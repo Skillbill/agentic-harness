@@ -20,14 +20,14 @@ function parseFrontmatter(raw: string): { meta: PromptFrontmatter; body: string 
   return { meta, body: match[2]! };
 }
 
-export function registerPrompt(pi: ExtensionAPI, name: string, mdPath: string) {
+export function registerPrompt(pi: ExtensionAPI, name: string, mdPath: string, extDir: string) {
   const raw = readFileSync(mdPath, "utf-8");
   const { meta, body } = parseFrontmatter(raw);
 
   pi.registerCommand(name, {
     description: meta.description ?? name,
     handler: async (args) => {
-      let prompt = body;
+      let prompt = body.replaceAll("$EXT_DIR", extDir);
       if (args) {
         prompt = prompt.replaceAll("$@", args);
         const firstArg = args.split(/\s+/)[0] ?? args;

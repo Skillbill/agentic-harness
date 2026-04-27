@@ -43,7 +43,7 @@ NON eseguire `gh pr create`, `git push`, `git mv`, commit. Solo letture.
    - Lascia `[ ]` quelli falliti o non verificabili automaticamente.
 
 5. **Genera la descrizione PR**:
-   - Leggi `.pi/templates/pr.md`.
+   - Leggi `$EXT_DIR/templates/pr.md`.
    - Compila sostituendo `{{TITLE}}` e `{{ID}}`.
    - Per "Cosa cambia" e "Componenti toccati": deduci da `git diff --stat main...HEAD`
      e dal contenuto del task.

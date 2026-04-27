@@ -66,7 +66,7 @@ Operazioni read-only (`git status`, `git log`, `git diff`,
 
 4. **Intervista l'utente passo-passo** (obbligatorio, sequenziale):
 
-   Leggi prima il template `.pi/templates/task.md` per conoscere le sezioni.
+   Leggi prima il template `$EXT_DIR/templates/task.md` per conoscere le sezioni.
    Poi conduci un'**intervista turn-by-turn**: una domanda (focalizzata) per
    turno, aspetta la risposta dell'utente, poi passa alla successiva.
 
@@ -109,7 +109,7 @@ Operazioni read-only (`git status`, `git log`, `git diff`,
    **C.0 — Esegui la procedura di architecture-sync (obbligatorio).**
 
    Leggi e applica la procedura definita in
-   [`.pi/procedures/architecture-sync.md`](../procedures/architecture-sync.md).
+   `$EXT_DIR/procedures/architecture-sync.md`.
    È la stessa logica che un tempo viveva nel prompt `/architecture-sync`
    (ora rimosso): confronta i moduli effettivi della codebase con quelli
    documentati, intervista il dev sulle eventuali differenze e aggiorna
@@ -178,7 +178,7 @@ Operazioni read-only (`git status`, `git log`, `git diff`,
 
 5. **Crea il file task**:
    - Path: `.pi/tasks/backlog/<ID>-<slug>.md`
-   - Parti dal template `.pi/templates/task.md`.
+   - Parti dal template `$EXT_DIR/templates/task.md`.
    - Sostituisci i placeholder del front-matter:
      - `{{ID}}` → nuovo ID
      - `{{TITLE}}` → titolo fornito (rispetta case originale)

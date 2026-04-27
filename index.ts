@@ -11,6 +11,6 @@ export default function (pi: ExtensionAPI) {
   for (const file of readdirSync(commandsDir)) {
     if (!file.endsWith(".md")) continue;
     const name = basename(file, ".md");
-    registerPrompt(pi, name, join(commandsDir, file));
+    registerPrompt(pi, name, join(commandsDir, file), __dirname);
   }
 }

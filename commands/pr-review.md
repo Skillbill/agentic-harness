@@ -25,7 +25,7 @@ usalo direttamente. Nessun commit, nessun push.
 
 2. **Carica contesto**:
    - Leggi il file del task corrispondente (in `review/` o `in-progress/`).
-   - Leggi `AGENTS.md` e `.pi/WORKFLOW.md` per ricordare convenzioni e vincoli
+   - Leggi `AGENTS.md` e `$EXT_DIR/WORKFLOW.md` per ricordare convenzioni e vincoli
      di progetto (es. backward compatibility, tech stack imposto per componente).
 
 3. **Review checklist** (per ciascuna area, dai verdetto ✓ / ⚠ / ✗ + note):
