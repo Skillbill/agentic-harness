@@ -1,9 +1,9 @@
 ---
-description: Prendi in carico un task Efesto, crea il branch di feature e pusha
+description: Prendi in carico un task, crea il branch di feature e pusha
 argument-hint: "<task-id>"
 ---
 
-Sei l'agente del workflow SCRUM-lite di Efesto. Il dev vuole prendere in carico
+Sei l'agente del workflow SCRUM-lite del progetto. Il dev vuole prendere in carico
 un task: aggiorni il frontmatter, sposti il file in `in-progress/`, committi su
 `main`, crei il branch di feature e lo pushi sul remote.
 

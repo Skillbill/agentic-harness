@@ -2,7 +2,7 @@
 
 > ⚠️ Questo **non** è un prompt template. È una procedura riutilizzabile,
 > richiamata da altri prompt (`.pi/prompts/*.md`) quando serve allineare la
-> documentazione di architettura di Efesto con la codebase reale.
+> documentazione di architettura del progetto con la codebase reale.
 >
 > Non esiste un comando `/architecture-sync`: la logica viene invocata
 > inline da altri flussi (attualmente `/task-new`, in apertura del turno
@@ -11,7 +11,7 @@
 ## Scopo
 
 Mantenere allineata la documentazione di architettura (`docs/architecture.html`
-e le sezioni collegate di `docs/efesto.md`) con i moduli realmente presenti
+e le sezioni collegate di `docs/project.md`) con i moduli realmente presenti
 nella codebase. La procedura è **interattiva**: confronta codebase e doc,
 segnala le differenze, fa domande mirate al dev, e solo alla fine aggiorna
 la doc.
@@ -41,13 +41,13 @@ Sono permesse le letture read-only (`git status`, `git diff`,
 
 1. Ricavare dalla **codebase** l'elenco dei moduli/componenti effettivi.
 2. Ricavare dalla **documentazione** (`docs/architecture.html` come fonte
-   autorevole, più eventuali riferimenti in `docs/efesto.md`) l'elenco
+   autorevole, più eventuali riferimenti in `docs/project.md`) l'elenco
    dei componenti attualmente documentati.
 3. Calcolare il **diff**: moduli nuovi (in codebase ma non in doc) e
    moduli obsoleti (in doc ma non in codebase).
 4. Intervistare il dev sulle differenze (non decidere da solo).
 5. Applicare le modifiche concordate a `docs/architecture.html` (e, se
-   serve, a `docs/efesto.md`).
+   serve, a `docs/project.md`).
 
 ## Passi
 
@@ -61,7 +61,7 @@ dev se:
 
 ### 2. Scansione codebase — moduli effettivi
 
-Considera "modulo/componente di Efesto" ogni cartella di primo livello
+Considera "modulo/componente del progetto" ogni cartella di primo livello
 del repo che rappresenta un servizio/app/area funzionale distinta.
 Regole operative:
 
@@ -99,7 +99,7 @@ grep -oE '<div class="label">[^<]+</div>' docs/architecture.html \
   | sed -E 's|<div class="label">([^<]+)</div>|\1|'
 ```
 
-Opzionalmente, controlla se `docs/efesto.md` sezione "Componenti" cita
+Opzionalmente, controlla se `docs/project.md` sezione "Componenti" cita
 altri nomi (link, elenchi, immagini). Non considerare autorevole
 `AGENTS.md` per la lista moduli: è un riferimento operativo, non il
 diagramma.
@@ -200,7 +200,7 @@ Se confermato:
 4. Per **rinominare** un nodo: aggiorna solo il contenuto di
    `<div class="label">` (e i commenti HTML che usano quel nome). Non
    toccare classi CSS a meno che il dev lo abbia chiesto esplicitamente.
-5. Se `docs/efesto.md` cita nominalmente i moduli modificati (sezione
+5. Se `docs/project.md` cita nominalmente i moduli modificati (sezione
    "Componenti" o elenchi), aggiorna anche quelle occorrenze. Non
    riscrivere testo non correlato.
 
@@ -221,7 +221,7 @@ Mostra al dev:
   ```
   git status
   git diff docs/architecture.html
-  git add docs/architecture.html docs/efesto.md   # se toccato
+  git add docs/architecture.html docs/project.md   # se toccato
   git commit -m "docs(architecture): sync con codebase (+InfluxDB, -Device Simulator)"
   git push
   ```
@@ -235,12 +235,12 @@ Al termine della procedura (sia che abbia modificato file, sia che
 tutto fosse già allineato, sia che l'utente abbia annullato), restituisci
 al flusso chiamante:
 
-1. La **lista corrente dei componenti di Efesto** come risulta ora dal
+1. La **lista corrente dei componenti del progetto** come risulta ora dal
    diagramma aggiornato (`codebase_modules` dopo eventuali decisioni di
    rename/skip del dev). Questo è il dato che il prompt chiamante userà
    nei turni successivi (es. in `/task-new`, per la scelta dei
    componenti impattati).
-2. Un flag che indichi se `docs/architecture.html` e/o `docs/efesto.md`
+2. Un flag che indichi se `docs/architecture.html` e/o `docs/project.md`
    sono stati modificati, così il prompt chiamante sa che quei file non
    rientrano nella sua eventuale eccezione git e vanno proposti al dev
    separatamente.

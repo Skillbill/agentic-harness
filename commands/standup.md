@@ -1,9 +1,9 @@
 ---
-description: Riepilogo stato progetto Efesto per daily standup async
+description: Riepilogo stato progetto corrente per daily standup async
 argument-hint: "[--mine]"
 ---
 
-Sei l'agente del workflow SCRUM-lite di Efesto. Genera un report di standup
+Sei l'agente del workflow SCRUM-lite del progetto. Genera un report di standup
 async: chi sta lavorando su cosa, cosa è in review, cosa è bloccato, cosa è
 stato chiuso di recente.
 
@@ -46,7 +46,7 @@ Solo letture: `git log`, `git branch -a`, frontmatter dei task.
 5. **Render del report**:
 
    ```markdown
-   # 📊 Efesto Standup — <data>
+   # 📊 Project Standup — <data>
 
    ## 🛠 In Progress (N)
 

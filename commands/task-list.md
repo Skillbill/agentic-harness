@@ -1,9 +1,9 @@
 ---
-description: Elenca i task Efesto filtrando per stato
+description: Elenca i task filtrando per stato
 argument-hint: "[backlog|in-progress|review|done|all]"
 ---
 
-Sei l'agente del workflow SCRUM-lite di Efesto. Mostra l'elenco dei task.
+Sei l'agente del workflow SCRUM-lite del progetto. Mostra l'elenco dei task.
 
 **Filtro richiesto:** $@ (default: tutto tranne `done`)
 

@@ -1,20 +1,60 @@
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { readdirSync } from "node:fs";
+import { readdirSync, readFileSync, existsSync } from "node:fs";
 import { join, basename, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { execSync } from "node:child_process";
 import { registerPrompt } from "./register-prompt.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const commandsDir = join(__dirname, "commands");
 
+/** Detect current task from git branch + task files on disk. */
+function detectCurrentTask(cwd: string): { id: string; title: string; branch: string; taskFile: string } | null {
+  try {
+    const branch = execSync("git branch --show-current", { cwd, encoding: "utf-8" }).trim();
+    const match = branch.match(/^feature\/(T-\d+)/);
+    if (!match) return null;
+    const id = match[1]!;
+
+    // Search task file in all status dirs
+    const tasksRoot = join(cwd, ".pi", "tasks");
+    for (const status of ["in-progress", "review", "backlog", "done"]) {
+      const statusDir = join(tasksRoot, status);
+      if (!existsSync(statusDir)) continue;
+      for (const entry of readdirSync(statusDir)) {
+        if (!entry.startsWith(id + "-")) continue;
+        const taskFile = join(statusDir, entry, "TASK.md");
+        if (!existsSync(taskFile)) continue;
+        const raw = readFileSync(taskFile, "utf-8");
+        const titleMatch = raw.match(/^title:\s*(.+)$/m);
+        return { id, title: titleMatch?.[1] ?? entry, branch, taskFile };
+      }
+    }
+    return { id, title: id, branch, taskFile: "" };
+  } catch {
+    return null;
+  }
+}
+
 export default function (pi: ExtensionAPI) {
+  let currentTask: ReturnType<typeof detectCurrentTask> = null;
+
   for (const file of readdirSync(commandsDir)) {
     if (!file.endsWith(".md")) continue;
-    const name = basename(file, ".md");
+    const name = `ah:${basename(file, ".md")}`;
     registerPrompt(pi, name, join(commandsDir, file), __dirname);
   }
 
   pi.on("session_start", async (_event, _ctx) => {
+    // Detect current task
+    currentTask = detectCurrentTask(process.cwd());
+
+    if (currentTask) {
+      console.log(`\n[agentic-harness] 🎯 Current task: ${currentTask.id} — ${currentTask.title} (${currentTask.branch})`);
+    } else {
+      console.log("\n[agentic-harness] No active task detected (not on a feature/ branch).");
+    }
+
     const commands = pi.getCommands();
     const tools = pi.getAllTools();
 
@@ -23,7 +63,7 @@ export default function (pi: ExtensionAPI) {
       t => t.sourceInfo.source !== "builtin" && t.sourceInfo.source !== "sdk"
     );
 
-    console.log("\n[agentic-harness] commands:");
+    console.log("[agentic-harness] commands:");
     for (const cmd of extCommands) {
       console.log(`  /${cmd.name} — ${cmd.description ?? "(no description)"}`);
     }
@@ -37,5 +77,37 @@ export default function (pi: ExtensionAPI) {
       }
     }
     console.log("");
+  });
+
+  // Inject current-task context into every LLM turn
+  pi.on("before_agent_start", async (_event, _ctx) => {
+    // Re-detect in case of branch switch during session
+    currentTask = detectCurrentTask(process.cwd());
+
+    if (!currentTask) return;
+
+    const taskContent = currentTask.taskFile && existsSync(currentTask.taskFile)
+      ? readFileSync(currentTask.taskFile, "utf-8")
+      : null;
+
+    const contextBlock = [
+      `## 🎯 Current Task Context`,
+      ``,
+      `- **Task:** ${currentTask.id} — ${currentTask.title}`,
+      `- **Branch:** ${currentTask.branch}`,
+      `- **Task file:** ${currentTask.taskFile}`,
+    ];
+
+    if (taskContent) {
+      contextBlock.push(``, `<task-frontmatter>`, taskContent.split("---")[1]?.trim() ?? "", `</task-frontmatter>`);
+    }
+
+    return {
+      message: {
+        customType: "current-task-context",
+        content: contextBlock.join("\n"),
+        display: false,
+      },
+    };
   });
 }

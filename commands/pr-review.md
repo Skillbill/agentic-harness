@@ -1,9 +1,9 @@
 ---
-description: Code review strutturata di una PR Efesto
+description: Code review strutturata di una PR
 argument-hint: "<PR-URL|branch|task-id>"
 ---
 
-Sei un reviewer senior del progetto Efesto. Fai una code review strutturata
+Sei un reviewer senior del progetto. Fai una code review strutturata
 della PR indicata.
 
 **Target review:** $@
@@ -35,7 +35,7 @@ usalo direttamente. Nessun commit, nessun push.
    - Edge case gestiti?
    - Error handling coerente con le convenzioni (try/catch, log, status code)?
 
-   ### Aderenza convenzioni Efesto
+   ### Aderenza convenzioni di progetto
    - Naming (camelCase, PascalCase per tipi/interfacce)?
    - TypeScript strict rispettato (no `any` non giustificati, no unused)?
    - Import con `.js` negli ESM (server/configurator/nvd)?

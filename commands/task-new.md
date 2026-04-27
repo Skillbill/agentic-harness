@@ -1,9 +1,9 @@
 ---
-description: Crea un nuovo task nel backlog Efesto (SCRUM-lite)
+description: Crea un nuovo task nel backlog (SCRUM-lite)
 argument-hint: "<titolo del task>"
 ---
 
-Sei l'agente del workflow SCRUM-lite di Efesto. Devi creare un nuovo task nel
+Sei l'agente del workflow SCRUM-lite del progetto. Devi creare un nuovo task nel
 backlog a partire dal titolo fornito dall'utente, **intervistandolo** per
 compilare la scheda in modo completo — niente placeholder lasciati vuoti.
 
@@ -26,7 +26,7 @@ Vincoli obbligatori prima di eseguire qualunque comando git che muta:
    non puoi procedere in automatico.
 
    ⚠️ In particolare, eventuali modifiche a `docs/architecture.html` /
-   `docs/efesto.md` introdotte dalla procedura di architecture-sync
+   `docs/project.md` introdotte dalla procedura di architecture-sync
    (vedi Turno C) **non** rientrano nell'eccezione e vanno proposte al
    dev come commit separato — mai accorpate al commit del task.
 2. **Branch `main`**: conferma con `git branch --show-current` di essere
@@ -101,8 +101,8 @@ Operazioni read-only (`git status`, `git log`, `git diff`,
    **Turno C — Componenti coinvolti.**
 
    ⚠️ **Non memorizzare mai una lista statica di componenti.** La lista
-   ufficiale dei componenti di Efesto vive nella documentazione di
-   architettura (`docs/architecture.html`, con eco in `docs/efesto.md`).
+   ufficiale dei componenti del progetto vive nella documentazione di
+   architettura (`docs/architecture.html`, con eco in `docs/project.md`).
    Prima di presentarla all'utente **devi** assicurarti che sia allineata
    alla codebase reale.
 
@@ -113,7 +113,7 @@ Operazioni read-only (`git status`, `git log`, `git diff`,
    È la stessa logica che un tempo viveva nel prompt `/architecture-sync`
    (ora rimosso): confronta i moduli effettivi della codebase con quelli
    documentati, intervista il dev sulle eventuali differenze e aggiorna
-   `docs/architecture.html` (e, se serve, `docs/efesto.md`).
+   `docs/architecture.html` (e, se serve, `docs/project.md`).
 
    Regole specifiche quando la procedura è invocata da `/task-new`:
 
@@ -123,7 +123,7 @@ Operazioni read-only (`git status`, `git log`, `git diff`,
      di entrare nel merito del task. Usa un breve annuncio all'utente,
      del tipo: «Prima di scegliere i componenti impattati dal task,
      allineo il diagramma di architettura con la codebase.»
-   - Le eventuali modifiche a `docs/architecture.html` / `docs/efesto.md`
+   - Le eventuali modifiche a `docs/architecture.html` / `docs/project.md`
      prodotte dalla procedura **non** rientrano nell'eccezione git di
      questo prompt: vanno proposte al dev come commit separato nel
      passo 7 (Output finale), non accorpate al commit del task.
@@ -143,7 +143,7 @@ Operazioni read-only (`git status`, `git log`, `git diff`,
    introducono di nuovi»: in quel caso i nuovi componenti *dovrebbero*
    essere già stati aggiunti al diagramma in C.0; se il dev ha preferito
    saltare la procedura, segna che andranno aggiunti in
-   `docs/architecture.html` / `docs/efesto.md` nel turno D.
+   `docs/architecture.html` / `docs/project.md` nel turno D.
 
    Se la risposta implica chiaramente schema DB, nuove API o nuovi
    storage ma l'utente non lo ha detto esplicitamente, fai **una** domanda
@@ -219,10 +219,10 @@ Operazioni read-only (`git status`, `git log`, `git diff`,
 
    ⚠️ Caso tipico di fallimento del vincolo (a): la procedura di
    architecture-sync eseguita in Turno C ha modificato
-   `docs/architecture.html` e/o `docs/efesto.md`. In questa situazione
+   `docs/architecture.html` e/o `docs/project.md`. In questa situazione
    **non** fare commit automatico: quei file richiedono un commit
    separato e vanno proposti al dev nel passo 7 come comandi manuali
-   (es. `git add docs/architecture.html docs/efesto.md && git commit -m
+   (es. `git add docs/architecture.html docs/project.md && git commit -m
    "docs(architecture): sync con codebase" && git push`), prima del
    commit del task.
 

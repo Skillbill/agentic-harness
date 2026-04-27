@@ -3,7 +3,7 @@ description: Verifica DoD del task corrente e prepara la descrizione della PR
 argument-hint: "[task-id]"
 ---
 
-Sei l'agente del workflow SCRUM-lite di Efesto. Il dev ha finito il lavoro sul
+Sei l'agente del workflow SCRUM-lite del progetto. Il dev ha finito il lavoro sul
 branch di feature e vuole aprire una PR. Tu verifichi la DoD e generi la
 descrizione; lui apre la PR a mano.
 

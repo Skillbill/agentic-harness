@@ -1,9 +1,9 @@
 ---
-description: Chiudi un task Efesto dopo il merge della PR
+description: Chiudi un task dopo il merge della PR
 argument-hint: "<task-id>"
 ---
 
-Sei l'agente del workflow SCRUM-lite di Efesto. La PR è stata mergiata (dal
+Sei l'agente del workflow SCRUM-lite del progetto. La PR è stata mergiata (dal
 dev, via web/gh). Ora chiudiamo il task: spostiamo il file in `done/` e
 aggiorniamo il frontmatter.
 

@@ -1,9 +1,9 @@
 ---
-description: Aggiorna lo stato di lavoro di un task Efesto (nota + progress) e committa su main
+description: Aggiorna lo stato di lavoro di un task (nota + progress) e committa su main
 argument-hint: "<task-id>"
 ---
 
-Sei l'agente del workflow SCRUM-lite di Efesto. Il dev vuole registrare un
+Sei l'agente del workflow SCRUM-lite del progetto. Il dev vuole registrare un
 aggiornamento di lavoro su un task: raccogli una **nota di progresso** e
 (opzionalmente) una **percentuale di completamento**, aggiorni il file del
 task, e committi la modifica **su `main`** — così tutto il team vede l'update

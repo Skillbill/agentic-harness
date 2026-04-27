@@ -1,6 +1,6 @@
-# Efesto — Team Workflow (SCRUM-lite)
+# Team Workflow (SCRUM-lite)
 
-Workflow semplificato ispirato a SCRUM, pensato per un team che sviluppa Efesto
+Workflow semplificato ispirato a SCRUM, pensato per un team che sviluppa il progetto
 con l'agente **pi**. Nessuno sprint, nessun backlog grooming formale: solo task,
 stime, branch, PR.
 
@@ -56,58 +56,84 @@ propongono i comandi git ma non li lanciano.
 
 ## Comandi disponibili
 
-| Comando            | Scopo                                                     |
-|--------------------|-----------------------------------------------------------|
-| `/task-new`        | Crea un nuovo task nel backlog                            |
-| `/task-list`       | Elenca i task filtrando per stato                         |
-| `/task-start`      | Prende in carico un task e prepara branch di feature      |
-| `/project-status`  | Progress bar del progetto + stato dei task in-progress    |
-| `/pr-open`         | Verifica DoD e prepara descrizione PR                     |
-| `/pr-review`       | Code review strutturata di una PR                         |
-| `/pr-merge`        | Chiude il task dopo merge della PR                        |
-| `/standup`         | Riepilogo stato progetto per daily async                  |
+Tutti i comandi AH hanno prefisso `ah:`.
+
+| Comando              | Scopo                                                     |
+|----------------------|-----------------------------------------------------------|
+| `/ah:task-new`       | Crea un nuovo task nel backlog                            |
+| `/ah:task-list`      | Elenca i task filtrando per stato                         |
+| `/ah:task-start`     | Prende in carico un task e prepara branch di feature      |
+| `/ah:task-next-step` | Avanza il task corrente alla prossima fase del ciclo interno (discuss → plan → execute → verify) |
+| `/ah:task-status`    | Aggiorna lo stato di avanzamento di un task               |
+| `/ah:task-done`      | Chiude un task dopo il merge della PR                     |
+| `/ah:project-status` | Progress bar del progetto + stato dei task in-progress    |
+| `/ah:pr-open`        | Verifica DoD e prepara descrizione PR                     |
+| `/ah:pr-review`      | Code review strutturata di una PR                         |
+| `/ah:pr-merge`       | Chiude il task dopo merge della PR                        |
+| `/ah:standup`        | Riepilogo stato progetto per daily async                  |
+| `/ah:do-git-stuff`   | Esegue comandi git mutanti delegati dal dev               |
+
+### Ciclo interno del task (skill, invocate da `/ah:task-next-step`)
+
+```
+discuss → plan → execute (N volte) → verify
+```
+
+| Fase    | Skill           | Artefatti prodotti                      |
+|---------|-----------------|------------------------------------------|
+| discuss | `ah-task-discuss`  | `CODEMAP.md` + `DISCUSS.md`             |
+| plan    | `ah-task-plan`     | `PLAN.md` + `steps/*.md`                |
+| execute | `ah-task-execute`  | codice + step aggiornati                |
+| verify  | `ah-task-verify`   | `VERIFY.md`                             |
 
 ## File supporto
 
 **Nell'estensione agentic-harness:**
-- `templates/task.md` — scheletro di un task (usato da `/task-new`)
-- `templates/pr.md` — scheletro descrizione PR (usato da `/pr-open`)
+- `commands/` — prompt template dei comandi `/ah:*`
+- `skills/` — skill del ciclo interno (discuss, plan, execute, verify)
+- `templates/task.md` — scheletro di un task (usato da `/ah:task-new`)
+- `templates/pr.md` — scheletro descrizione PR (usato da `/ah:pr-open`)
 - `procedures/architecture-sync.md` — procedura di allineamento architettura
+- `task-layout.md` — contratto del layout directory dei task
 - `WORKFLOW.md` — questo file
 
 **Nel repo del progetto:**
-- `.pi/tasks/<stato>/T-NNN-slug.md` — i task effettivi
+- `.pi/tasks/<stato>/T-NNN-slug/TASK.md` — i task effettivi (directory layout)
 
 ## Flusso tipico
 
 ```bash
 # 1. Product owner / tech lead crea task nel backlog (su main)
-/task-new "Add web camera support to configurator"
+/ah:task-new "Add web camera support to configurator"
 # dev edita a mano il file (stima in ore, contesto, DoD) e committa su main
 
 # 2. Dev prende in carico il task (su main)
-/task-start T-003
+/ah:task-start T-003
 # l'agente propone:
 #   git switch -c feature/T-003-web-camera-configurator
 #   git mv .pi/tasks/backlog/T-003-*.md .pi/tasks/in-progress/
 #   git add -A && git commit -m "chore(T-003): start task"
 # il dev li esegue a mano
 
-# 3. Lavoro di sviluppo sul branch
-# ... codice, test ...
-/project-status  # progress bar del progetto + stato task in-progress
+# 3. Lavoro di sviluppo sul branch — ciclo interno
+/ah:task-next-step   # fase discuss: genera CODEMAP + DISCUSS
+/ah:task-next-step   # fase plan: genera PLAN + steps/
+/ah:task-next-step   # fase execute: esegue step 1, commit atomico
+/ah:task-next-step   # fase execute: esegue step 2, ...
+/ah:task-next-step   # fase verify: verifica DoD globale
+/ah:project-status   # progress bar del progetto
 
 # 4. Apertura PR (sul branch)
-/pr-open
+/ah:pr-open
 # l'agente verifica DoD, genera descrizione PR
 # il dev esegue a mano: gh pr create ... (o via web)
 # poi sposta il file in review/ e committa a mano
 
 # 5. Review
-/pr-review <PR-URL>
+/ah:pr-review <PR-URL>
 
 # 6. Merge (fatto a mano dal dev via web/gh), poi su main:
 git switch main && git pull
-/pr-merge T-003
+/ah:pr-merge T-003
 # l'agente propone il git mv in done/ e il commit, il dev li esegue
 ```

@@ -3,7 +3,7 @@ description: Esegue operazioni git mutanti proposte in precedenza (eccezione esp
 argument-hint: "[lista di comandi git, opzionale]"
 ---
 
-Sei l'Assistente del workflow SCRUM-lite di Efesto. Il dev usa questo
+Sei l'Assistente del workflow SCRUM-lite del progetto. Il dev usa questo
 comando per **delegarti l'esecuzione** di operazioni git mutanti che
 normalmente dovrebbe eseguire lui a mano (per via della Git Safety Rule).
 
@@ -70,20 +70,7 @@ conferma esplicita al dev citando il comando esatto.
    - Se c'è qualcosa che non va, mostralo al dev e chiedi cosa fare
      (rimuoverlo / sostituirlo / eseguire comunque con conferma esplicita).
 
-3. **Mostra il piano e chiedi conferma** (sempre, anche se piano ovvio):
-   ```
-   Sto per eseguire:
-     1) git add .pi/tasks/backlog/T-002-web-camera.md
-     2) git commit -m "chore(T-002): add task to backlog — web-camera"
-     3) git push
-
-   Confermi? (sì / no / modifica)
-   ```
-
-   Shortcut accettati: `sì` / `si` / `s` / `yes` / `y` / `ok` / `vai`.
-   Qualsiasi altra risposta → interpreta come "no" o richiesta di modifica.
-
-4. **Verifica stato git prima di eseguire** (read-only):
+3. **Verifica stato git prima di eseguire** (read-only):
    - `git branch --show-current` → mostra il branch corrente.
    - `git status --porcelain` → mostra le modifiche in corso.
    - Se il piano include `commit` ma non c'è nulla in staging dopo l'add
@@ -91,7 +78,7 @@ conferma esplicita al dev citando il comando esatto.
    - Se il piano include `push` ma il branch corrente non ha un upstream,
      usa `git push -u origin <branch>` (dopo aver avvisato il dev).
 
-5. **Esegui i comandi uno a uno**, mostrando per ciascuno:
+4. **Esegui i comandi uno a uno**, mostrando per ciascuno:
    - Il comando esatto che stai per eseguire.
    - L'output di stdout/stderr.
    - Il codice di uscita.
@@ -100,7 +87,7 @@ conferma esplicita al dev citando il comando esatto.
    mostra l'errore e chiedi al dev come procedere (riprova / annulla /
    fix manuale). Non continuare la sequenza a occhi chiusi.
 
-6. **Output finale**:
+5. **Output finale**:
    - Riassunto: quali comandi sono stati eseguiti con successo, quali
      saltati/falliti.
    - Stato finale: `git status` breve e, se rilevante,

@@ -1,9 +1,9 @@
 ---
-description: Chiude un task Efesto (PR mergiata) spostandolo in done/ e committando su main
+description: Chiude un task (PR mergiata) spostandolo in done/ e committando su main
 argument-hint: "<task-id>"
 ---
 
-Sei l'agente del workflow SCRUM-lite di Efesto. Il dev ha visto la PR
+Sei l'agente del workflow SCRUM-lite del progetto. Il dev ha visto la PR
 mergiata su `main` e vuole chiudere il task: lo sposti da `review/` (o
 direttamente da `in-progress/` se non è passato per la review) a `done/`,
 aggiorni il front-matter e committi su `main`.
