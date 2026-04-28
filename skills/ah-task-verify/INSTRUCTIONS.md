@@ -287,3 +287,7 @@ Seguito da suggerimento contestuale:
   l'approvazione, poi rilancia `/ah:task-next-step` per aggiornare lo stato».
 
 Mai bloccare. Advisory: il dev decide.
+
+💡 **Consiglio: usa `/new` per svuotare il contesto prima del prossimo
+comando.** Ogni fase ricarica da disco solo i file che le servono —
+contesto fresco e bounded.

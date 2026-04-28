@@ -326,3 +326,8 @@ Se non ci sono più step `todo`:
 Se lo step è `failed` (sei al passo 7c, ramo fallito), mostra invece
 un report chiaro di cosa è successo, quali check sono falliti e le
 opzioni per recuperare. Niente commit, niente push.
+
+💡 **Consiglio: usa `/new` per svuotare il contesto, poi rilancia
+`/ah:task-next-step` per lo step successivo (o verify se tutti done).**
+Ogni invocazione ricarica da disco solo i file che le servono — contesto
+fresco e bounded.

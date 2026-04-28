@@ -345,3 +345,7 @@ proposti al dev).
 Ricorda al dev che il passo successivo del ciclo è `/ah:task-next-step`, che
 prenderà il primo step `todo` e lo eseguirà attivamente (un solo step
 per invocazione, con fermata obbligatoria a fine step).
+
+💡 **Consiglio: usa `/new` per svuotare il contesto, poi rilancia
+`/ah:task-next-step` per la fase successiva (execute).** Ogni fase ricarica
+da disco solo i file che le servono — contesto fresco e bounded.

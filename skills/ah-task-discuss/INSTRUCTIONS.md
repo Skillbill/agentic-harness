@@ -266,4 +266,7 @@ Seguito dall'esito git (commit/push fatti dall'agente o comandi
 proposti al dev).
 
 Se restano sezioni `_Da definire._`, elencale come follow-up.
-Prossimo passo naturale del ciclo: `/ah:task-next-step`.
+
+💡 **Consiglio: usa `/new` per svuotare il contesto, poi rilancia
+`/ah:task-next-step` per la fase successiva (plan).** Ogni fase ricarica
+da disco solo i file che le servono — contesto fresco e bounded.
