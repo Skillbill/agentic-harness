@@ -1,12 +1,34 @@
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { readdirSync, readFileSync, existsSync } from "node:fs";
-import { join, basename, dirname } from "node:path";
+import { join, basename, dirname, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { execSync } from "node:child_process";
 import { registerPrompt } from "./register-prompt.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const commandsDir = join(__dirname, "commands");
+
+/**
+ * Recursively collect all .md files under a directory.
+ * Returns an array of { relPath, content } sorted by path.
+ */
+function collectMarkdownFiles(dir: string, baseDir?: string): { relPath: string; content: string }[] {
+  if (!existsSync(dir)) return [];
+  const base = baseDir ?? dir;
+  const results: { relPath: string; content: string }[] = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const fullPath = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      results.push(...collectMarkdownFiles(fullPath, base));
+    } else if (entry.isFile() && entry.name.endsWith(".md")) {
+      results.push({
+        relPath: relative(base, fullPath),
+        content: readFileSync(fullPath, "utf-8"),
+      });
+    }
+  }
+  return results.sort((a, b) => a.relPath.localeCompare(b.relPath));
+}
 
 /** Detect current task from git branch + task files on disk. */
 function detectCurrentTask(cwd: string): { id: string; title: string; branch: string; taskFile: string } | null {
@@ -77,6 +99,45 @@ export default function (pi: ExtensionAPI) {
       }
     }
     console.log("");
+  });
+
+  // Inject project docs context into every LLM turn
+  pi.on("before_agent_start", async (_event, _ctx) => {
+    const cwd = process.cwd();
+    const docsDir = join(cwd, "docs");
+    const codebaseDir = join(cwd, ".pi", "codebase");
+
+    const docFiles = collectMarkdownFiles(docsDir);
+    const codebaseFiles = collectMarkdownFiles(codebaseDir);
+
+    if (docFiles.length === 0 && codebaseFiles.length === 0) return;
+
+    const sections: string[] = [
+      `## 📚 Project Documentation Context`,
+      ``,
+    ];
+
+    if (codebaseFiles.length > 0) {
+      sections.push(`### .pi/codebase`, ``);
+      for (const f of codebaseFiles) {
+        sections.push(`#### ${f.relPath}`, ``, f.content, ``);
+      }
+    }
+
+    if (docFiles.length > 0) {
+      sections.push(`### docs/`, ``);
+      for (const f of docFiles) {
+        sections.push(`#### ${f.relPath}`, ``, f.content, ``);
+      }
+    }
+
+    return {
+      message: {
+        customType: "project-docs-context",
+        content: sections.join("\n"),
+        display: false,
+      },
+    };
   });
 
   // Inject current-task context into every LLM turn
