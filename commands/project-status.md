@@ -57,6 +57,10 @@ Solo letture. Nessuna modifica a file o git.
 
    In review
      T-001  Fix alarm broadcast                                   (marco, 2h)
+
+   Backlog
+     T-010  Integrate thermal cameras                             (-, -)
+     T-011  DTS module setup                                      (-, 8h)
    ```
 
    Regole di rendering:
@@ -72,8 +76,10 @@ Solo letture. Nessuna modifica a file o git.
      parentesi quadre dopo `(assignee, stima)`. Formato: `[discuss]`,
      `[plan]`, `[execute N/M]` (step done/totale), `[verify]`, `[✔ ready]`.
    - Sezione "In review" senza barra: solo ID, titolo, (assignee, stima).
+   - **Sezione "Backlog"**: elenca tutti i task in `backlog/` senza barra
+     di progresso. Formato: solo ID, titolo troncato, (assignee, stima).
    - **Omettere** sezioni vuote (se nessun in-progress, non stampare il blocco
-     "In progress"; idem review).
+     "In progress"; idem review, idem backlog).
    - Se `total == 0`, stampa solo: `📊 Project — <oggi>  (nessun task)`.
    - **NON** aggiungere altro output: niente consigli, niente "next steps",
      niente leggenda, niente spiegazioni. Solo il blocco qui sopra.
