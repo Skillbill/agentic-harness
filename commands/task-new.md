@@ -19,7 +19,7 @@ del task appena creato nel backlog.
 Vincoli obbligatori prima di eseguire qualunque comando git che muta:
 
 1. **Unico file toccato**: verifica con `git status --porcelain` che l'unica
-   modifica nel working tree sia `.pi/tasks/backlog/<ID>-<slug>.md`
+   modifica nel working tree sia `.pi/tasks/backlog/<ID>-<slug>/TASK.md`
    (file nuovo, status `??` o `A`). Se ci sono altre modifiche (staged o
    non-staged, in qualunque path), **non fare commit/push**: mostra lo
    stato all'utente e proponi i comandi manualmente, spiegando perché
@@ -54,8 +54,9 @@ Operazioni read-only (`git status`, `git log`, `git diff`,
      per essere visibile a tutto il team. Chiedi conferma prima di procedere.
 
 2. **Determina il prossimo ID task**:
-   - Scansiona `.pi/tasks/{backlog,in-progress,review,done}/` per tutti i file
-     che matchano `T-NNN-*.md`.
+   - Scansiona `.pi/tasks/{backlog,in-progress,review,done}/` per tutte le
+     **cartelle** che matchano `T-NNN-*` (ogni task è una directory, vedi
+     `task-layout.md` §1).
    - Estrai il numero più alto e incrementa di 1.
    - Formatta come `T-001`, `T-002`, ecc. (zero-padding a 3 cifre).
 
@@ -176,8 +177,9 @@ Operazioni read-only (`git status`, `git log`, `git diff`,
    inserirai nel file una riga `_Da definire._` sotto l'heading
    corrispondente, come TODO esplicito.
 
-5. **Crea il file task**:
-   - Path: `.pi/tasks/backlog/<ID>-<slug>.md`
+5. **Crea il file task** (directory layout, vedi `task-layout.md` §1):
+   - Crea la cartella `.pi/tasks/backlog/<ID>-<slug>/`.
+   - Path del file: `.pi/tasks/backlog/<ID>-<slug>/TASK.md`.
    - Parti dal template `$EXT_DIR/templates/task.md`.
    - Sostituisci i placeholder del front-matter:
      - `{{ID}}` → nuovo ID
@@ -203,11 +205,11 @@ Operazioni read-only (`git status`, `git log`, `git diff`,
 6. **Commit & push del task** (usando l'eccezione dichiarata sopra):
 
    a. Esegui `git status --porcelain` e verifica che l'unico path
-      modificato sia `.pi/tasks/backlog/<ID>-<slug>.md`.
+      modificato sia `.pi/tasks/backlog/<ID>-<slug>/TASK.md`.
    b. Esegui `git branch --show-current` e verifica che sia `main`.
    c. Se **entrambi** i vincoli sono soddisfatti, esegui in sequenza:
       ```bash
-      git add .pi/tasks/backlog/<ID>-<slug>.md
+      git add .pi/tasks/backlog/<ID>-<slug>/TASK.md
       git commit -m "chore(<ID>): add task to backlog — <TITLE>"
       git push
       ```
