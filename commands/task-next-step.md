@@ -21,7 +21,7 @@ Ogni fase produce artefatti nella directory del task
 
 | Fase | Artefatto | Condizione di completamento |
 |------|-----------|-----------------------------|
-| discuss | `CODEMAP.md` + `DISCUSS.md` | entrambi esistono |
+| discuss | `DISCUSS.md` | esiste |
 | plan | `PLAN.md` + `steps/*.md` | `PLAN.md` esiste e `steps/` non è vuoto |
 | execute | codice + step `done` | tutti gli step in `steps/` sono `done` |
 | verify | `VERIFY.md` | `VERIFY.md` esiste |
@@ -45,16 +45,15 @@ corrotto).
 Controlla gli artefatti nella directory del task, **in ordine**:
 
 ```
-1. CODEMAP.md non esiste?          → fase = discuss
-2. DISCUSS.md non esiste?          → fase = discuss
-3. PLAN.md non esiste?             → fase = plan
-4. steps/ vuoto o assente?         → fase = plan
-5. Almeno uno step non è `done`?   → fase = execute
-6. VERIFY.md non esiste?           → fase = verify
-7. Tutto presente e completo       → fase = done (task pronto per PR)
+1. DISCUSS.md non esiste?          → fase = discuss
+2. PLAN.md non esiste?             → fase = plan
+3. steps/ vuoto o assente?         → fase = plan
+4. Almeno uno step non è `done`?   → fase = execute
+5. VERIFY.md non esiste?           → fase = verify
+6. Tutto presente e completo       → fase = done (task pronto per PR)
 ```
 
-Per il check al punto 5, scansiona `steps/*.md` (escludi `steps/archive/`):
+Per il check al punto 4, scansiona `steps/*.md` (escludi `steps/archive/`):
 leggi il frontmatter `status:` di ciascuno. Se almeno uno è `todo`,
 `doing`, `blocked` o `failed` → fase = execute.
 
@@ -65,7 +64,7 @@ Prima di invocare la skill, mostra al dev un riepilogo compatto:
 ```
 🔄 Task T-NNN — <titolo>
    fase corrente: <discuss|plan|execute|verify|done>
-   artefatti:     CODEMAP ✅  DISCUSS ✅  PLAN ❌  steps 0/0  VERIFY ❌
+   artefatti:     DISCUSS ✅  PLAN ❌  steps 0/0  VERIFY ❌
 ```
 
 Usa ✅ se il file esiste, ❌ se non esiste. Per steps mostra `done/totale`

@@ -16,6 +16,7 @@ Questo comando **è autorizzato** a eseguire operazioni git mutanti, solo:
 
 - `git mv` del file del task da `review/` (o `in-progress/`) a `done/`
 - `git add` del file del task
+- `git add .pi/codebase/` (se la mappa è stata aggiornata)
 - `git commit -m "chore(<ID>): mark task as done"`
 - `git push`
 
@@ -59,19 +60,32 @@ Niente branch, niente altri file, niente `--force`. Vedi `AGENTS.md` →
    - Conta checkbox `- [x]` vs totale.
    - Serve solo per l'output finale; non blocca se non è 100%.
 
-5. **Aggiorna il front-matter del task** (via `edit`) mentre il file è
+5. **Aggiorna la mappa della codebase** (se presente):
+   - Se `.pi/codebase/` esiste, la mappa va aggiornata per riflettere
+     le modifiche introdotte dal task appena chiuso.
+   - Esegui la logica di `/ah:map-codebase` inline: leggi il file
+     `$EXT_DIR/commands/map-codebase.md` ed esegui le istruzioni dei
+     passi 2–5 (le 4 passate di mapping). Quando la mappa esiste
+     già, usa la modalità "Rigenera" (cancella e rimappa).
+   - Al termine, i file aggiornati in `.pi/codebase/` vanno inclusi
+     nel commit del passo 8.
+   - Se `.pi/codebase/` **non esiste** → salta questo passo (la mappa
+     non era stata creata, non c'è nulla da aggiornare).
+
+6. **Aggiorna il front-matter del task** (via `edit`) mentre il file è
    ancora in `review/` (o `in-progress/`):
    - `status: done`
    - `progress: 100` (se la chiave esiste, o aggiungila sotto `estimate:`)
    - `updated: <YYYY-MM-DD>` (oggi, via `date +%Y-%m-%d`)
 
-6. **Sposta il file** con `git mv` da `review/` (o `in-progress/`) a `done/`,
+7. **Sposta il file** con `git mv` da `review/` (o `in-progress/`) a `done/`,
    preservando il filename.
 
-7. **Commit e push su `main`** (SOLO il file del task):
+8. **Commit e push su `main`** (file del task + mappa codebase aggiornata):
 
    ```
    git add <vecchio-path> <nuovo-path>   # copre il rename
+   git add .pi/codebase/                  # mappa aggiornata (se presente)
    git commit -m "chore(<ID>): mark task as done"
    git push
    ```
@@ -81,7 +95,7 @@ Niente branch, niente altri file, niente `--force`. Vedi `AGENTS.md` →
    - Avvisa il dev: «`main` è avanzato sul remote. Esegui `git pull --rebase`
      a mano, poi rilancia `/task-done`.»
 
-8. **Output finale — conciso** (4 righe):
+9. **Output finale — conciso** (4 righe):
 
    ```
    ✅ <ID> chiuso — <title>

@@ -63,37 +63,32 @@ Se la directory del task non contiene `TASK.md` → errore (task corrotto).
 
 ### 2. Verifica prerequisiti
 
-#### 2a. `CODEMAP.md` — prerequisito (bloccante)
+#### 2a. Mappa della codebase (`.pi/codebase/`) — prerequisito bloccante
 
-La mappa del codice è **necessaria** per pianificare step realistici
-ancorati al codice reale (vedi `docs/task-layout.md` §2.2, §3.2).
-Senza di lei gli step risultano astratti e spesso sbagliati.
+La mappa della codebase è **obbligatoria** per pianificare step
+realistici ancorati al codice reale.
 
-- Controlla se esiste `.pi/tasks/in-progress/<ID>-<slug>/CODEMAP.md`.
-- Se **non esiste** → STOP con messaggio:
-  > Questo task non ha ancora una `CODEMAP.md`. La mappa del codice è
-  > il prerequisito per pianificare step ancorati al codice.
-  > Lancia `/ah:task-next-step` prima: al primo run genera la mappa
-  > automaticamente. Poi rilancia `/ah:task-next-step`.
+- Controlla se `.pi/codebase/` esiste e contiene almeno i file
+  `ARCHITETTURA.md`, `STRUTTURA.md`, `CONVENZIONI.md`.
+- Se **non esiste o è incompleta**:
+  > La mappa della codebase è assente o incompleta. È un prerequisito
+  > bloccante per pianificare step ancorati al codice.
+  > Genero la mappa adesso?
 
-  Non generare la mappa da qui: è scelta di design che il mapping
-  iniziale viva dentro `/ah:task-next-step`.
+  Se il dev conferma → **esegui la logica di `/ah:map-codebase`** inline:
+  leggi il file `$EXT_DIR/commands/map-codebase.md` ed esegui le
+  istruzioni dei passi 2–5 (crea `.pi/codebase/`, le 4 passate,
+  scan sicurezza, verifica output). Al termine prosegui col passo 2b.
 
-- Se la mappa esiste ma sembra **stantia** (data molto vecchia o molti
-  commit sul branch dopo), avvisa il dev in **advisory**:
-  > La `CODEMAP.md` è del <data> (<N> commit fa). Può essere
-  > disallineata. Vuoi rigenerarla con `/ah:task-next-step` prima? (`sì,
-  > annulla` / `no, procedi con la mappa attuale`)
-
-  Se `sì` → esci e suggerisci `/ah:task-next-step`. Se `no` → prosegui.
+  Se il dev rifiuta → STOP.
 
 #### 2b. `DISCUSS.md` — prerequisito (advisory)
 
 - Controlla se esiste `.pi/tasks/in-progress/<ID>-<slug>/DISCUSS.md`.
 - Se **non esiste**, avvisa il dev:
   > ⚠️ Nessun `DISCUSS.md` per questo task. Il piano sarà basato
-  > solo su `TASK.md` + `CODEMAP.md`, che potrebbero lasciare gray
-  > area non decise. Ti consiglio `/ah:task-next-step` prima.
+  > solo su `TASK.md` e la mappa codebase, che potrebbero lasciare
+  > gray area non decise. Ti consiglio `/ah:task-next-step` prima.
   > Procedo comunque? (sì / no)
 - Se `no` → esci e suggerisci `/ah:task-next-step`.
 - Se `sì` (o se `DISCUSS.md` esiste) → procedi.
@@ -103,9 +98,6 @@ Senza di lei gli step risultano astratti e spesso sbagliati.
 Leggi per intero (con `read`, non assumere di averli già in contesto):
 
 - `TASK.md` — contesto, obiettivo, componenti, DoD, note tecniche.
-- **`CODEMAP.md`** — mappa del codice per argomento (Primary + Related
-  per concern). **Obbligatorio**: leggilo sempre, serve a pianificare
-  step che citano file reali.
 - **`DISCUSS.md`** se presente — decisioni sulle gray area.
   **Obbligatorio se esiste**: leggilo sempre, contiene le decisioni
   che guidano il piano.
@@ -117,20 +109,45 @@ Leggi per intero (con `read`, non assumere di averli già in contesto):
 Non leggere `VERIFY.md`: riguarda la DoD globale del task, non la
 pianificazione.
 
-#### 3-bis. Carica i file codice dalla mappa (mirato)
+#### 3-codebase. Carica i documenti della mappa codebase
+
+Carica **selettivamente** i documenti pertinenti al tipo di task,
+usando la tabella di corrispondenza:
+
+| Tipo di task (da TASK.md: contesto, componenti, obiettivo) | Documenti da caricare |
+|---|---|
+| UI, frontend, componenti | `.pi/codebase/CONVENZIONI.md`, `.pi/codebase/STRUTTURA.md` |
+| API, backend, endpoint | `.pi/codebase/ARCHITETTURA.md`, `.pi/codebase/CONVENZIONI.md` |
+| Database, schema, modelli | `.pi/codebase/ARCHITETTURA.md`, `.pi/codebase/STACK.md` |
+| Testing | `.pi/codebase/TESTING.md`, `.pi/codebase/CONVENZIONI.md` |
+| Integrazione, API esterne | `.pi/codebase/INTEGRAZIONI.md`, `.pi/codebase/STACK.md` |
+| Refactoring, cleanup | `.pi/codebase/CRITICITA.md`, `.pi/codebase/ARCHITETTURA.md` |
+| Setup, configurazione | `.pi/codebase/STACK.md`, `.pi/codebase/STRUTTURA.md` |
+
+Se il task tocca **più categorie**, carica tutti i documenti pertinenti
+(union). Se il tipo non è chiaro, carica `ARCHITETTURA.md` +
+`CONVENZIONI.md` come default sicuro.
+
+Usa questi documenti per:
+
+- **STRUTTURA.md** → decidere dove posizionare file nuovi.
+- **CONVENZIONI.md** → specificare naming, stile, pattern da seguire.
+- **ARCHITETTURA.md** → rispettare i layer e le astrazioni esistenti.
+- **TESTING.md** → allineare gli step di test ai pattern esistenti.
+- **CRITICITA.md** → evitare di peggiorare debito tecnico noto.
+
+#### 3-bis. Carica i file codice (mirato)
 
 Prima di proporre la scomposizione (passo 5), carica il **contenuto
-dei file** elencati in `CODEMAP.md` secondo la regola d'uso in
-`docs/task-layout.md` §2.2:
+dei file** citati nei documenti della mappa codebase che sono
+pertinenti al task:
 
-1. Per ciascun argomento della mappa, leggi i file in `Primary`
-   (interamente se < 300 righe, altrimenti mirato con `grep`/`offset`).
-2. Leggi i file in `Related` solo se il progetto dello step dipende
-   da loro (es. dove si inserisce un nuovo endpoint, chi lo chiama).
+1. Dalla mappa codebase, identifica i file chiave citati per le aree
+   coinvolte dal task (quelli in backtick nei doc caricati).
+2. Leggi i file principali (interamente se < 300 righe, altrimenti
+   mirato con `grep`/`offset`).
 3. **Non espandere** oltre: niente hop di import, niente `grep`
-   speculativi. Se scopri che alla mappa manca qualcosa, annotalo e
-   suggerisci al dev di rilanciare `/ah:task-next-step` per rigenerarla
-   (ma non bloccare: proponi comunque il piano con ciò che hai).
+   speculativi.
 
 ### 4. Distingui prima generazione vs re-run
 
@@ -148,9 +165,7 @@ dei file** elencati in `CODEMAP.md` secondo la regola d'uso in
   >
   > Procedo con il replan? (sì / annulla)
 
-  Se `annulla` → esci senza toccare nulla. Se vuoi aggiungere step
-  *senza* archiviare nulla, editali a mano o interrompi e lavora sul
-  piano attuale.
+  Se `annulla` → esci senza toccare nulla.
 
 ### 5. Proponi la scomposizione in step atomici (in un colpo solo)
 
@@ -158,16 +173,16 @@ dei file** elencati in `CODEMAP.md` secondo la regola d'uso in
 piano ti accorgi che uno step tocca troppi ambiti per stare in un
 commit coerente, spezzalo.
 
-Analizza `TASK.md` + `CODEMAP.md` + `DISCUSS.md` e proponi **una
+Analizza `TASK.md` + mappa codebase + `DISCUSS.md` e proponi **una
 lista ordinata** di step, pensati per essere eseguiti in serie
 stretta. Per ciascuno fornisci:
 
 - **Titolo** — frase breve, forma imperativa ("Aggiungi colonna
   `camera.kind`…").
 - **Scope sintetico** — 1 riga: cosa tocca, quali file/componenti
-  (cita i path reali dalla `CODEMAP.md`, non inventarli).
+  (cita i path reali dalla mappa codebase, non inventarli).
 - **Verify locale** — 2–4 bullet, mix di check manuali e comandi
-  eseguibili. Forma consigliata (P-4 del design — decisione fissata):
+  eseguibili. Forma consigliata:
 
   ```markdown
   - [ ] `npm run lint` passa in `server`
@@ -209,8 +224,7 @@ Chiedi al dev:
 > - `annulla` → esci senza scrivere
 
 Itera sui raffinamenti finché il dev dice `ok`. Ogni iterazione
-ri-numera e ristampa la tabella compatta aggiornata (non tutto il
-dettaglio, per non fare rumore).
+ri-numera e ristampa la tabella compatta aggiornata.
 
 ### 7. Archivia il piano precedente (solo in re-run)
 
@@ -218,9 +232,8 @@ Se siamo in re-run:
 
 - Crea `steps/archive/` se non esiste.
 - Per ogni file `steps/NN-*.md` con `status` ≠ `done`: **spostalo** in
-  `steps/archive/` con `git mv`, preservandone il nome (prefisso
-  numerico incluso). Se in `archive/` esiste già un file con lo stesso
-  nome da un replan precedente, aggiungi un suffisso `-<YYYYMMDD>`.
+  `steps/archive/` con `git mv`, preservandone il nome. Se in `archive/`
+  esiste già un file con lo stesso nome, aggiungi un suffisso `-<YYYYMMDD>`.
 - Gli step `done` restano in `steps/` col loro numero.
 
 ### 8. Scrivi i file
@@ -241,10 +254,10 @@ estimate: <N>h | null
 ## Execute
 
 <Cosa va fatto, concretamente. File attesi (input/output) — cita i
-path reali presi dalla CODEMAP.md. Decisioni tecniche di dettaglio
+path reali dalla mappa codebase. Decisioni tecniche di dettaglio
 che riguardano *solo questo step*.>
 
-**File coinvolti** (dalla CODEMAP — argomenti: <lista>):
+**File coinvolti** (dalla mappa codebase):
 - Da modificare: `path/a.ts`, `path/b.ts`
 - Da creare: `path/nuovo.ts`
 
@@ -263,9 +276,6 @@ Convenzioni:
 - `status: todo` sempre, a inizio piano.
 - Numerazione: nuova prima-generazione parte da `01`; re-run continua
   da max(step done) + 1.
-- `steps/` non deve mai contenere buchi nella numerazione (salvo gli
-  step `done` archiviati virtualmente in archive, ma resta
-  contigua tra done-in-place e nuovi step).
 
 #### 8b. `PLAN.md`
 
@@ -297,12 +307,7 @@ Crea (o riscrivi) `PLAN.md` secondo `docs/task-layout.md` §2.3:
   - <cosa è cambiato in 1 riga>
 ```
 
-Al re-run, **preserva** la sezione "Aggiornamenti del piano" aggiungendo
-una nuova voce in cima. Gli step `done` conservati vanno comunque
-elencati nella lista ordinata con il loro status `done`, così `PLAN.md`
-resta l'indice completo di ciò che c'è in `steps/`.
-
-### 9. Commit & push (usando l'eccezione dichiarata sopra)
+### 9. Commit & push
 
 a. `git status --porcelain` — tutti i path devono essere sotto
    `.pi/tasks/in-progress/<ID>-<slug>/PLAN.md` o

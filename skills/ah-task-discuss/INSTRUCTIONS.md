@@ -5,35 +5,20 @@ Sei l'Assistente del workflow SCRUM-lite del progetto. Il dev è dentro un task 
 vuole approfondire le **gray area** — le decisioni che `TASK.md` non copre e
 che condizioneranno il piano (`/ah:task-next-step`) e l'esecuzione (`/ah:task-next-step`).
 
-Il comando lavora in **due fasi** (vedi `docs/task-layout.md` §3.1):
-
-1. **Fase codemap** — solo al primo run (o se il dev chiede rigenerazione):
-   genera `CODEMAP.md`, la mappa del codice pertinente al task, per
-   ancorare le domande successive al codice reale.
-2. **Fase discuss** — sempre: intervista turn-by-turn sulle gray area
-   selezionate, consumando `CODEMAP.md`, produce o estende `DISCUSS.md`.
-
-I due artefatti vanno in **due commit separati** (vedi §Git).
+Output: `DISCUSS.md` nella directory del task.
 
 ## ⛔ Regola: niente codice
 
 La fase discuss **non genera né modifica codice sorgente del progetto**.
 Tocca esclusivamente file della directory del task:
-`CODEMAP.md` e `DISCUSS.md`. Se durante l'esplorazione emerge che serve
+`DISCUSS.md`. Se durante l'esplorazione emerge che serve
 una modifica al codice, annotala nel DISCUSS ma non farla.
 
 ## 🔒 Git — commit automatico
 
-Al termine di ciascuna fase (codemap e discuss), l'agente committa e
-pusha automaticamente. Questa è un'eccezione esplicita alla Git Safety
-Rule di AGENTS.md.
+Al termine della fase discuss, l'agente committa e pusha automaticamente.
+Questa è un'eccezione esplicita alla Git Safety Rule di AGENTS.md.
 
-- **Dopo la fase codemap** (se eseguita):
-  ```bash
-  git add .pi/tasks/in-progress/<ID>-<slug>/CODEMAP.md
-  git commit -m "chore(<ID>): codemap"   # o "update CODEMAP" se rigenerazione
-  git push
-  ```
 - **Dopo la fase discuss**:
   ```bash
   git add .pi/tasks/in-progress/<ID>-<slug>/DISCUSS.md
@@ -69,171 +54,61 @@ Read-only (`git status`, `git log`, `git diff`,
 
 Se la directory del task non contiene `TASK.md` → errore (task corrotto).
 
-### 2. Leggi il contesto del task
+### 2. Verifica prerequisito: mappa della codebase (bloccante)
+
+La mappa della codebase (`.pi/codebase/`) è il prerequisito per ancorare
+le domande al codice reale. È **bloccante**.
+
+- Controlla se `.pi/codebase/` esiste e contiene almeno i file
+  `ARCHITETTURA.md`, `STRUTTURA.md`, `CONVENZIONI.md`.
+- Se **non esiste o è incompleta**:
+  > La mappa della codebase è assente o incompleta. È un prerequisito
+  > bloccante per ancorare le domande al codice reale.
+  > Genero la mappa adesso?
+
+  Se il dev conferma → **esegui la logica di `/ah:map-codebase`** inline:
+  leggi il file `$EXT_DIR/commands/map-codebase.md` ed esegui le
+  istruzioni dei passi 2–5 (crea `.pi/codebase/`, le 4 passate,
+  scan sicurezza, verifica output). Al termine prosegui col passo 3.
+
+  Se il dev rifiuta → STOP.
+
+### 3. Leggi il contesto del task
 
 Carica per intero:
 
 - `TASK.md` — contesto minimo imprescindibile.
-- `CODEMAP.md` se esiste già — ti servirà in fase discuss.
 - `DISCUSS.md` se esiste già — contiene gray area già trattate, non
   duplicarle.
+
+**Carica selettivamente dalla mappa codebase** i documenti pertinenti
+al tipo di task (stessa tabella di corrispondenza di `/ah:task-plan`):
+
+| Tipo di task (da TASK.md) | Documenti da caricare |
+|---|---|
+| UI, frontend, componenti | `.pi/codebase/CONVENZIONI.md`, `.pi/codebase/STRUTTURA.md` |
+| API, backend, endpoint | `.pi/codebase/ARCHITETTURA.md`, `.pi/codebase/CONVENZIONI.md` |
+| Database, schema, modelli | `.pi/codebase/ARCHITETTURA.md`, `.pi/codebase/STACK.md` |
+| Testing | `.pi/codebase/TESTING.md`, `.pi/codebase/CONVENZIONI.md` |
+| Integrazione, API esterne | `.pi/codebase/INTEGRAZIONI.md`, `.pi/codebase/STACK.md` |
+| Refactoring, cleanup | `.pi/codebase/CRITICITA.md`, `.pi/codebase/ARCHITETTURA.md` |
+| Setup, configurazione | `.pi/codebase/STACK.md`, `.pi/codebase/STRUTTURA.md` |
+
+Se il task tocca più categorie, carica la union. Se il tipo non è chiaro,
+carica `ARCHITETTURA.md` + `CONVENZIONI.md` come default sicuro.
 
 Non caricare `PLAN.md`, `steps/`, `VERIFY.md`: sono fasi successive,
 non entrano nella discuss.
 
-### 3. Fase codemap — genera o rigenera `CODEMAP.md` se serve
-
-La mappa del codice è il **prerequisito codice-aware** della discuss
-(vedi `docs/task-layout.md` §2.2).
-
-#### 3a. Decidi se serve generare/rigenerare
-
-- **`CODEMAP.md` non esiste** → vai al passo 3b (genera da zero).
-  Avvisa il dev:
-  > Questo task non ha ancora una `CODEMAP.md`. Prima di entrare nelle
-  > gray area, genero la mappa per ancorare le domande al codice reale.
-- **`CODEMAP.md` esiste, sembra stantia** (data molto vecchia o molti
-  commit sul branch dopo la data) → avvisa il dev in **advisory**:
-  > La `CODEMAP.md` è del <data> (<N> commit fa). Vuoi rigenerarla
-  > prima di procedere? (`sì` / `no, va bene così`)
-
-  Se `sì` → vai al passo 3b (rigenera). Se `no` → salta al passo 4.
-- **`CODEMAP.md` esiste ed è fresca** → salta al passo 4.
-
-#### 3b. Deriva gli argomenti della mappa (autonomo, senza intervista)
-
-Gli argomenti della `CODEMAP.md` sono **per concern** del task, non per
-componente (vedi `docs/task-layout.md` §2.2). Deriva gli argomenti
-autonomamente da `TASK.md` (contesto, obiettivo, componenti coinvolti,
-note tecniche). Non chiedere conferma al dev: procedi direttamente
-con l'esplorazione del codice.
-
-Applica il **cap: max 8–10 argomenti**.
-
-#### 3c. Esplorazione mirata del codice
-
-Per ciascun argomento approvato:
-
-1. **Scope dei componenti**: solo quelli checkati `[x]` in
-   `TASK.md → ## Componenti coinvolti`. Mapping autorevole (da
-   `docs/architecture.png`):
-
-   | Voce checkbox | Root path |
-   |---|---|
-   | `server` | `server/` |
-   | `hmi` | `hmi/` |
-   | `configurator` | `configurator/` |
-   | `nvd` | `nvd/` |
-   | `mock-backend` | `mock-backend/` |
-   | `postgresql-liquibase` (schema) | `postgresql-liquibase/` |
-   | `e2e-server-tests` | `e2e-server-tests/` |
-   | `config/` | `config/` |
-
-2. **Orientati prima** con `rg`/`find`/`ls` per trovare i file
-   candidati, non per leggerli in massa:
-   ```bash
-   rg -l '<keyword>' <component-root>/
-   find <component-root> -name '<pattern>' | head
-   ```
-
-3. **Leggi** solo i 2–4 file più promettenti per argomento. Mai
-   leggere > 300 righe interamente: usa `read` con `offset`/`limit`
-   o `rg` con contesto.
-
-4. **Classifica** in `Primary` (file centrali) e `Related` (file
-   collegati: consumer, chiamanti, test, migrazioni, form,
-   rendering).
-
-5. **Cap dimensionali obbligatori** (vedi §2.2): max 5 Primary + 8
-   Related per argomento. Sforabili solo documentando il perché
-   nelle `Notes`. Per-file: `path + 1 riga di commento`, nient'altro.
-
-6. **Scope rigido**: se durante l'esplorazione un componente non
-   checkato sembra rilevante, interrompi e chiedi al dev se vuole
-   spuntarlo in `TASK.md` (tu non tocchi `TASK.md` da solo).
-
-#### 3d. Scrivi `CODEMAP.md`
-
-Path: `.pi/tasks/in-progress/<ID>-<slug>/CODEMAP.md`.
-
-Struttura (canonica in `docs/task-layout.md` §2.2):
-
-```markdown
-# Codemap — T-NNN
-
-> Ultimo aggiornamento: YYYY-MM-DD (snapshot a <commit sha breve>)
-
-## Argomenti
-
-1. [<titolo argomento 1>](#<slug>)
-2. [<titolo argomento 2>](#<slug>)
-...
-
-## <Titolo argomento 1>
-
-<1 frase che spiega l'ambito dell'argomento>
-
-### Primary
-- `path/to/file1` — <1 riga>
-- ...
-
-### Related
-- `path/to/related1` — <1 riga>
-- ...
-
-### Notes
-- <eventuali note, gap, motivi per sforare>
-
-## <Titolo argomento 2>
-...
-```
-
-- Data: `date +%Y-%m-%d`.
-- Commit sha: `git rev-parse --short HEAD`.
-- In rigenerazione: sovrascrivi.
-
-#### 3e. Commit di `CODEMAP.md` (prima dei turni di discuss)
-
-Commit **immediato**, prima di iniziare l'intervista delle gray area.
-Due ragioni: (1) la mappa è un artefatto a sé stante, indipendente
-dalla discuss; (2) isolare il commit di `CODEMAP.md` rende l'eccezione
-git più facile da verificare.
-
-Vincoli (dalla §Git Safety Rule sopra):
-
-a. `git status --porcelain` — deve elencare solo `CODEMAP.md` del
-   task corrente.
-b. `git branch --show-current` — deve essere `feature/<ID>-<slug>`.
-c. Se ok:
-   ```bash
-   git add .pi/tasks/in-progress/<ID>-<slug>/CODEMAP.md
-   git commit -m "chore(<ID>): codemap"         # prima generazione
-   # oppure:
-   git commit -m "chore(<ID>): update CODEMAP"  # rigenerazione
-   git push
-   ```
-d. Se i vincoli non reggono (es. DISCUSS.md già toccato per altro
-   motivo) → flusso manuale per entrambi i file, al dev.
-
-Mostra al dev una breve nota:
-```
-🗺  Codemap generata — T-NNN (<M> argomenti, <X> Primary, <Y> Related)
-```
-
-Poi prosegui col passo 4.
-
 ### 4. Proponi il menu delle gray area
 
 ⚠️ **Il menu è dinamico, non una lista fissa.** Analizza `TASK.md`
-**e `CODEMAP.md`** (contesto, obiettivo, componenti coinvolti, DoD,
-note tecniche, argomenti della mappa) e proponi 4–8 gray area
-**plausibili per questo task specifico**.
+**e i documenti della mappa codebase** caricati al passo 3 e proponi
+4–8 gray area **plausibili per questo task specifico**.
 
-La `CODEMAP.md` aiuta a formulare gray area **ancorate al codice**:
-se la mappa dice che il data model camera vive in
-`server/lib/db/camera.ts`, la domanda può citare direttamente quel
-file («Oggi `camera.ts` ha i campi X, Y, Z — come aggiungiamo il
-tipo WEB?»).
+La mappa codebase aiuta a formulare gray area **ancorate al codice**:
+se `ARCHITETTURA.md` descrive il data model e i layer, la domanda può
+citare direttamente quei pattern e quei file.
 
 Esempi di categorie da cui attingere — scegli solo quelle pertinenti al
 task in esame, non elencarle tutte:
@@ -256,11 +131,7 @@ task in esame, non elencarle tutte:
 - **Alternative scartate** — da documentare.
 
 Per ogni gray area proposta, scrivi **una riga di contesto** che ancora
-la voce al task, non una generica. Esempio per T-002 (`web-camera`):
-
-> 1. **Data model** — oggi le camere hanno solo parametri "fisici"
->    (host, porta, NVR). Come marchiamo una camera come "WEB" e dove
->    mettiamo lo `stream_url`?
+la voce al task, non una generica.
 
 Alla fine del menu aggiungi:
 
@@ -285,36 +156,21 @@ Se `DISCUSS.md` esiste già:
 
 ### 6. Intervista turn-by-turn sulle gray area selezionate
 
-⚠️ **Prima di ogni gray area, carica il contesto codice dalla
-`CODEMAP.md`** (regola d'uso in `docs/task-layout.md` §2.2):
+⚠️ **Prima di ogni gray area, carica il contesto codice** dalla mappa
+codebase: leggi i file pertinenti citati nei documenti di
+`.pi/codebase/` (le sezioni che elencano path specifici con backtick).
+Se serve più dettaglio su un file specifico, usa `read` diretto sul
+file sorgente.
 
-1. Apri `CODEMAP.md` e trova la sezione (argomento) più affine alla
-   gray area che stai per trattare.
-2. Leggi i file in `Primary` di quella sezione (interamente se <
-   300 righe, altrimenti mirato con `grep`/`offset`).
-3. Leggi i file in `Related` solo se la domanda dipende da loro.
-4. **Non espandere** oltre: niente hop di import, niente `grep`
-   speculativi. Se scopri che alla mappa manca qualcosa, annotalo
-   (nel tuo ragionamento) e suggerisci al dev di rigenerare la mappa
-   al prossimo `/ah:task-next-step`.
-5. Se per la gray area in questione **non esiste un argomento
-   corrispondente** nella mappa, è un segnale di mappa incompleta:
-   avvisa il dev e offri di lanciare adesso una rigenerazione
-   (tornando al passo 3b). Advisory, non bloccante.
-
-Solo dopo aver caricato il contesto codice, fai la domanda.
-
-Per ogni gray area selezionata, conduci un'**intervista di stile analogo
-a `/task-new`**:
+Per ogni gray area selezionata, conduci un'**intervista**:
 
 - **Una gray area per turno.** Niente muri di domande.
 - Per ciascuna: domanda principale focalizzata + al massimo 2–3
   sotto-bullet chiarificatori se davvero aiutano.
-- Cita i file pertinenti della mappa se li hai usati per formulare
-  la domanda (es. «Guardando `server/lib/db/camera.ts`, …») — aiuta
-  il dev a verificare che tu stia guardando il punto giusto.
+- Cita i file pertinenti dalla mappa codebase se li hai usati per
+  formulare la domanda.
 - **Aspetta la risposta** prima di passare al turno successivo.
-- **Shortcut accettati** (coerenti con `/task-new`):
+- **Shortcut accettati**:
   - `skip` / `non so` / `boh` / `dopo` / `-` → la sezione viene
     marcata `_Da definire._` nel file e si passa alla prossima.
   - `basta` / `stop` / `scrivi` → interrompi la discussione e scrivi
@@ -330,10 +186,6 @@ Per ciascuna sezione devi catturare almeno:
 - **Alternative scartate** (se emerse nel dialogo).
 - Eventuali **note/rischi** collegati.
 
-Se il dev propone qualcosa che impatta `docs/` (nuova doc,
-aggiornamento), annotalo ma **non toccare `docs/`** in questo comando:
-non è suo scopo.
-
 ### 7. Mostra il riepilogo e chiedi conferma
 
 Prima di scrivere `DISCUSS.md`, mostra al dev:
@@ -347,8 +199,7 @@ Chiedi:
 > **Scrivo `DISCUSS.md`?** (sì / modifica <sezione> / annulla)
 
 Se `modifica <sezione>` → rifai **solo quel turno** e torna al
-riepilogo. Se `annulla` → esci senza toccare `DISCUSS.md` (`CODEMAP.md`
-era già stato committato al passo 3e: resta).
+riepilogo. Se `annulla` → esci senza toccare `DISCUSS.md`.
 
 ### 8. Scrivi `DISCUSS.md`
 
@@ -384,17 +235,13 @@ Regole di scrittura:
 - Aggiorna `> Ultimo aggiornamento: <oggi>`.
 - Le sezioni `_Da definire._` restano come TODO espliciti.
 
-**Non modificare `TASK.md`.** L'aggiornamento del campo `updated:`
-verrà fatto dai comandi che già lo prevedono (`/task-start`,
-`/ah:task-next-step`, ecc.).
+**Non modificare `TASK.md`.**
 
 ### 9. Commit di `DISCUSS.md`
 
 Vincoli (dalla §Git Safety Rule sopra):
 
 a. `git status --porcelain` — solo `DISCUSS.md` del task corrente.
-   (`CODEMAP.md`, se generata, è già stata committata al passo 3e e
-   quindi non appare qui.)
 b. `git branch --show-current` — `feature/<ID>-<slug>`.
 c. Se ok:
    ```bash
@@ -411,10 +258,8 @@ Conciso:
 
 ```
 🗣  Discuss aggiornato — T-NNN
-   codemap:  <creata | rigenerata | già presente (riutilizzata)>
    discuss:  N nuove, M aggiornate, K "Da definire"
    file:     .pi/tasks/in-progress/<ID>-<slug>/DISCUSS.md
-             .pi/tasks/in-progress/<ID>-<slug>/CODEMAP.md
 ```
 
 Seguito dall'esito git (commit/push fatti dall'agente o comandi

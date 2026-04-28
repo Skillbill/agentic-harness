@@ -33,7 +33,6 @@ Solo letture. Nessuna modifica a file o git.
 
    b. **Fase del ciclo interno** — controlla gli artefatti nella directory
       del task (`.pi/tasks/in-progress/T-NNN-<slug>/`):
-      - `CODEMAP.md` non esiste → `discuss`
       - `DISCUSS.md` non esiste → `discuss`
       - `PLAN.md` non esiste → `plan`
       - `steps/` vuoto o assente → `plan`

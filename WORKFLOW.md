@@ -71,7 +71,30 @@ Tutti i comandi AH hanno prefisso `ah:`.
 | `/ah:pr-review`      | Code review strutturata di una PR                         |
 | `/ah:pr-merge`       | Chiude il task dopo merge della PR                        |
 | `/ah:standup`        | Riepilogo stato progetto per daily async                  |
+| `/ah:map-codebase`   | Analizza la codebase e produce 7 doc strutturati in `.pi/codebase/` |
 | `/ah:do-git-stuff`   | Esegue comandi git mutanti delegati dal dev               |
+
+### Mappa della codebase (prerequisito consigliato)
+
+`/ah:map-codebase` analizza l'intera codebase e produce 7 documenti
+strutturati in `.pi/codebase/`:
+
+| Documento | Contenuto |
+|---|---|
+| `STACK.md` | Linguaggi, runtime, framework, dipendenze |
+| `INTEGRAZIONI.md` | API esterne, database, provider auth |
+| `ARCHITETTURA.md` | Pattern, layer, flusso dati, entry point |
+| `STRUTTURA.md` | Layout directory, dove aggiungere codice nuovo |
+| `CONVENZIONI.md` | Stile codice, naming, pattern |
+| `TESTING.md` | Framework test, struttura, mocking |
+| `CRITICITA.md` | Debito tecnico, bug noti, aree fragili |
+
+Questi documenti vengono **consumati** automaticamente dalle fasi `plan`
+e `execute` del ciclo interno, per dare all'agente contesto globale
+su architettura, convenzioni e pattern del progetto.
+
+La mappa è **consigliata ma non bloccante**: le fasi funzionano anche
+senza, ma con meno contesto.
 
 ### Ciclo interno del task (skill, invocate da `/ah:task-next-step`)
 
@@ -81,7 +104,7 @@ discuss → plan → execute (N volte) → verify
 
 | Fase    | Skill           | Artefatti prodotti                      |
 |---------|-----------------|------------------------------------------|
-| discuss | `ah-task-discuss`  | `CODEMAP.md` + `DISCUSS.md`             |
+| discuss | `ah-task-discuss`  | `DISCUSS.md`                             |
 | plan    | `ah-task-plan`     | `PLAN.md` + `steps/*.md`                |
 | execute | `ah-task-execute`  | codice + step aggiornati                |
 | verify  | `ah-task-verify`   | `VERIFY.md`                             |
@@ -116,7 +139,7 @@ discuss → plan → execute (N volte) → verify
 # il dev li esegue a mano
 
 # 3. Lavoro di sviluppo sul branch — ciclo interno
-/ah:task-next-step   # fase discuss: genera CODEMAP + DISCUSS
+/ah:task-next-step   # fase discuss: genera DISCUSS
 /ah:task-next-step   # fase plan: genera PLAN + steps/
 /ah:task-next-step   # fase execute: esegue step 1, commit atomico
 /ah:task-next-step   # fase execute: esegue step 2, ...

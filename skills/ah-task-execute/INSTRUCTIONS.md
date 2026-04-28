@@ -65,14 +65,28 @@ sempre permesso.
 Verifica inoltre:
 
 - `TASK.md` esiste (altrimenti task corrotto).
-- `CODEMAP.md` esiste (altrimenti: «Mappa del codice mancante. Lancia
-  `/ah:task-next-step` prima: al primo run genera la mappa automaticamente.
-  Poi torna qui con `/ah:task-next-step`.»). STOP. La mappa è necessaria
-  per caricare il contesto codice dello step senza leggere il repo in
-  cieco.
 - `PLAN.md` esiste (altrimenti: «Nessun piano trovato. Lancia
   `/ah:task-next-step` prima.»). STOP.
 - `steps/` esiste e contiene almeno un file (stessa cosa).
+
+### 1-bis. Verifica prerequisito: mappa della codebase (bloccante)
+
+La mappa della codebase (`.pi/codebase/`) è **obbligatoria** per
+l'esecuzione.
+
+- Controlla se `.pi/codebase/` esiste e contiene almeno i file
+  `ARCHITETTURA.md`, `STRUTTURA.md`, `CONVENZIONI.md`.
+- Se **non esiste o è incompleta**:
+  > La mappa della codebase è assente o incompleta. È un prerequisito
+  > bloccante per eseguire step ancorati al codice.
+  > Genero la mappa adesso?
+
+  Se il dev conferma → **esegui la logica di `/ah:map-codebase`** inline:
+  leggi il file `$EXT_DIR/commands/map-codebase.md` ed esegui le
+  istruzioni dei passi 2–5 (crea `.pi/codebase/`, le 4 passate,
+  scan sicurezza, verifica output). Al termine prosegui col passo 2.
+
+  Se il dev rifiuta → STOP.
 
 ### 2. Precondizione: working tree
 
@@ -111,7 +125,6 @@ Scansiona `steps/NN-<slug>.md` in ordine numerico crescente (ignora
 Leggi per intero:
 
 - `TASK.md` — contesto e DoD globale.
-- `CODEMAP.md` — mappa del codice (argomenti + Primary/Related).
 - `DISCUSS.md` se presente — decisioni sulle gray area.
 - `PLAN.md` — strategia e relazione con gli altri step.
 - Il file dello step scelto — `## Execute` e `## Verify`.
@@ -120,25 +133,52 @@ Scopo: farsi un'idea precisa di cosa va fatto prima di toccare
 codice. Non leggere tutti gli step degli altri (troppo rumore): basta
 che tu abbia presente lo step corrente nel suo contesto di piano.
 
-#### 4-bis. Carica i file codice pertinenti dalla `CODEMAP.md`
+#### 4-codebase. Carica i documenti della mappa codebase
 
-Regola d'uso (vedi `docs/task-layout.md` §2.2):
+Carica selettivamente i documenti di `.pi/codebase/` pertinenti
+allo step corrente. Usa la tabella di corrispondenza:
 
-1. Identifica nell'`## Execute` dello step quali argomenti/concern
-   della `CODEMAP.md` sono coinvolti (tipicamente citati come «File
-   coinvolti (dalla CODEMAP — argomenti: …)» da `/ah:task-next-step`).
-2. Per ciascun argomento identificato, leggi i file in `Primary`
-   (interamente se < 300 righe, altrimenti mirato con `grep`/`offset`).
-3. Leggi i file in `Related` solo se il mini-plan dipende da loro
-   (es. un consumer che va aggiornato insieme).
-4. **Non espandere** oltre: niente hop di import speculativi. Se
-   durante l'implementazione scopri che ti serve un file non in
-   mappa, documentalo e aggiornerai `CODEMAP.md` al passo 8-bis.
+| Tipo di step (da `## Execute`) | Documenti da caricare |
+|---|---|
+| UI, frontend, componenti | `.pi/codebase/CONVENZIONI.md`, `.pi/codebase/STRUTTURA.md` |
+| API, backend, endpoint | `.pi/codebase/ARCHITETTURA.md`, `.pi/codebase/CONVENZIONI.md` |
+| Database, schema, modelli | `.pi/codebase/ARCHITETTURA.md`, `.pi/codebase/STACK.md` |
+| Testing | `.pi/codebase/TESTING.md`, `.pi/codebase/CONVENZIONI.md` |
+| Integrazione, API esterne | `.pi/codebase/INTEGRAZIONI.md`, `.pi/codebase/STACK.md` |
+| Refactoring, cleanup | `.pi/codebase/CRITICITA.md`, `.pi/codebase/ARCHITETTURA.md` |
+| Setup, configurazione | `.pi/codebase/STACK.md`, `.pi/codebase/STRUTTURA.md` |
+
+Se il tipo non è chiaro, carica `ARCHITETTURA.md` + `CONVENZIONI.md`
+come default sicuro.
+
+Usa questi documenti durante l'implementazione per:
+
+- **STRUTTURA.md** → posizionare i file nuovi nella directory corretta.
+- **CONVENZIONI.md** → rispettare naming, stile codice, pattern di import.
+- **ARCHITETTURA.md** → rispettare layer, astrazioni, flusso dati.
+- **TESTING.md** → scrivere test coerenti con i pattern esistenti.
+- **CRITICITA.md** → non peggiorare debito tecnico noto.
+
+Se un documento della mappa contiene indicazioni che **contraddicono**
+quanto scritto nello step (`## Execute`), segui lo step: il piano ha
+precedenza sulla mappa globale. Annota la contraddizione nel `## Log`.
+
+#### 4-bis. Carica i file codice pertinenti
+
+Dalla mappa codebase e dalla sezione `## Execute` dello step:
+
+1. Identifica i file coinvolti (citati nella sezione «File coinvolti»
+   dello step e/o referenziati nei documenti della mappa codebase).
+2. Leggi i file principali (interamente se < 300 righe, altrimenti
+   mirato con `grep`/`offset`).
+3. **Non espandere** oltre: niente hop di import speculativi. Se
+   durante l'implementazione scopri che ti serve un file non previsto,
+   leggilo direttamente e documentalo nel `## Log`.
 
 ### 5. Mini-plan di implementazione (obbligatorio prima di scrivere)
 
 ⚠️ **Non scrivere nulla prima che il dev abbia approvato il
-mini-plan.** Questo è il freno concordato (decisione E-3).
+mini-plan.**
 
 a. Esamina i file di progetto rilevanti (letture mirate, non
    scanning di massa).
@@ -187,9 +227,8 @@ b. **Applica le modifiche** secondo il mini-plan approvato:
      - `modified`: file esistenti modificati;
      - `renamed`: rinominazioni (`da` → `a`);
      - `deleted`: file rimossi.
-     Ti servirà (1) al commit: `git add` mirato solo di questi path
-     + il file dello step; (2) all'aggiornamento incrementale della
-     `CODEMAP.md` al passo 8-bis.
+     Ti servirà al commit: `git add` mirato solo di questi path
+     + il file dello step.
    - Se emergono imprevisti (file non previsto da toccare, step più
      grande del previsto), STOP:
      > L'implementazione si sta allargando oltre il mini-plan. Opzioni:
@@ -198,8 +237,7 @@ b. **Applica le modifiche** secondo il mini-plan approvato:
      >   lo step;
      > - `annulla` → ripristino lo step a `todo` e scarto le modifiche.
 
-c. Non committare ancora. Il commit (incluso l'update della
-   `CODEMAP.md`) è al passo 8.
+c. Non committare ancora. Il commit è al passo 8.
 
 ### 7. Verify locale dello step
 
@@ -238,60 +276,13 @@ c. **Esito complessivo:**
      >   step a `todo`.
      Fermati e attendi.
 
-### 8. Aggiornamento incrementale della `CODEMAP.md`
+### 8. Commit atomico (solo se step `done`)
 
-Prima di committare, aggiorna `CODEMAP.md` per riflettere le
-modifiche effettive al codice introdotte dallo step. Questo
-mantiene la mappa allineata step-dopo-step (vedi
-`docs/task-layout.md` §3.3).
-
-a. Per ciascun path tracciato al passo 6b:
-   - `created` → aggiungi il file alla sezione più pertinente della
-     mappa (`Primary` se è centrale per quell'argomento, `Related`
-     altrimenti). Se il file appartiene a un nuovo concern non
-     ancora in mappa, **non crearlo da solo**: registra una nota
-     nel `## Log` dello step e suggerisci al dev di rigenerare la
-     mappa con `/ah:task-next-step` al prossimo giro.
-   - `modified` → se il file era già in mappa, lascia inalterata la
-     sua riga. Se non c'era, aggiungilo (come sopra).
-   - `renamed` → aggiorna il path della riga esistente nella mappa
-     (e la sua 1-riga di commento se il contesto è cambiato
-     significativamente).
-   - `deleted` → rimuovi la riga dalla mappa.
-
-b. **Rispetta i cap dimensionali** (vedi `docs/task-layout.md`
-   §2.2): max 5 Primary + 8 Related per argomento. Se uno step fa
-   esplodere la dimensione di un argomento oltre i cap, **non**
-   riscrivere la mappa interamente: aggiungi i file necessari con
-   una nota nelle `Notes` dell'argomento («cap sforato — valutare
-   rigenerazione con `/ah:task-next-step`») e segnala al dev.
-
-c. Aggiorna l'intestazione della mappa:
-   ```
-   > Ultimo aggiornamento: YYYY-MM-DD (snapshot a <commit sha breve>)
-   ```
-   Usa la data odierna; il commit sha lo aggiornerai **dopo** il
-   commit (passo 9), perché non è ancora noto. In alternativa, lascia
-   il vecchio sha e aggiorna solo la data — è accettabile, il log dei
-   commit dice comunque cosa è successo.
-
-Se l'update della mappa è **strutturalmente invasivo** (ristrutturazione
-profonda, nuovo argomento dominante, molti file spostati tra
-`Primary`/`Related`), **non tentare** di rifare la mappa: aggiungi il
-minimo indispensabile per non mentire sullo stato corrente, e nel
-`## Log` dello step scrivi:
-> 📖 Mappa del codice significativamente cambiata da questo step.
-> Consiglio rigenerazione con `/ah:task-next-step` prima del prossimo
-> `/ah:task-next-step` o `/ah:task-next-step`.
-
-### 9. Commit atomico (solo se step `done`)
-
-Vincoli dal §Git Safety Rule sopra, in particolare:
+Vincoli dal §Git Safety Rule sopra:
 
 - `git status --porcelain` finale → deve mostrare solo:
   - i file che **tu** hai modificato al passo 6b;
-  - il file `steps/NN-<slug>.md` aggiornato al passo 7;
-  - il file `CODEMAP.md` aggiornato al passo 8.
+  - il file `steps/NN-<slug>.md` aggiornato al passo 7.
 
 Se c'è altro (es. il dev ha toccato qualcosa in parallelo), STOP:
 
@@ -301,18 +292,15 @@ Se c'è altro (es. il dev ha toccato qualcosa in parallelo), STOP:
 Se lo stato è pulito:
 
 a. `git add` mirato ai path tracciati al passo 6b **+** il file dello
-   step **+** `CODEMAP.md`. Mostra la lista al dev prima di
-   committare.
+   step. Mostra la lista al dev prima di committare.
 b. Commit (singolo, atomico):
    ```bash
    git commit -m "feat(T-NNN/NN): <titolo step>"
    ```
-   Il titolo viene dal frontmatter `title:` dello step. L'update
-   della mappa entra nello stesso commit dello step: la mappa è
-   parte del "risultato" dello step.
+   Il titolo viene dal frontmatter `title:` dello step.
 c. `git push`.
 
-### 10. Fermata obbligatoria + output finale
+### 9. Fermata obbligatoria + output finale
 
 Dopo il commit/push, **non avviare il prossimo step**. Mostra:
 
