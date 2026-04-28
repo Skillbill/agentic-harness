@@ -43,6 +43,30 @@ Solo letture: `git log`, `git branch -a`, frontmatter dei task.
    - Se `git fetch` è "economico", non eseguirlo — lavora solo sui ref locali
      (ricorda al dev di fare `git fetch` se vuole dati freschi dai remoti).
 
+   **Stato aggiornato dal feature branch (solo per in-progress):**
+   Per ogni task in-progress con `branch` popolato, leggi il TASK.md
+   **dal feature branch** invece che dalla copia locale su main.
+   Questo garantisce che DoD, progress e log riflettano il lavoro più
+   recente dell'assignee.
+
+   - Determina il ref: usa `origin/<branch>` (remote tracking) oppure
+     `<branch>` se esiste solo localmente.
+   - Ricava il path del TASK.md nel repo:
+     `.pi/tasks/in-progress/<task-dir>/TASK.md`
+   - Leggi il file con:
+     ```
+     git show <ref>:.pi/tasks/in-progress/<task-dir>/TASK.md
+     ```
+   - Se il comando fallisce (branch non ha quel path, ref non esiste),
+     fai fallback silenzioso alla copia locale su disco.
+   - Usa il contenuto ottenuto dal branch per calcolare:
+     - DoD checked/total (conteggio `- [x]` vs `- [ ]` nella sezione
+       Definition of Done).
+     - `progress` dal frontmatter.
+     - Ultime voci del `## Log`.
+   - ⚠ **Non fare `git checkout`/`git switch`**: il branch locale non
+     deve mai cambiare. `git show <ref>:<path>` è read-only.
+
 5. **Render del report**:
 
    ```markdown
