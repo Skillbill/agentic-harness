@@ -13,7 +13,7 @@ dichiarate nelle singole skill che verranno invocate.
 ## Ciclo interno
 
 ```
-discuss → plan → execute (N volte) → verify
+discuss → plan → execute (N volte) → verify → pr-open
 ```
 
 Ogni fase produce artefatti nella directory del task
@@ -25,6 +25,7 @@ Ogni fase produce artefatti nella directory del task
 | plan | `PLAN.md` + `steps/*.md` | `PLAN.md` esiste e `steps/` non è vuoto |
 | execute | codice + step `done` | tutti gli step in `steps/` sono `done` |
 | verify | `VERIFY.md` | `VERIFY.md` esiste |
+| pr-open | PR su GitHub | PR creata, `status: review` |
 
 ## Passi
 
@@ -71,9 +72,7 @@ Usa ✅ se il file esiste, ❌ se non esiste. Per steps mostra `done/totale`
 (es. `3/5`).
 
 Se fase = **done**:
-> Tutte le fasi sono completate. Prossimo passo: `/ah:pr-open`.
-
-STOP.
+> Tutte le fasi sono completate. Creo la PR.
 
 ### 4. Invoca la skill appropriata
 
@@ -86,6 +85,7 @@ Carica la skill corrispondente alla fase determinata al passo 2 usando
 | plan | `skills/ah-task-plan/INSTRUCTIONS.md` |
 | execute | `skills/ah-task-execute/INSTRUCTIONS.md` |
 | verify | `skills/ah-task-verify/INSTRUCTIONS.md` |
+| done (pr-open) | `skills/ah-task-pr-open/INSTRUCTIONS.md` |
 
 Il path assoluto della directory AH è: `$EXT_DIR`.
 
