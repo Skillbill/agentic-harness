@@ -15,6 +15,17 @@ Solo letture. Nessuna modifica a file o git.
    Per ogni file estrai dal frontmatter: `id`, `title`, `status`, `estimate`,
    `assignee`, `branch`.
 
+   **⚠ Fonte autorevole per i task attivi (non `done`, non `backlog`)**:
+   il TASK.md su `main` può essere stale (status/progress aggiornati solo
+   sul feature branch e non ancora mergiati). Per ogni task che ha un campo
+   `branch` nel frontmatter:
+   - Prova `git show <branch>:<path-del-TASK.md>` (locale).
+   - Se il branch locale non esiste, prova `origin/<branch>`.
+   - Se nemmeno il remote esiste, usa il file su disco (fallback).
+   Usa il frontmatter risultante (`status`, `progress`, `updated`) come
+   versione autorevole. Questo può spostare un task da `in-progress` a
+   `review` (o viceversa) rispetto alla directory in cui si trova su `main`.
+
 2. **Calcola avanzamento progetto**:
    - `total   = backlog + in-progress + review + done`
    - `closed  = done`
