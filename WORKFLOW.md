@@ -13,7 +13,7 @@ nell'estensione agentic-harness e vengono caricati da pi all'avvio.
 ```
   backlog/ ──► in-progress/ ──► review/ ──► done/
       │              │              │           │
-  /task-new     /task-start     /pr-open    /pr-merge
+  /task-new     /task-start     /pr-open    /task-done
 ```
 
 - `backlog/` — task creato e (opzionalmente) stimato, non ancora preso in carico
@@ -61,15 +61,11 @@ Tutti i comandi AH hanno prefisso `ah:`.
 | Comando              | Scopo                                                     |
 |----------------------|-----------------------------------------------------------|
 | `/ah:task-new`       | Crea un nuovo task nel backlog                            |
-| `/ah:task-list`      | Elenca i task filtrando per stato                         |
 | `/ah:task-start`     | Prende in carico un task e prepara branch di feature      |
 | `/ah:task-next-step` | Avanza il task corrente alla prossima fase del ciclo interno (discuss → plan → execute → verify) |
-| `/ah:task-status`    | Aggiorna lo stato di avanzamento di un task               |
 | `/ah:task-done`      | Chiude un task dopo il merge della PR                     |
 | `/ah:project-status` | Progress bar del progetto + stato dei task in-progress    |
 | `/ah:pr-open`        | Verifica DoD e prepara descrizione PR                     |
-| `/ah:pr-review`      | Code review strutturata di una PR                         |
-| `/ah:pr-merge`       | Chiude il task dopo merge della PR                        |
 | `/ah:standup`        | Riepilogo stato progetto per daily async                  |
 | `/ah:map-codebase`   | Analizza la codebase e produce 7 doc strutturati in `.pi/codebase/` |
 | `/ah:do-git-stuff`   | Esegue comandi git mutanti delegati dal dev               |
@@ -152,11 +148,9 @@ discuss → plan → execute (N volte) → verify
 # il dev esegue a mano: gh pr create ... (o via web)
 # poi sposta il file in review/ e committa a mano
 
-# 5. Review
-/ah:pr-review <PR-URL>
-
-# 6. Merge (fatto a mano dal dev via web/gh), poi su main:
+# 5. Merge (fatto a mano dal dev via web/gh), poi su main:
 git switch main && git pull
-/ah:pr-merge T-003
+/ah:task-done T-003
 # l'agente propone il git mv in done/ e il commit, il dev li esegue
+# (o il dev lancia /ah:do-git-stuff per farli eseguire all'agente)
 ```

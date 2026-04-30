@@ -46,7 +46,8 @@ Read-only (`git status`, `git log`, `git diff`,
   - `git branch --show-current` → deve matchare `feature/T-NNN-<slug>`.
   - Directory: `.pi/tasks/in-progress/T-NNN-<slug>/`.
   - Se non sei su un branch di feature → STOP con suggerimento di
-    `/task-start` o `/task-list`.
+    `/task-start <ID>` (l'ID lo prendi dai task in `.pi/tasks/in-progress/`
+    o `.pi/tasks/backlog/`).
 - **Override esplicito**:
   - `task-id (se fornito)` normalizzato a `T-NNN`, ricerca in `.pi/tasks/in-progress/`.
   - Se il task non è `in-progress` → errore con suggerimento di
