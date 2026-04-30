@@ -4,6 +4,7 @@ import { join, basename, dirname, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { execSync } from "node:child_process";
 import { registerPrompt } from "./register-prompt.js";
+import { registerContextInspector } from "./context-inspector.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const commandsDir = join(__dirname, "commands");
@@ -61,6 +62,10 @@ function detectCurrentTask(cwd: string): { id: string; title: string; branch: st
 export default function (pi: ExtensionAPI) {
   let currentTask: ReturnType<typeof detectCurrentTask> = null;
 
+  // Context Inspector: monitora token/payload upload e download per
+  // ottimizzazione fine durante i task.
+  registerContextInspector(pi);
+
   for (const file of readdirSync(commandsDir)) {
     if (!file.endsWith(".md")) continue;
     const name = `ah:${basename(file, ".md")}`;
@@ -101,40 +106,53 @@ export default function (pi: ExtensionAPI) {
     console.log("");
   });
 
-  // Inject project docs context into every LLM turn
+  // Inject .pi/codebase/*.md ONCE per session, cached in closure.
+  // NOTE (2026-04-30): docs/ is NO LONGER loaded here. Rationale: the
+  // generic project-docs dump hit every LLM turn, inflating uploads by
+  // ~100kB per request even when the content wasn't relevant to the
+  // current task. We now keep only the compact codebase map, and will
+  // layer task-scoped context selection on top of it (likely via
+  // /task-new in the future).
+  let codebaseContextInjected = false;
+  let cachedCodebaseContext: string | null = null;
+
   pi.on("before_agent_start", async (_event, _ctx) => {
-    const cwd = process.cwd();
-    const docsDir = join(cwd, "docs");
-    const codebaseDir = join(cwd, ".pi", "codebase");
+    if (codebaseContextInjected) return;
 
-    const docFiles = collectMarkdownFiles(docsDir);
-    const codebaseFiles = collectMarkdownFiles(codebaseDir);
+    if (cachedCodebaseContext === null) {
+      const cwd = process.cwd();
+      const codebaseDir = join(cwd, ".pi", "codebase");
+      const codebaseFiles = collectMarkdownFiles(codebaseDir);
 
-    if (docFiles.length === 0 && codebaseFiles.length === 0) return;
+      if (codebaseFiles.length === 0) {
+        codebaseContextInjected = true;
+        return;
+      }
 
-    const sections: string[] = [
-      `## 📚 Project Documentation Context`,
-      ``,
-    ];
-
-    if (codebaseFiles.length > 0) {
-      sections.push(`### .pi/codebase`, ``);
+      const sections: string[] = [
+        `## 📚 Project Codebase Map`,
+        ``,
+        `### .pi/codebase`,
+        ``,
+      ];
       for (const f of codebaseFiles) {
         sections.push(`#### ${f.relPath}`, ``, f.content, ``);
       }
+      cachedCodebaseContext = sections.join("\n");
+
+      const approxTokens = Math.round(cachedCodebaseContext.length / 4);
+      console.log(
+        `[agentic-harness] codebase-map: injecting ${codebaseFiles.length} files ` +
+        `(~${approxTokens} tokens) once per session`
+      );
     }
 
-    if (docFiles.length > 0) {
-      sections.push(`### docs/`, ``);
-      for (const f of docFiles) {
-        sections.push(`#### ${f.relPath}`, ``, f.content, ``);
-      }
-    }
+    codebaseContextInjected = true;
 
     return {
       message: {
-        customType: "project-docs-context",
-        content: sections.join("\n"),
+        customType: "project-codebase-map",
+        content: cachedCodebaseContext,
         display: false,
       },
     };
