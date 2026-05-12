@@ -229,6 +229,44 @@ Mostra al dev:
 Se l'utente ha annullato al passo 6, non scrivere nulla e termina la
 procedura con un messaggio neutro («Nessuna modifica applicata»).
 
+## Modalità silenziosa (auto)
+
+Un prompt chiamante può invocare la procedura in **modalità silenziosa**
+(es. `/task-new` la usa così: il dev sta creando un task, non vuole essere
+interrotto da un'intervista sull'architettura). In questa modalità:
+
+- **Niente intervista** (passo 5 saltato del tutto). Niente domanda di
+  conferma (passo 6 saltato).
+- **Niente output verboso** verso il dev: nessun diff stampato, nessun
+  riepilogo intermedio.
+- **Decisioni automatiche** (default conservativi):
+  - `nuovi_in_codebase` → **aggiungi** ogni nodo al diagramma. Per il
+    posizionamento e le relazioni, usa euristiche ragionevoli (vedi sotto)
+    e annota con commento HTML `<!-- TODO: posizionamento da rivedere -->`
+    così il dev può ritoccare a mano in seguito.
+  - `obsoleti_in_doc` → **non rimuovere nulla**. Mantieni i nodi
+    esistenti: cancellare automaticamente è troppo rischioso (potrebbero
+    essere infra non rappresentate da cartelle). Limitati a ricordare
+    questi nodi nell'output finale come segnalazione.
+  - Nessun `rinomina` automatico.
+- **Euristica di relazione per nodi nuovi**: se il modulo nuovo è una
+  cartella con `package.json` o `Dockerfile` di tipo servizio, collegalo
+  al `Server` con una freccia generica; se è *infra* (DB, message bus),
+  collegalo come destinazione del `Server`. Non inventare relazioni con
+  altri moduli specifici.
+- **Output al chiamante**: un solo messaggio sintetico, una riga, del
+  tipo:
+  - `✅ Architettura allineata` (nessuna modifica),
+  - `📐 Architettura aggiornata: +N nodi (M obsoleti segnalati)`
+    (modifiche applicate), oppure
+  - `⚠ Architecture-sync silenziosa fallita: <motivo>` (in caso di
+    errore, non bloccare il flusso chiamante: il task viene creato
+    ugualmente, e il dev sistema l'architettura a parte).
+- **Git**: nessuna eccezione, come al solito. Se la procedura ha
+  modificato `docs/architecture.html` / `docs/project.md`, lo segnala al
+  prompt chiamante via il flag del Contratto di ritorno (sotto), che
+  proporrà al dev i comandi git separatamente.
+
 ## Contratto di ritorno al prompt chiamante
 
 Al termine della procedura (sia che abbia modificato file, sia che

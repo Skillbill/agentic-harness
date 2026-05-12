@@ -125,17 +125,23 @@ updated: YYYY-MM-DD
 ---
 ```
 
-**Sezioni del corpo**:
+**Sezioni del corpo** (versione snella, post-semplificazione di
+`/ah:task-new`):
 
-- `## Contesto`
-- `## Obiettivo` (con eventuale *Fuori scope*)
-- `## Componenti coinvolti` (checkbox, lista da `docs/architecture.html`)
-- `## Definition of Done` — **qui resta solo la DoD "umana" raccolta
-  nell'intervista di `/task-new`** (criteri di accettazione specifici del
-  task). Le voci tecniche standard (lint, typecheck, build, backward
-  compat, PR) sono delegate a `VERIFY.md` e non duplicate qui.
-- `## Note tecniche`
-- `## Log` (note macro del dev, non collegate ai singoli step)
+- `## Contesto` — prosa breve: perché il task esiste.
+- `## Obiettivo` — prosa breve: cosa va fatto, scope.
+- `## Definition of Done` — voci standard (lint/typecheck/build/test/PR)
+  copiate dal template. La DoD "umana" specifica del task, se serve, va
+  aggiunta dal dev a mano oppure emergerà in `/ah:task-discuss` /
+  `/ah:task-plan`. La fase di verify la legge e la materializza in
+  `VERIFY.md`.
+- `## Log` (note macro del dev, non collegate ai singoli step).
+
+Le sezioni `## Componenti coinvolti` e `## Note tecniche` **non sono più
+parte del template**: `/ah:task-new` non le chiede. Se per un task
+specifico il dev vuole tracciarle, può aggiungerle a mano — nessun altro
+comando AH le legge come obbligatorie. La lista "componenti del
+progetto" autorevole resta `docs/architecture.html`.
 
 ### 3.2 `DISCUSS.md` — output della fase discuss (opzionale)
 

@@ -1,13 +1,18 @@
 ---
 description: Crea un nuovo task nel backlog (SCRUM-lite)
-argument-hint: "<titolo del task>"
+argument-hint: "<argomento del task>"
 ---
 
-Sei l'agente del workflow SCRUM-lite del progetto. Devi creare un nuovo task nel
-backlog a partire dal titolo fornito dall'utente, **intervistandolo** per
-compilare la scheda in modo completo — niente placeholder lasciati vuoti.
+Sei l'agente del workflow SCRUM-lite del progetto. Devi creare un nuovo task
+nel backlog a partire dall'argomento fornito dall'utente.
 
-**Titolo fornito:** $@
+**Argomento fornito:** $@
+
+L'unico obiettivo dell'intervista è chiarire **di cosa parla il task** —
+contesto (perché esiste) e obiettivo (cosa va fatto). Tutto il resto
+(componenti coinvolti, DoD specifica, note tecniche, stima) **non si
+chiede**: il dev compilerà a mano dopo se serve, oppure ne riparleremo in
+`/ah:task-discuss` / `/ah:task-plan`.
 
 ## 🔒 Git Safety Rule (eccezione dichiarata)
 
@@ -18,226 +23,165 @@ del task appena creato nel backlog.
 
 Vincoli obbligatori prima di eseguire qualunque comando git che muta:
 
-1. **Unico file toccato**: verifica con `git status --porcelain` che l'unica
-   modifica nel working tree sia `.pi/tasks/backlog/<ID>-<slug>/TASK.md`
-   (file nuovo, status `??` o `A`). Se ci sono altre modifiche (staged o
-   non-staged, in qualunque path), **non fare commit/push**: mostra lo
-   stato all'utente e proponi i comandi manualmente, spiegando perché
-   non puoi procedere in automatico.
+1. **Unico file toccato dall'eccezione**: l'unico path che puoi mettere in
+   `git add` è `.pi/tasks/backlog/<ID>-<slug>/TASK.md`. Verifica con
+   `git status --porcelain` prima del commit. Se nel working tree ci sono
+   altre modifiche non correlate (staged o non-staged), **non fare commit
+   automatico**: mostra lo stato al dev e proponi i comandi a mano.
 
-   ⚠️ In particolare, eventuali modifiche a `docs/architecture.html` /
-   `docs/project.md` introdotte dalla procedura di architecture-sync
-   (vedi Turno C) **non** rientrano nell'eccezione e vanno proposte al
-   dev come commit separato — mai accorpate al commit del task.
-2. **Branch `main`**: conferma con `git branch --show-current` di essere
-   su `main`. Se non lo sei, niente commit/push automatici — proponi i
-   comandi al dev.
-3. **`git add` mirato**: usa sempre il path esatto del file
-   (`git add .pi/tasks/backlog/<ID>-<slug>.md`), mai `git add .` o
+   ⚠️ Eventuali modifiche a `docs/architecture.html` / `docs/project.md`
+   prodotte dalla procedura di architecture-sync silenziosa **non**
+   rientrano in questa eccezione: vanno proposte al dev come commit
+   separato (vedi passo 5).
+2. **Branch `main`**: conferma con `git branch --show-current`. Se non sei
+   su `main`, niente commit/push automatici — proponi i comandi al dev.
+3. **`git add` mirato**: usa il path esatto del file, mai `git add .` o
    `git add -A`.
-4. **`git push` mirato**: `git push` pusha solo il commit appena creato
-   sul branch corrente (`main`). Non fare push di altri branch, non
-   fare force-push, non toccare tag.
-
-Se uno qualunque di questi vincoli non è soddisfatto, ricadi nel
-comportamento standard: proponi i comandi all'utente e lui li esegue a
-mano.
+4. **`git push` mirato**: pusha solo il commit appena creato sul branch
+   corrente. Niente force-push, niente tag, niente altri branch.
 
 Operazioni read-only (`git status`, `git log`, `git diff`,
 `git branch --show-current`) sono sempre permesse.
 
 ## Passi
 
-1. **Verifica contesto git** (read-only):
-   - Esegui `git branch --show-current` per sapere su che branch sei.
-   - Se NON sei su `main`, avvisa l'utente: il task dovrebbe nascere su `main`
-     per essere visibile a tutto il team. Chiedi conferma prima di procedere.
+### 1. Verifica contesto git (read-only)
 
-2. **Determina il prossimo ID task**:
-   - Scansiona `.pi/tasks/{backlog,in-progress,review,done}/` per tutte le
-     **cartelle** che matchano `T-NNN-*` (ogni task è una directory, vedi
-     `task-layout.md` §1).
-   - Estrai il numero più alto e incrementa di 1.
-   - Formatta come `T-001`, `T-002`, ecc. (zero-padding a 3 cifre).
+- `git branch --show-current`. Se NON sei su `main`, avvisa il dev (un'unica
+  riga, non un blocco): «Sei su `<branch>`, il task dovrebbe nascere su
+  `main`. Procedo comunque? (sì/no)». Se "no", esci.
 
-3. **Genera lo slug** dal titolo:
-   - lowercase, spazi → trattini, rimuovi caratteri non alfanumerici tranne `-`.
-   - Tronca a ~50 caratteri.
-   - Esempio: "Add web camera support" → `add-web-camera-support`
+### 2. Determina ID e slug
 
-4. **Intervista l'utente passo-passo** (obbligatorio, sequenziale):
+- **ID**: scansiona `.pi/tasks/{backlog,in-progress,review,done}/` per le
+  cartelle che matchano `T-NNN-*`. Prendi il numero più alto + 1.
+  Formatta `T-NNN` (zero-padding a 3 cifre).
+- **Slug**: dall'argomento fornito → lowercase, spazi → `-`, rimuovi
+  caratteri non alfanumerici tranne `-`, tronca a ~50 caratteri.
 
-   Leggi prima il template `$EXT_DIR/templates/task.md` per conoscere le sezioni.
-   Poi conduci un'**intervista turn-by-turn**: una domanda (focalizzata) per
-   turno, aspetta la risposta dell'utente, poi passa alla successiva.
+Non li mostrare ancora al dev: l'ID definitivo lo darai nell'output finale,
+così l'intervista resta pulita.
 
-   ⚠️ **Regole dell'intervista** — valgono per tutti i turni:
-   - **Una sola sezione per turno.** Niente muri di 6 domande in blocco.
-   - **Poni la domanda principale e al massimo 2–3 sotto-domande chiarificatrici**
-     come bullet, solo se servono davvero a far capire cosa vuoi sapere.
-   - **Non anticipare** le sezioni successive (“poi ti chiederò…”): genera
-     rumore e induce l'utente a rispondere a tutto subito.
-   - **Aspetta la risposta** prima di passare al turno successivo. Mai
-     accorpare due sezioni nello stesso messaggio.
-   - **Shortcut accettati**: se l'utente scrive `skip`, `non so`, `boh`,
-     `dopo`, `-` o simili, segna la sezione come `_Da definire._` e passa
-     oltre senza insistere.
-   - **Shortcut di uscita**: se l'utente scrive `basta`, `stop`,
-     `crea il file`, interrompi l'intervista e crea il file con quanto
-     raccolto fin qui, marcando le sezioni mancanti come `_Da definire._`.
-   - **Riformulazione**: se la risposta è ambigua o troppo vaga per finire
-     nella scheda, chiedi *un* chiarimento mirato, poi procedi. Non fare
-     ping-pong infinito.
+### 3. Intervista — loop libero, una domanda alla volta
 
-   **Sequenza dei turni** (uno per messaggio, in quest'ordine):
+⚠️ **Niente turni rigidi, niente checklist di sezioni.** Hai un solo
+obiettivo: capire **perché** questo task esiste e **cosa concretamente** va
+fatto, abbastanza bene da scrivere un breve paragrafo di Contesto e uno di
+Obiettivo nel TASK.md. Tipicamente bastano 1–3 domande in totale.
 
-   **Turno A — Contesto.** «Perché questo task esiste? Quale problema
-   risolve o quale feature abilita?»
-   Sotto-bullet opzionali solo se utile: «Ticket esterni? Decisioni
-   architetturali o discussioni da referenziare?»
+Regole del loop:
 
-   **Turno B — Obiettivo.** «Concretamente, cosa va fatto? Qual è lo scope?»
-   Sotto-bullet opzionali: «Cosa è esplicitamente *fuori scope*?»
+- **Una domanda per messaggio**, focalizzata. Niente muri di domande in
+  blocco.
+- **Aspetta la risposta** prima di chiederne un'altra.
+- Se l'argomento iniziale `$@` è già abbastanza chiaro (es. il dev ha
+  scritto un titolo descrittivo + 2 righe di spiegazione), **non fare
+  nessuna domanda**: passa direttamente al passo 4.
+- Se manca il "perché", chiedilo. Se manca il "cosa", chiedilo. Se manca
+  entrambi, chiedi prima il "cosa" (più concreto), poi al massimo il
+  "perché" se non emerge naturalmente dalla risposta.
+- **Non chiedere** componenti coinvolti, DoD aggiuntiva, note tecniche,
+  stima, dipendenze, rischi. Non sono affari di `/task-new`.
+- **Shortcut di uscita**: se il dev scrive `basta`, `stop`, `crea il
+  task`, `ok vai`, interrompi subito il loop e procedi al passo 4 con
+  quello che hai. Non insistere mai.
+- **Niente turno di riepilogo + conferma**. Quando ritieni di avere abbastanza
+  per scrivere Contesto + Obiettivo, **passa direttamente al passo 4** —
+  l'output finale (passo 6) farà da implicita "conferma a posteriori".
 
-   **Turno C — Componenti coinvolti.**
+### 4. Architecture-sync silenziosa (background, non blocca)
 
-   ⚠️ **Non memorizzare mai una lista statica di componenti.** La lista
-   ufficiale dei componenti del progetto vive nella documentazione di
-   architettura (`docs/architecture.html`, con eco in `docs/project.md`).
-   Prima di presentarla all'utente **devi** assicurarti che sia allineata
-   alla codebase reale.
+Prima di scrivere il file, esegui la procedura
+`$EXT_DIR/procedures/architecture-sync.md` in **modalità silenziosa**
+(vedi sezione omonima di quella procedura).
 
-   **C.0 — Esegui la procedura di architecture-sync (obbligatorio).**
+Concretamente:
 
-   Leggi e applica la procedura definita in
-   `$EXT_DIR/procedures/architecture-sync.md`.
-   È la stessa logica che un tempo viveva nel prompt `/architecture-sync`
-   (ora rimosso): confronta i moduli effettivi della codebase con quelli
-   documentati, intervista il dev sulle eventuali differenze e aggiorna
-   `docs/architecture.html` (e, se serve, `docs/project.md`).
+- Niente domande al dev su nodi nuovi/obsoleti.
+- Aggiungi automaticamente al diagramma i moduli nuovi rilevati nella
+  codebase (con TODO HTML per il posizionamento).
+- Non rimuovere nodi obsoleti automaticamente.
+- Output verso il dev: una sola riga sintetica nell'output finale del
+  passo 6 (es. `📐 Architettura: allineata` o
+  `📐 Architettura: +1 nodo (TODO posizionamento)`).
+- Se la procedura fallisce per qualunque motivo, **non bloccare il task**:
+  segnala l'errore in una riga e prosegui.
 
-   Regole specifiche quando la procedura è invocata da `/task-new`:
+Se la procedura ha modificato `docs/architecture.html` o `docs/project.md`,
+ricordati per il passo 6 che quei file vanno proposti al dev come commit
+separato (non rientrano nell'eccezione git di questo prompt).
 
-   - Se il diff è vuoto (`✅ Architettura allineata`), la procedura
-     termina subito e passi a C.1 senza ulteriori domande.
-   - Se ci sono differenze, segui l'intervista della procedura **prima**
-     di entrare nel merito del task. Usa un breve annuncio all'utente,
-     del tipo: «Prima di scegliere i componenti impattati dal task,
-     allineo il diagramma di architettura con la codebase.»
-   - Le eventuali modifiche a `docs/architecture.html` / `docs/project.md`
-     prodotte dalla procedura **non** rientrano nell'eccezione git di
-     questo prompt: vanno proposte al dev come commit separato nel
-     passo 7 (Output finale), non accorpate al commit del task.
-   - Se l'utente usa `basta` / `stop` / `annulla` durante la procedura,
-     rispetta quella decisione: prosegui con l'intervista del task
-     usando come lista componenti quella risultante fin lì (anche se
-     non è stata scritta su file), e segnala nel Log del task che
-     l'architecture-sync è stata interrotta.
+### 5. Crea il file task
 
-   **C.1 — Scelta dei componenti impattati.**
+Layout (vedi `task-layout.md` §1): ogni task è una **directory**
+`.pi/tasks/backlog/<ID>-<slug>/` contenente almeno `TASK.md`.
 
-   Al ritorno dalla procedura, prendi la lista corrente dei componenti
-   così come risulta dal diagramma aggiornato e chiedi all'utente quali
-   **di quei componenti** sono impattati dal task, presentandoli
-   esattamente come compaiono nella doc (stessi nomi, stesso wording).
-   Accetta anche la risposta «nessun componente esistente, se ne
-   introducono di nuovi»: in quel caso i nuovi componenti *dovrebbero*
-   essere già stati aggiunti al diagramma in C.0; se il dev ha preferito
-   saltare la procedura, segna che andranno aggiunti in
-   `docs/architecture.html` / `docs/project.md` nel turno D.
+- Crea la cartella `.pi/tasks/backlog/<ID>-<slug>/`.
+- Path del file: `.pi/tasks/backlog/<ID>-<slug>/TASK.md`.
+- Parti dal template `$EXT_DIR/templates/task.md` (versione snella: solo
+  Contesto, Obiettivo, Definition of Done standard, Log).
+- Sostituisci i placeholder del front-matter:
+  - `{{ID}}` → nuovo ID
+  - `{{TITLE}}` → titolo derivato dall'argomento del dev. Se l'argomento è
+    già una frase-titolo (≤ 80 caratteri, capitalized o tipico stile
+    titolo), usalo così com'è. Altrimenti sintetizza un titolo di 5–10
+    parole che riassuma il task.
+  - `{{DATE}}` → `date +%Y-%m-%d`.
+- Riempi le sezioni del corpo con quanto raccolto nell'intervista:
+  - `## Contesto` → 2–5 righe di prosa che spiegano perché il task esiste
+    (problema, motivazione, eventuali link/decisioni se emersi).
+  - `## Obiettivo` → 2–5 righe che descrivono concretamente cosa va fatto
+    (scope). Niente bullet point a meno che il dev abbia esplicitamente
+    elencato sotto-obiettivi.
+- **Niente** `_Da definire._`, niente sezioni vuote, niente placeholder.
+  Se davvero un punto non è chiaro nemmeno dopo l'intervista (es. il dev
+  ha scritto "boh" ovunque), scrivi una frase onesta tipo «Da chiarire in
+  fase di discuss.» direttamente nella prosa, senza inventarti contenuti.
+- **Rimuovi i commenti HTML `<!-- ... -->` di istruzione** dalle sezioni
+  che hai compilato.
+- Lascia `estimate: null` nel front-matter (la stima non si chiede in
+  `/task-new`).
+- Lascia la sezione `## Log` vuota (si compila durante il lavoro).
 
-   Se la risposta implica chiaramente schema DB, nuove API o nuovi
-   storage ma l'utente non lo ha detto esplicitamente, fai **una** domanda
-   mirata di conferma nello stesso turno (non in un turno extra).
+Scrivi il file.
 
-   **Turno D — Documentazione in `docs/`.** Ricorda la convenzione
-   (AGENTS.md → *Documentation Location*): tutta la doc funzionale vive in
-   `docs/`. Chiedi: «Questo task richiede nuovi documenti o aggiornamenti
-   in `docs/`? Se sì, quali file/sezioni?»
+### 6. Commit & push del task (usando l'eccezione)
 
-   **Turno E — Definition of Done specifica.** «Oltre alle voci standard
-   (lint, typecheck, build, backward compat, PR approvata), quali criteri
-   di accettazione aggiuntivi vuoi? (es. latenza, comportamento in caso di
-   errore, copertura test e2e specifica, ecc.)»
+a. `git status --porcelain`: verifica che gli unici path modificati siano
+   `.pi/tasks/backlog/<ID>-<slug>/TASK.md` (e la directory contenitore).
+   Eventuali modifiche a `docs/architecture.html` / `docs/project.md`
+   prodotte al passo 4 NON rientrano qui: se ci sono, **non fare commit
+   automatico** del task — proponi al dev i comandi a mano per entrambi
+   i commit (prima docs, poi task), separati.
+b. `git branch --show-current`: deve essere `main`.
+c. Se i vincoli sono soddisfatti, esegui in sequenza:
+   ```bash
+   git add .pi/tasks/backlog/<ID>-<slug>/TASK.md
+   git commit -m "chore(<ID>): add task to backlog — <TITLE>"
+   git push
+   ```
+   Mostra l'output di ciascun comando.
+d. Se uno dei vincoli non è soddisfatto, **non eseguire** commit/push:
+   mostra la situazione e proponi i comandi che il dev lancerà a mano.
 
-   **Turno F — Note tecniche.** «Ci sono scelte implementative già
-   decise, vincoli, librerie da usare/evitare, dipendenze tra componenti,
-   impatti su WebSocket / DB / backend-frontend-interface, rischi noti?»
+### 7. Output finale (conciso)
 
-   **Turno G — Stima (opzionale).** «Hai già un'idea della stima in ore?
-   (Altrimenti la setterai dopo editando il campo `estimate:` nel frontmatter del file.)»
+Quattro righe, niente di più:
 
-   **Turno H — Riepilogo e conferma.** Prima di scrivere il file, mostra
-   un riepilogo sintetico (1–2 righe per sezione) e chiedi
-   «**Confermi la creazione del task?** (sì / modifica <sezione> / annulla)».
-   Se l'utente chiede di modificare una sezione, rifai **solo quel turno**
-   e torna al riepilogo. Se annulla, non scrivere nulla.
+```
+✅ <ID> creato — <TITLE>
+   file: .pi/tasks/backlog/<ID>-<slug>/TASK.md
+   📐 Architettura: <riga di esito dalla sync silenziosa>
+   commit: <short-sha> su main (pushed) | comandi proposti al dev
+```
 
-   Se una sezione resta vuota (skip / non so), **non inventare contenuti**:
-   inserirai nel file una riga `_Da definire._` sotto l'heading
-   corrispondente, come TODO esplicito.
+Se la sync silenziosa ha toccato file sotto `docs/`, aggiungi UNA riga
+extra coi comandi git da eseguire a mano per il commit separato:
 
-5. **Crea il file task** (directory layout, vedi `task-layout.md` §1):
-   - Crea la cartella `.pi/tasks/backlog/<ID>-<slug>/`.
-   - Path del file: `.pi/tasks/backlog/<ID>-<slug>/TASK.md`.
-   - Parti dal template `$EXT_DIR/templates/task.md`.
-   - Sostituisci i placeholder del front-matter:
-     - `{{ID}}` → nuovo ID
-     - `{{TITLE}}` → titolo fornito (rispetta case originale)
-     - `{{DATE}}` → data corrente ISO (YYYY-MM-DD), via `date +%Y-%m-%d`.
-   - **Riempi le sezioni del corpo** con le risposte dell'intervista:
-     - `## Contesto` → risposta A
-     - `## Obiettivo` → risposta B (con eventuale sotto-elenco “Fuori scope”)
-     - `## Componenti coinvolti` → spunta `[x]` i componenti indicati in C,
-       lascia `[ ]` gli altri.
-     - `## Definition of Done` → mantieni le voci standard del template e
-       **aggiungi** in coda le voci specifiche raccolte in D. Se emerso da
-       C-bis, assicurati che ci sia una voce esplicita tipo
-       `[ ] Documentazione aggiornata in docs/<file>.md`.
-     - `## Note tecniche` → risposta E
-     - `## Log` → lasciare vuoto (si compila durante il lavoro).
-   - **Rimuovi i commenti HTML `<!-- ... -->` di istruzione** dalle sezioni che
-     hai compilato (restano solo nelle sezioni non compilate, se ce ne sono).
-   - Se la stima è stata fornita (F), aggiornala nel front-matter
-     (`estimate: <ore>h`); altrimenti lasciala `null`.
-   - Scrivi il file.
+```
+   ⚠ docs/ aggiornato dalla sync — commit separato:
+     git add docs/architecture.html docs/project.md && git commit -m "docs(architecture): sync con codebase" && git push
+```
 
-6. **Commit & push del task** (usando l'eccezione dichiarata sopra):
-
-   a. Esegui `git status --porcelain` e verifica che l'unico path
-      modificato sia `.pi/tasks/backlog/<ID>-<slug>/TASK.md`.
-   b. Esegui `git branch --show-current` e verifica che sia `main`.
-   c. Se **entrambi** i vincoli sono soddisfatti, esegui in sequenza:
-      ```bash
-      git add .pi/tasks/backlog/<ID>-<slug>/TASK.md
-      git commit -m "chore(<ID>): add task to backlog — <TITLE>"
-      git push
-      ```
-      Mostra all'utente l'output di ciascun comando.
-   d. Se **uno qualunque** dei vincoli non è soddisfatto (altri file
-      modificati, branch diverso da `main`, ecc.), **non eseguire**
-      commit/push: mostra la situazione al dev e proponi i comandi che
-      dovrà lanciare lui a mano.
-
-   ⚠️ Caso tipico di fallimento del vincolo (a): la procedura di
-   architecture-sync eseguita in Turno C ha modificato
-   `docs/architecture.html` e/o `docs/project.md`. In questa situazione
-   **non** fare commit automatico: quei file richiedono un commit
-   separato e vanno proposti al dev nel passo 7 come comandi manuali
-   (es. `git add docs/architecture.html docs/project.md && git commit -m
-   "docs(architecture): sync con codebase" && git push`), prima del
-   commit del task.
-
-7. **Output finale**: mostra all'utente:
-   - ID assegnato, path del file creato, riassunto sintetico delle sezioni
-     compilate (1–2 righe ciascuna).
-   - Esito della procedura di architecture-sync: allineata / modifiche
-     applicate / interrotta dal dev. Se ha toccato file sotto `docs/`,
-     elenca quei file e proponi i comandi git manuali (commit separato,
-     non coperto dall'eccezione di `/task-new`).
-   - Esito del commit/push del task (fatto dall'agente o comandi proposti
-     al dev).
-   - Se la stima non è stata data: invita a compilare a mano il campo
-     `estimate:` nel frontmatter del file.
-   - Se restano sezioni marcate `_Da definire._`: elencale esplicitamente come
-     follow-up da completare editando il file.
+Niente next steps, niente checklist, niente «ora fai task-start». Il dev
+sa cosa fare.
