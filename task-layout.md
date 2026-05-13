@@ -140,8 +140,7 @@ updated: YYYY-MM-DD
 Le sezioni `## Componenti coinvolti` e `## Note tecniche` **non sono più
 parte del template**: `/ah:task-new` non le chiede. Se per un task
 specifico il dev vuole tracciarle, può aggiungerle a mano — nessun altro
-comando AH le legge come obbligatorie. La lista "componenti del
-progetto" autorevole resta `docs/architecture.html`.
+comando AH le legge come obbligatorie.
 
 ### 3.2 `DISCUSS.md` — output della fase discuss (opzionale)
 

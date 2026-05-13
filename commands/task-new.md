@@ -28,11 +28,6 @@ Vincoli obbligatori prima di eseguire qualunque comando git che muta:
    `git status --porcelain` prima del commit. Se nel working tree ci sono
    altre modifiche non correlate (staged o non-staged), **non fare commit
    automatico**: mostra lo stato al dev e proponi i comandi a mano.
-
-   ⚠️ Eventuali modifiche a `docs/architecture.html` / `docs/project.md`
-   prodotte dalla procedura di architecture-sync silenziosa **non**
-   rientrano in questa eccezione: vanno proposte al dev come commit
-   separato (vedi passo 5).
 2. **Branch `main`**: conferma con `git branch --show-current`. Se non sei
    su `main`, niente commit/push automatici — proponi i comandi al dev.
 3. **`git add` mirato**: usa il path esatto del file, mai `git add .` o
@@ -89,29 +84,7 @@ Regole del loop:
   per scrivere Contesto + Obiettivo, **passa direttamente al passo 4** —
   l'output finale (passo 6) farà da implicita "conferma a posteriori".
 
-### 4. Architecture-sync silenziosa (background, non blocca)
-
-Prima di scrivere il file, esegui la procedura
-`$EXT_DIR/procedures/architecture-sync.md` in **modalità silenziosa**
-(vedi sezione omonima di quella procedura).
-
-Concretamente:
-
-- Niente domande al dev su nodi nuovi/obsoleti.
-- Aggiungi automaticamente al diagramma i moduli nuovi rilevati nella
-  codebase (con TODO HTML per il posizionamento).
-- Non rimuovere nodi obsoleti automaticamente.
-- Output verso il dev: una sola riga sintetica nell'output finale del
-  passo 6 (es. `📐 Architettura: allineata` o
-  `📐 Architettura: +1 nodo (TODO posizionamento)`).
-- Se la procedura fallisce per qualunque motivo, **non bloccare il task**:
-  segnala l'errore in una riga e prosegui.
-
-Se la procedura ha modificato `docs/architecture.html` o `docs/project.md`,
-ricordati per il passo 6 che quei file vanno proposti al dev come commit
-separato (non rientrano nell'eccezione git di questo prompt).
-
-### 5. Crea il file task
+### 4. Crea il file task
 
 Layout (vedi `task-layout.md` §1): ogni task è una **directory**
 `.pi/tasks/backlog/<ID>-<slug>/` contenente almeno `TASK.md`.
@@ -145,14 +118,10 @@ Layout (vedi `task-layout.md` §1): ogni task è una **directory**
 
 Scrivi il file.
 
-### 6. Commit & push del task (usando l'eccezione)
+### 5. Commit & push del task (usando l'eccezione)
 
 a. `git status --porcelain`: verifica che gli unici path modificati siano
    `.pi/tasks/backlog/<ID>-<slug>/TASK.md` (e la directory contenitore).
-   Eventuali modifiche a `docs/architecture.html` / `docs/project.md`
-   prodotte al passo 4 NON rientrano qui: se ci sono, **non fare commit
-   automatico** del task — proponi al dev i comandi a mano per entrambi
-   i commit (prima docs, poi task), separati.
 b. `git branch --show-current`: deve essere `main`.
 c. Se i vincoli sono soddisfatti, esegui in sequenza:
    ```bash
@@ -164,23 +133,14 @@ c. Se i vincoli sono soddisfatti, esegui in sequenza:
 d. Se uno dei vincoli non è soddisfatto, **non eseguire** commit/push:
    mostra la situazione e proponi i comandi che il dev lancerà a mano.
 
-### 7. Output finale (conciso)
+### 6. Output finale (conciso)
 
-Quattro righe, niente di più:
+Tre righe, niente di più:
 
 ```
 ✅ <ID> creato — <TITLE>
    file: .pi/tasks/backlog/<ID>-<slug>/TASK.md
-   📐 Architettura: <riga di esito dalla sync silenziosa>
    commit: <short-sha> su main (pushed) | comandi proposti al dev
-```
-
-Se la sync silenziosa ha toccato file sotto `docs/`, aggiungi UNA riga
-extra coi comandi git da eseguire a mano per il commit separato:
-
-```
-   ⚠ docs/ aggiornato dalla sync — commit separato:
-     git add docs/architecture.html docs/project.md && git commit -m "docs(architecture): sync con codebase" && git push
 ```
 
 Niente next steps, niente checklist, niente «ora fai task-start». Il dev

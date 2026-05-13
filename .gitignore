@@ -29,3 +29,8 @@ vendor/
 coverage/
 .cache/
 tmp/
+
+# Codebase cache (per-doc commit metadata for /map-codebase incremental updates).
+# Only the dynamic state is ignored — the 7 thematic docs under .pi/codebase/
+# remain versioned.
+.pi/codebase/.cache.json

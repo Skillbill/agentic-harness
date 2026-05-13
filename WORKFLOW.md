@@ -112,7 +112,6 @@ discuss → plan → execute (N volte) → verify
 - `skills/` — skill del ciclo interno (discuss, plan, execute, verify)
 - `templates/task.md` — scheletro di un task (usato da `/ah:task-new`)
 - `templates/pr.md` — scheletro descrizione PR (usato da `/ah:pr-open`)
-- `procedures/architecture-sync.md` — procedura di allineamento architettura
 - `task-layout.md` — contratto del layout directory dei task
 - `WORKFLOW.md` — questo file
 

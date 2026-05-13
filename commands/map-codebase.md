@@ -66,34 +66,131 @@ contenuto, neanche parzialmente.
 
 ## Passi
 
-### 1. Verifica esistenza della mappa
+### 1. Determina cosa è stale (cache di provenienza)
 
-Controlla se `.pi/codebase/` esiste già.
+Questo passo decide **quali doc tematici riscrivere**. Mai cancellare
+file — gli aggiornamenti avvengono sempre via `write` (sovrascrittura),
+i doc fuori dal set stale restano intatti. La cache di provenienza vive
+in `.pi/codebase/.cache.json` (gitignored) e registra, per ciascun doc,
+il commit HEAD a cui corrisponde l'ultima rigenerazione.
 
-**Se esiste:**
+#### 1a. Stato del filesystem
 
-> `.pi/codebase/` esiste già con questi documenti:
-> [elenco file trovati]
->
-> Cosa faccio?
-> 1. **Rigenera** — cancella tutto e rimappa da zero
-> 2. **Aggiorna** — mantieni i doc esistenti, aggiorna solo quelli specifici
-> 3. **Salta** — usa la mappa esistente così com'è
+Controlla:
+- `.pi/codebase/` esiste?
+- `.pi/codebase/.cache.json` esiste?
 
-Attendi la risposta del dev.
+**Tre scenari:**
 
-- Se "Rigenera": cancella `.pi/codebase/`, continua al passo 2.
-- Se "Aggiorna": chiedi quali documenti aggiornare, continua al passo 3
-  limitato a quelli.
-- Se "Salta": esci.
+1. **Mappa assente** (`.pi/codebase/` non esiste): scenario greenfield.
+   Definisci `stale_docs = {STACK.md, INTEGRAZIONI.md, ARCHITETTURA.md,
+   STRUTTURA.md, CONVENZIONI.md, TESTING.md, CRITICITA.md}` (tutti e 7).
+   Vai al passo 2.
 
-**Se non esiste:** continua al passo 2.
+2. **Mappa presente ma cache assente**: la mappa è stata creata prima
+   dell'introduzione della cache, o `.cache.json` è stato cancellato.
+   Chiedi al dev:
+
+   > `.pi/codebase/` esiste ma `.cache.json` è assente. Cosa preferisci?
+   > 1. **Calibra** — assumi HEAD attuale come baseline, scrivi la cache
+   >    SENZA toccare i doc (rischio: i doc potrebbero essere stale ma
+   >    saranno considerati fresh fino al prossimo cambio)
+   > 2. **Full rewrite** — riscrivi tutti e 7 i doc e inizializza la cache
+   > 3. **Salta** — esci senza modifiche
+
+   - "Calibra": `stale_docs = {}`, salta direttamente al passo 6 dopo
+     aver scritto la cache con HEAD per tutti e 7 i doc.
+   - "Full rewrite": `stale_docs = {tutti i 7}`, vai al passo 2.
+   - "Salta": esci.
+
+3. **Mappa + cache entrambe presenti**: usa l'helper per calcolare il
+   set stale (passo 1b).
+
+#### 1b. Invocazione dell'helper
+
+Esegui questo blocco da bash per ottenere il set stale:
+
+```bash
+node --experimental-strip-types -e '
+import("./codebase-cache.ts").then(({ readCache, diffSinceCachedCommit, decideStaleDocs }) => {
+  const fs = require("node:fs");
+  const { execSync } = require("node:child_process");
+  const cache = readCache(".pi/codebase/.cache.json");
+  if (!cache) { console.error("CACHE_INVALID"); process.exit(2); }
+  const head = execSync("git rev-parse HEAD", { encoding: "utf-8" }).trim();
+  // Use the OLDEST cached commit as baseline so no doc is missed if
+  // some docs were updated more recently than others.
+  const commits = Object.values(cache.docs).map(d => d.commit);
+  const baseline = commits.length ? commits[0] : head;
+  // Detect topology change (added/deleted files between baseline and HEAD).
+  let topologyChanged = false;
+  try {
+    const out = execSync(`git diff --diff-filter=AD --name-only ${baseline}..HEAD`, { encoding: "utf-8" });
+    topologyChanged = out.trim().length > 0;
+  } catch {}
+  const changed = diffSinceCachedCommit(baseline, ".");
+  const stale = [...decideStaleDocs(changed, undefined, { topologyChanged })];
+  console.log(JSON.stringify({ head, baseline, changedCount: changed.length, topologyChanged, stale }, null, 2));
+}).catch(e => { console.error("HELPER_ERROR", e?.message ?? e); process.exit(3); });
+'
+```
+
+**Fallback se l'invocazione fallisce** (exit non-zero, `HELPER_ERROR`,
+`CACHE_INVALID`, oppure `node --experimental-strip-types` non
+disponibile):
+- Mostra l'errore completo al dev.
+- **Non procedere automaticamente** a rigenerazione full.
+- Chiedi: «Helper non disponibile. Procedo con full rewrite (riscrivo
+  tutti e 7 i doc + reinizializzo cache)? Sì/No».
+- Se "Sì": `stale_docs = {tutti i 7}`, vai al passo 2.
+- Se "No": esci.
+
+#### 1c. Presenta il set stale e attendi conferma
+
+Con l'output del helper, mostra al dev:
+
+```
+🗺️  Cache check — .pi/codebase/
+
+  Baseline:  <commit baseline>
+  HEAD:      <head>
+  Changed files (filtrati): <changedCount>
+  Topology changed: <true/false>
+
+  Doc stale (da riscrivere):
+    - STACK.md
+    - TESTING.md
+  Doc fresh (non toccati):
+    - INTEGRAZIONI.md, ARCHITETTURA.md, STRUTTURA.md, CONVENZIONI.md, CRITICITA.md
+```
+
+**Tre esiti possibili:**
+
+- **`stale` vuoto** (no-op): mostra «✅ Cache coerente con HEAD: niente
+  da aggiornare». Aggiorna comunque il campo `updatedAt` di ciascun doc
+  in cache (passo 4b) e vai al passo 6 (verifica output). Salta il
+  passo 2 (la struttura esiste già) e il passo 3 (nessuna passata).
+
+- **`stale` non vuoto**: chiedi al dev
+
+  > Riscrivo solo i doc stale (Sì), salto del tutto (No), oppure forzo
+  > full rewrite di tutti e 7 (Forza)?
+
+  - "Sì": `stale_docs = <set restituito dal helper>`, vai al passo 2.
+  - "No": esci senza modifiche.
+  - "Forza": `stale_docs = {tutti i 7}`, vai al passo 2.
+
+Da qui in poi, `stale_docs` è autoritativo: **non scrivere mai un doc
+fuori da questo set**.
 
 ### 2. Crea la struttura
 
 ```bash
 mkdir -p .pi/codebase
 ```
+
+(idempotente: se la cartella esiste già, `mkdir -p` non fa nulla — i
+file esistenti restano intatti).
 
 Gli 8 documenti attesi:
 - `STACK.md` (stack tecnologico)
@@ -105,12 +202,18 @@ Gli 8 documenti attesi:
 - `CRITICITA.md` (debito tecnico, bug noti, aree fragili)
 - `INDEX.md` (path + 1-line summary per doc, machine-parsed by the extension)
 
-### 3. Mapping sequenziale — 4 passate
+### 3. Mapping sequenziale — 4 passate (solo per i doc stale)
 
 Esegui le 4 passate in sequenza, ciascuna con esplorazione mirata.
+**Per ciascun doc da scrivere, controlla prima `stale_docs`: se il doc
+NON è in `stale_docs`, salta del tutto la sua scrittura e la
+ri-esplorazione associata.** Una passata può quindi non produrre alcun
+file (es. se in `stale_docs` non c'è né `CONVENZIONI.md` né `TESTING.md`,
+la Passata 3 è interamente skip).
+
 Se `$@` contiene un'area specifica (es. "server"), limita l'esplorazione
-a quella sottocartella ma produci comunque tutti i documenti (sezioni
-non pertinenti → «Non applicabile a quest'area»).
+a quella sottocartella ma produci comunque tutti i documenti in
+`stale_docs` (sezioni non pertinenti → «Non applicabile a quest'area»).
 
 **Linee guida generali per l'esplorazione:**
 
@@ -129,7 +232,7 @@ Esplora:
 - File di configurazione (`tsconfig.json`, `.eslintrc*`, `vite.config.*`, ecc.)
 - `.nvmrc`, `.python-version`, `Dockerfile`
 
-Scrivi:
+Scrivi (solo se nel set `stale_docs`):
 - `.pi/codebase/STACK.md` — Linguaggi, runtime, framework, dipendenze, configurazione
 - `.pi/codebase/INTEGRAZIONI.md` — API esterne, database, provider auth, webhook
 
@@ -142,7 +245,7 @@ Esplora:
 - Entry point (`*/index.ts`, `*/app.ts`, `*/main.tsx`, ecc.)
 - Pattern di import per capire i layer
 
-Scrivi:
+Scrivi (solo se nel set `stale_docs`):
 - `.pi/codebase/ARCHITETTURA.md` — Pattern, layer, flusso dati, astrazioni, entry point
 - `.pi/codebase/STRUTTURA.md` — Layout directory, posizioni chiave, dove aggiungere codice nuovo
 
@@ -153,7 +256,7 @@ Esplora:
 - File di test (`*.test.*`, `*.spec.*`)
 - Configurazione CI se presente
 
-Scrivi:
+Scrivi (solo se nel set `stale_docs`):
 - `.pi/codebase/CONVENZIONI.md` — Stile codice, naming, pattern, gestione errori
 - `.pi/codebase/TESTING.md` — Framework, struttura test, mocking, coverage
 
@@ -165,14 +268,16 @@ Esplora:
 - Stubs / return vuoti
 - Dipendenze obsolete
 
-Scrivi:
+Scrivi (solo se nel set `stale_docs`):
 - `.pi/codebase/CRITICITA.md` — Debito tecnico, bug noti, sicurezza, performance, aree fragili
 
 ### 4. Genera INDEX.md
 
-Dopo aver scritto i 7 documenti tematici, produci `.pi/codebase/INDEX.md`:
-un indice machine-parsabile con **una riga per ciascun file `.md`** in
-`.pi/codebase/` (escludendo `INDEX.md` stesso).
+Se `stale_docs` è vuoto (no-op puro) puoi saltare questo passo —
+`INDEX.md` esistente è coerente. Altrimenti rigenera
+`.pi/codebase/INDEX.md` enumerando **tutti** i `.md` presenti in
+`.pi/codebase/` (sia quelli appena riscritti, sia quelli rimasti
+intatti).
 
 **Formato di ogni riga:**
 
@@ -209,6 +314,54 @@ rigenerare `INDEX.md` dopo modifiche ai documenti tematici è quindi
 **raccomandato ma non obbligatorio** — in assenza, l'estensione ricostruisce
 l'indice al volo.
 
+### 4b. Aggiorna `.pi/codebase/.cache.json`
+
+Per ogni doc **toccato in questa esecuzione** (cioè ogni elemento di
+`stale_docs` che è stato effettivamente scritto), aggiorna la voce
+corrispondente nella cache. I doc non toccati conservano le loro
+voci precedenti — non sovrascriverle.
+
+Esegui:
+
+```bash
+node --experimental-strip-types -e '
+import("./codebase-cache.ts").then(({ readCache, writeCache }) => {
+  const { execSync } = require("node:child_process");
+  const cachePath = ".pi/codebase/.cache.json";
+  const head = execSync("git rev-parse HEAD", { encoding: "utf-8" }).trim();
+  const now = new Date().toISOString();
+  const touched = process.argv.slice(1); // lista doc toccati passata via argv
+  const state = readCache(cachePath) ?? { docs: {} };
+  for (const doc of touched) {
+    state.docs[doc] = { commit: head, updatedAt: now };
+  }
+  writeCache(cachePath, state);
+  console.log("cache updated:", JSON.stringify(state.docs, null, 2));
+});
+' -- STACK.md TESTING.md   # ← sostituisci con la lista dei doc effettivamente toccati
+```
+
+**Caso speciale "Calibra"** (scenario 2 del passo 1a): passa tutti e 7
+i doc come argv, anche se non li hai riscritti — stai inizializzando la
+cache.
+
+**Caso speciale "no-op"** (`stale_docs` vuoto al passo 1c): non
+modificare i campi `commit`, ma aggiorna solo `updatedAt` per riflettere
+l'ultimo check. In pratica:
+
+```bash
+node --experimental-strip-types -e '
+import("./codebase-cache.ts").then(({ readCache, writeCache }) => {
+  const cachePath = ".pi/codebase/.cache.json";
+  const state = readCache(cachePath);
+  if (!state) process.exit(0);
+  const now = new Date().toISOString();
+  for (const d of Object.keys(state.docs)) state.docs[d].updatedAt = now;
+  writeCache(cachePath, state);
+});
+'
+```
+
 ### 5. Scan di sicurezza pre-commit
 
 ```bash
@@ -230,6 +383,23 @@ Verifica:
 - Nessun documento tematico vuoto (ciascuno dovrebbe avere > 20 righe)
 - `INDEX.md` ha esattamente una riga per ciascun altro `.md` e ogni riga
   matcha `^[A-Za-z0-9_\-\./]+\.md: .{1,120}$`
+
+**Verifica cache:**
+
+```bash
+test -f .pi/codebase/.cache.json && node -e '
+const s = JSON.parse(require("node:fs").readFileSync(".pi/codebase/.cache.json","utf-8"));
+const docs = Object.keys(s.docs);
+console.log("cache docs:", docs.join(", "));
+const missing = ["STACK.md","INTEGRAZIONI.md","ARCHITETTURA.md","STRUTTURA.md","CONVENZIONI.md","TESTING.md","CRITICITA.md"].filter(d => !s.docs[d]);
+if (missing.length) { console.error("⚠️ Cache incompleta — manca:", missing.join(", ")); process.exit(1); }
+console.log("✅ Cache contiene tutti e 7 i doc");
+' || echo "⚠️ .cache.json non scritto (atteso solo in scenario 'Salta')"
+```
+
+Una cache parziale (es. 5/7 doc) è accettabile solo dopo update
+incrementali su una mappa pre-esistente; uno scenario greenfield o
+"Full rewrite" deve produrre cache completa (7/7).
 
 ### 7. Output finale
 
