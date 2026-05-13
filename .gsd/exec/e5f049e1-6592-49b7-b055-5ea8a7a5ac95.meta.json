@@ -1,0 +1,18 @@
+{
+  "id": "e5f049e1-6592-49b7-b055-5ea8a7a5ac95",
+  "runtime": "bash",
+  "purpose": "S04 T03 verify: 5 mechanical greps on INSTRUCTIONS.md",
+  "script_chars": 451,
+  "started_at": "2026-05-13T08:20:46.504Z",
+  "finished_at": "2026-05-13T08:20:46.520Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 16,
+  "stdout_bytes": 17,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "/home/toto/.gsd/projects/b9d617286a81/worktrees/M001/.gsd/exec/e5f049e1-6592-49b7-b055-5ea8a7a5ac95.stdout",
+  "stderr_path": "/home/toto/.gsd/projects/b9d617286a81/worktrees/M001/.gsd/exec/e5f049e1-6592-49b7-b055-5ea8a7a5ac95.stderr"
+}

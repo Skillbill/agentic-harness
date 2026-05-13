@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "taskId": "T03",
+  "unitId": "M001/S04/T03",
+  "timestamp": 1778660416276,
+  "passed": true,
+  "discoverySource": "task-plan",
+  "checks": [
+    {
+      "command": "grep -q '^## Context audit' skills/ah-task-verify/INSTRUCTIONS.md",
+      "exitCode": 0,
+      "durationMs": 15,
+      "verdict": "pass"
+    },
+    {
+      "command": "grep -q 'ah:ctx-audit' skills/ah-task-verify/INSTRUCTIONS.md",
+      "exitCode": 0,
+      "durationMs": 6,
+      "verdict": "pass"
+    },
+    {
+      "command": "grep -q 'Context audit (sezione)' skills/ah-task-verify/INSTRUCTIONS.md",
+      "exitCode": 0,
+      "durationMs": 9,
+      "verdict": "pass"
+    },
+    {
+      "command": "grep -q 'Git Safety Rule' skills/ah-task-verify/INSTRUCTIONS.md",
+      "exitCode": 0,
+      "durationMs": 7,
+      "verdict": "pass"
+    },
+    {
+      "command": "grep -q '## Verify Log' skills/ah-task-verify/INSTRUCTIONS.md",
+      "exitCode": 0,
+      "durationMs": 8,
+      "verdict": "pass"
+    }
+  ]
+}

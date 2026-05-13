@@ -28,9 +28,53 @@
  */
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { existsSync, mkdirSync, appendFileSync, writeFileSync, readFileSync } from "node:fs";
-import { join, resolve } from "node:path";
-import { spawn } from "node:child_process";
+import {
+  existsSync,
+  mkdirSync,
+  appendFileSync,
+  writeFileSync,
+  readFileSync,
+  readdirSync,
+  statSync,
+} from "node:fs";
+import { join, resolve, dirname } from "node:path";
+import { spawn, execSync } from "node:child_process";
+import {
+  createAudit,
+  onToolCall,
+  onToolResult,
+  renderContextAuditMarkdown,
+  serializeAudit,
+  type ContextAudit,
+  type AuditError,
+} from './context-audit.js';
+import { parseContextNeeded } from './plan-context.js';
+import { sep } from "node:path";
+
+// Inlined copy of resolveCodebaseDocPath from ./load-codebase-doc.ts. We
+// avoid the import because load-codebase-doc.ts imports typebox at module
+// scope and the runtime test path resolves .js specifiers against on-disk
+// files; duplicating the ~25-LOC pure function keeps this module typebox-free.
+const NAME_PATTERN_CB = /^[a-zA-Z0-9_-]+$/;
+type ResolveResult = { ok: true; path: string } | { ok: false; error: string };
+function resolveCodebaseDocPath(cwd: string, name: string): ResolveResult {
+  if (typeof name !== "string" || name.length === 0) {
+    return { ok: false, error: "name is required" };
+  }
+  if (!NAME_PATTERN_CB.test(name)) {
+    return { ok: false, error: `invalid name "${name}"` };
+  }
+  const codebaseRoot = resolve(join(cwd, ".pi", "codebase"));
+  const candidate = resolve(join(codebaseRoot, name + ".md"));
+  const rootWithSep = codebaseRoot.endsWith(sep) ? codebaseRoot : codebaseRoot + sep;
+  if (candidate !== codebaseRoot && !candidate.startsWith(rootWithSep)) {
+    return { ok: false, error: `resolved path escapes .pi/codebase/: ${candidate}` };
+  }
+  if (!existsSync(candidate)) {
+    return { ok: false, error: `codebase doc not found: ${name}.md` };
+  }
+  return { ok: true, path: candidate };
+}
 
 // ── Stato per sessione ───────────────────────────────────────────────────
 
@@ -56,6 +100,8 @@ interface SessionCtx {
   usageFile: string;
   summaryFile: string;
   totals: Totals;
+  // Per-task context audit. Key = taskId (e.g. "T-001").
+  context: Record<string, ContextAudit>;
 }
 
 let current: SessionCtx | undefined;
@@ -118,14 +164,141 @@ function initSession(cwd: string, sessionId: string): SessionCtx {
       tools: {},
       startedAt: new Date().toISOString(),
     },
+    context: {},
   };
-  writeFileSync(sc.summaryFile, JSON.stringify(sc.totals, null, 2) + "\n", "utf8");
+  persistSummary(sc);
   return sc;
 }
 
 function persistSummary(sc: SessionCtx): void {
   try {
-    writeFileSync(sc.summaryFile, JSON.stringify(sc.totals, null, 2) + "\n", "utf8");
+    const context: Record<string, object> = {};
+    for (const [k, v] of Object.entries(sc.context)) {
+      context[k] = serializeAudit(v);
+    }
+    const payload = { ...sc.totals, context };
+    writeFileSync(sc.summaryFile, JSON.stringify(payload, null, 2) + "\n", "utf8");
+  } catch {
+    /* ignore */
+  }
+}
+
+// Inlined task detector. Duplicated (~25 LOC) instead of imported from
+// ./index.js to avoid the import cycle index → context-inspector → index.
+function detectCurrentTaskLocal(
+  cwd: string,
+): { id: string; taskFile: string } | null {
+  try {
+    const branch = execSync("git branch --show-current", { cwd, encoding: "utf-8" }).trim();
+    const match = branch.match(/^feature\/(T-\d+)/);
+    if (!match) return null;
+    const id = match[1]!;
+    const tasksRoot = join(cwd, ".pi", "tasks");
+    for (const status of ["in-progress", "review", "backlog", "done"]) {
+      const statusDir = join(tasksRoot, status);
+      if (!existsSync(statusDir)) continue;
+      for (const entry of readdirSync(statusDir)) {
+        if (!entry.startsWith(id + "-")) continue;
+        const taskFile = join(statusDir, entry, "TASK.md");
+        if (!existsSync(taskFile)) continue;
+        return { id, taskFile };
+      }
+    }
+    return { id, taskFile: "" };
+  } catch {
+    return null;
+  }
+}
+
+function ensureAuditForCurrentTask(cwd: string, sc: SessionCtx): ContextAudit | null {
+  const task = detectCurrentTaskLocal(cwd);
+  if (!task) return null;
+  const existing = sc.context[task.id];
+  if (existing) return existing;
+
+  let declared: string[] | null = null;
+  const initialErrors: AuditError[] = [];
+
+  if (task.taskFile) {
+    const planFile = join(dirname(task.taskFile), "PLAN.md");
+    if (existsSync(planFile)) {
+      try {
+        const raw = readFileSync(planFile, "utf-8");
+        const r = parseContextNeeded(raw);
+        if (r.ok) {
+          declared = r.stems;
+        } else {
+          initialErrors.push({ name: "<plan>", reason: `parse-failed: ${r.reason}` });
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        initialErrors.push({ name: "<plan>", reason: `read-failed: ${msg}` });
+      }
+    }
+  }
+
+  let declaredBudgetTokens: number | null = null;
+  if (declared !== null) {
+    let sumBytes = 0;
+    for (const stem of declared) {
+      const r = resolveCodebaseDocPath(cwd, stem);
+      if (r.ok) {
+        try {
+          sumBytes += statSync(r.path).size;
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          initialErrors.push({ name: stem, reason: `stat-failed: ${msg}` });
+        }
+      } else {
+        initialErrors.push({ name: stem, reason: r.error });
+      }
+    }
+    declaredBudgetTokens = Math.round(sumBytes / 4);
+  }
+
+  const audit = createAudit(task.id, declared, declaredBudgetTokens);
+  for (const e of initialErrors) audit.errors.push(e);
+  sc.context[task.id] = audit;
+  return audit;
+}
+
+// Session dir naming is `${YYYYMMDD-HHMMSS}_${sid8}` (see initSession). The
+// timestamp prefix is monotonic and lexicographically sortable, so we sort by
+// name descending rather than by mtime — survives clock skew across mounts.
+const SESSION_DIR_PATTERN = /^\d{8}-\d{6}_[A-Za-z0-9]+$/;
+
+export function findLatestAuditForTask(cwd: string, taskId: string): string | null {
+  const root = join(resolve(cwd), ".pi", "context-inspector");
+  if (!existsSync(root)) return null;
+  let entries: string[];
+  try {
+    entries = readdirSync(root);
+  } catch {
+    return null;
+  }
+  const sessions = entries
+    .filter((name) => SESSION_DIR_PATTERN.test(name))
+    .sort()
+    .reverse();
+  for (const name of sessions) {
+    const candidate = join(root, name, "tasks", taskId, "context-audit.json");
+    if (existsSync(candidate)) return candidate;
+  }
+  return null;
+}
+
+const TASK_ID_PATTERN = /^T-\d+$/;
+
+function persistContextAudit(sc: SessionCtx, audit: ContextAudit): void {
+  persistSummary(sc);
+  try {
+    const taskDir = join(sc.dir, "tasks", audit.taskId);
+    mkdirSync(taskDir, { recursive: true });
+    writeFileSync(
+      join(taskDir, "context-audit.json"),
+      JSON.stringify(serializeAudit(audit), null, 2) + "\n",
+      "utf8",
+    );
   } catch {
     /* ignore */
   }
@@ -375,6 +548,36 @@ export function registerContextInspector(pi: ExtensionAPI): void {
     persistSummary(current);
   });
 
+  // ── Context audit (declared vs loaded per-task) ──────────────────────
+  // Observer-only: handlers MUST NOT return a non-undefined value (D-Q3=A).
+
+  pi.on("tool_call", (event, _ctx) => {
+    if (!current) return;
+    const audit = ensureAuditForCurrentTask(process.cwd(), current);
+    if (!audit) return;
+    onToolCall(audit, {
+      toolName: event.toolName,
+      toolCallId: event.toolCallId,
+      input: (event as any).input,
+    });
+  });
+
+  pi.on("tool_result", (event, _ctx) => {
+    if (!current) return;
+    const audit = ensureAuditForCurrentTask(process.cwd(), current);
+    if (!audit) return;
+    onToolResult(
+      audit,
+      {
+        toolCallId: event.toolCallId,
+        content: event.content,
+        isError: event.isError,
+      },
+      new Date().toISOString(),
+    );
+    persistContextAudit(current, audit);
+  });
+
   // ── Comandi ────────────────────────────────────────────────────────
 
   pi.registerCommand("ah:ctx-stats", {
@@ -415,8 +618,69 @@ export function registerContextInspector(pi: ExtensionAPI): void {
       if (models.length) {
         lines.push("🤖 Modelli usati (count assistant msg)");
         for (const [m, n] of models) lines.push(`   ${m.padEnd(32)} ${n}`);
+        lines.push("");
+      }
+      const audits = Object.entries(current.context);
+      for (const [taskId, audit] of audits) {
+        lines.push(`📚 Context audit — ${taskId}`);
+        if (audit.declared === null) {
+          lines.push(`   declared:    <none — no PLAN.md or no context-needed:>`);
+        } else {
+          const budget = audit.declaredBudgetTokens ?? 0;
+          lines.push(
+            `   declared:    [${audit.declared.join(", ")}]   (≈${fmtN(budget)} tok)`,
+          );
+        }
+        const loadedNames = Object.keys(audit.loaded);
+        let totalCalls = 0;
+        for (const n of loadedNames) totalCalls += audit.loaded[n].calls;
+        lines.push(
+          `   loaded:      [${loadedNames.join(", ")}]      (≈${fmtN(audit.loadedTokens)} tok, ${totalCalls} calls)`,
+        );
+        const sign = audit.deltaToken >= 0 ? "+" : "";
+        lines.push(`   delta_token: ${sign}${audit.deltaToken}`);
+        lines.push(`   label:       ${audit.label}`);
+        if (audit.errors.length > 0) {
+          lines.push(`   errors:      ${audit.errors.length}`);
+          for (const e of audit.errors) {
+            lines.push(`     - ${e.name}: ${e.reason}`);
+          }
+        }
+        lines.push("");
       }
       ctx.ui.notify(lines.join("\n"), "info");
+    },
+  });
+
+  pi.registerCommand("ah:ctx-audit", {
+    description: "Context Inspector: rendered per-task context audit (declared vs loaded)",
+    handler: async (args, ctx) => {
+      const raw = typeof args === "string" ? args.trim() : "";
+      let taskId: string | null = null;
+      if (raw && TASK_ID_PATTERN.test(raw)) {
+        taskId = raw;
+      } else {
+        const detected = detectCurrentTaskLocal(process.cwd());
+        if (detected && TASK_ID_PATTERN.test(detected.id)) taskId = detected.id;
+      }
+      if (!taskId) {
+        ctx.ui.notify(renderContextAuditMarkdown(null), "info");
+        return;
+      }
+      const auditPath = findLatestAuditForTask(process.cwd(), taskId);
+      if (!auditPath) {
+        ctx.ui.notify(renderContextAuditMarkdown(null), "info");
+        return;
+      }
+      let parsed: ContextAudit;
+      try {
+        const raw = readFileSync(auditPath, "utf-8");
+        parsed = JSON.parse(raw) as ContextAudit;
+      } catch {
+        ctx.ui.notify(renderContextAuditMarkdown(null), "info");
+        return;
+      }
+      ctx.ui.notify(renderContextAuditMarkdown(parsed), "info");
     },
   });
 

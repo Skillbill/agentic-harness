@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "taskId": "T03",
+  "unitId": "M001/S02/T03",
+  "timestamp": 1778599655758,
+  "passed": true,
+  "discoverySource": "task-plan",
+  "checks": [
+    {
+      "command": "! grep -E 'Tipo di step' skills/ah-task-execute/INSTRUCTIONS.md >/dev/null",
+      "exitCode": 0,
+      "durationMs": 8,
+      "verdict": "pass"
+    },
+    {
+      "command": "! grep -E 'CONVENZIONI\\.md.*STRUTTURA\\.md' skills/ah-task-execute/INSTRUCTIONS.md >/dev/null",
+      "exitCode": 0,
+      "durationMs": 8,
+      "verdict": "pass"
+    },
+    {
+      "command": "grep -q 'context-needed' skills/ah-task-execute/INSTRUCTIONS.md",
+      "exitCode": 0,
+      "durationMs": 8,
+      "verdict": "pass"
+    },
+    {
+      "command": "grep -q 'load_codebase_doc' skills/ah-task-execute/INSTRUCTIONS.md",
+      "exitCode": 0,
+      "durationMs": 6,
+      "verdict": "pass"
+    },
+    {
+      "command": "grep -q 'PLAN.md' skills/ah-task-execute/INSTRUCTIONS.md",
+      "exitCode": 0,
+      "durationMs": 9,
+      "verdict": "pass"
+    }
+  ]
+}

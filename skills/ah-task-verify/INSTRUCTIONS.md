@@ -95,6 +95,10 @@ Scrivi la prima bozza di `VERIFY.md` secondo `docs/task-layout.md` §2.5:
 - [ ] <voce custom 1 copiata da TASK.md>
 - [ ] ...
 
+## Context audit
+
+<!-- popolato dallo step 6.5 -->
+
 ## Verify Log
 
 (popolato dai run di /ah:task-next-step)
@@ -110,6 +114,22 @@ decisione V-4).
 
 I log delle run precedenti in `## Verify Log` **restano**. Questa run
 aggiungerà una nuova entry in coda.
+
+### 2.5 Context audit (sezione)
+
+La sezione `## Context audit` di `VERIFY.md` rispecchia il più recente
+`tasks/<T-NNN>/context-audit.json` prodotto dal Context Inspector e
+viene esposta dal comando `ah:ctx-audit <T-NNN>`. Come le checkbox della
+DoD globale, viene **resettata ad ogni run** (decisione V-4 parity): non
+si accumula uno storico — il blocco riflette sempre l'ultima esecuzione
+di `/ah:task-next-step`. Contiene declared / loaded / delta_token /
+label sintetica (`on-budget` / `over-load` / `under-load` /
+`under-declared` / `no-audit`) e, quando presenti, un sotto-blocco
+`errors:` con le anomalie registrate (es. PLAN.md non parsabile, voce
+`context-needed` malformata). Se l'Inspector non ha ancora registrato
+nessun `tool_call` per questo task, la sezione mostra esplicitamente
+"Context audit not available — Inspector did not record load_codebase_doc
+calls for this task" invece di rompere il flusso.
 
 ### 3. Determina i componenti impattati dal branch (decisione V-3)
 
@@ -233,6 +253,33 @@ sull'esito complessivo>.
 ```
 
 La data viene da `date +"%Y-%m-%d %H:%M"`.
+
+### 6.5 Materializza la sezione `## Context audit`
+
+Invoca `ah:ctx-audit <T-NNN>` per ottenere il markdown renderizzato del
+più recente `context-audit.json` del task. Se il comando non è
+disponibile in questo contesto pi, leggi direttamente il JSON da
+`.pi/context-inspector/<sessione-più-recente>/tasks/<T-NNN>/context-audit.json`
+e applica il renderer puro `renderContextAuditMarkdown` di
+`context-audit.ts`.
+
+- **Primo run** (sezione appena creata da §2a): inserisci il blocco
+  renderizzato **sotto** l'heading `## Context audit`, rimpiazzando il
+  placeholder `<!-- popolato dallo step 6.5 -->`.
+- **Run successivo**: **SOSTITUISCI** il corpo della sezione `##
+  Context audit` con il nuovo blocco renderizzato. Non accodare la
+  storia — stesse semantiche del reset delle checkbox DoD (decisione
+  V-4 parity). Il `## Verify Log` resta cronologico; `## Context audit`
+  no.
+
+Se l'Inspector non ha registrato alcun `tool_call` per il task, il
+renderer emette la riga esplicita "Context audit not available —
+Inspector did not record load_codebase_doc calls for this task":
+inseriscila comunque, non saltare la sezione.
+
+L'unico path che resta toccato è
+`.pi/tasks/in-progress/<ID>-<slug>/VERIFY.md` — niente nuovi file nel
+working tree, in linea con la §Git Safety Rule.
 
 ### 7. Mostra il report al dev e chiedi conferma
 

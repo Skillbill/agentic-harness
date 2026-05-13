@@ -1,0 +1,18 @@
+{
+  "id": "5b9d731e-9f20-44a7-a612-7eb7a7a4292a",
+  "runtime": "bash",
+  "purpose": "S03 slice closeout: run T01+T02+T03 verification chains",
+  "script_chars": 2335,
+  "started_at": "2026-05-12T15:51:17.057Z",
+  "finished_at": "2026-05-12T15:51:19.339Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 2282,
+  "stdout_bytes": 555,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "/home/toto/.gsd/projects/b9d617286a81/worktrees/M001/.gsd/exec/5b9d731e-9f20-44a7-a612-7eb7a7a4292a.stdout",
+  "stderr_path": "/home/toto/.gsd/projects/b9d617286a81/worktrees/M001/.gsd/exec/5b9d731e-9f20-44a7-a612-7eb7a7a4292a.stderr"
+}

@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "taskId": "T01",
+  "unitId": "M001/S03/T01",
+  "timestamp": 1778600552340,
+  "passed": true,
+  "discoverySource": "task-plan",
+  "checks": [
+    {
+      "command": "test -f plan-context.ts",
+      "exitCode": 0,
+      "durationMs": 6,
+      "verdict": "pass"
+    },
+    {
+      "command": "grep -q 'export function parseContextNeeded' plan-context.ts",
+      "exitCode": 0,
+      "durationMs": 9,
+      "verdict": "pass"
+    },
+    {
+      "command": "grep -q 'export const NAME_PATTERN' plan-context.ts",
+      "exitCode": 0,
+      "durationMs": 8,
+      "verdict": "pass"
+    },
+    {
+      "command": "grep -q \"from '../plan-context.js'\" tests/s02-plan-context-needed.test.mts",
+      "exitCode": 0,
+      "durationMs": 9,
+      "verdict": "pass"
+    },
+    {
+      "command": "! grep -qE '^function parseContextNeeded' tests/s02-plan-context-needed.test.mts",
+      "exitCode": 0,
+      "durationMs": 9,
+      "verdict": "pass"
+    }
+  ]
+}

@@ -109,32 +109,51 @@ Leggi per intero (con `read`, non assumere di averli già in contesto):
 Non leggere `VERIFY.md`: riguarda la DoD globale del task, non la
 pianificazione.
 
-#### 3-codebase. Carica i documenti della mappa codebase
+#### 3-codebase. Carica i documenti della mappa codebase (on-demand via INDEX)
 
-Carica **selettivamente** i documenti pertinenti al tipo di task,
-usando la tabella di corrispondenza:
+`/ah:task-plan` è il **solo produttore** della chiave `context-needed:`
+in `PLAN.md`. Le fasi a valle (discuss/execute/verify) si limitano a
+leggere quella lista — quindi qui scegli con cura quali doc servono.
 
-| Tipo di task (da TASK.md: contesto, componenti, obiettivo) | Documenti da caricare |
-|---|---|
-| UI, frontend, componenti | `.pi/codebase/CONVENZIONI.md`, `.pi/codebase/STRUTTURA.md` |
-| API, backend, endpoint | `.pi/codebase/ARCHITETTURA.md`, `.pi/codebase/CONVENZIONI.md` |
-| Database, schema, modelli | `.pi/codebase/ARCHITETTURA.md`, `.pi/codebase/STACK.md` |
-| Testing | `.pi/codebase/TESTING.md`, `.pi/codebase/CONVENZIONI.md` |
-| Integrazione, API esterne | `.pi/codebase/INTEGRAZIONI.md`, `.pi/codebase/STACK.md` |
-| Refactoring, cleanup | `.pi/codebase/CRITICITA.md`, `.pi/codebase/ARCHITETTURA.md` |
-| Setup, configurazione | `.pi/codebase/STACK.md`, `.pi/codebase/STRUTTURA.md` |
+Non esiste una tabella statica tipo-task → doc. La selezione è
+**esplicita per task**, fatta consultando l'INDEX della codebase già
+iniettato in contesto a inizio sessione (`.pi/codebase/INDEX.md`, formato
+`- <relPath>: <summary>`).
 
-Se il task tocca **più categorie**, carica tutti i documenti pertinenti
-(union). Se il tipo non è chiaro, carica `ARCHITETTURA.md` +
-`CONVENZIONI.md` come default sicuro.
+Procedura:
 
-Usa questi documenti per:
+1. Leggi le voci dell'INDEX (già in contesto). Ogni riga ha la forma
+   `- <relPath>: <summary>` (es. `- CONVENZIONI.md: …`).
+2. Sulla base di `TASK.md` (contesto, componenti, obiettivo) e di
+   `DISCUSS.md` se presente, decidi **quali doc ti servono davvero**
+   per pianificare step ancorati al codice. Non caricare nulla per
+   inerzia: solo doc che cambieranno o vincoleranno le decisioni del
+   piano.
+3. Per ciascun doc scelto, chiama `load_codebase_doc({ name: "<stem>" })`
+   — uno per chiamata. Lo **stem** è la `relPath` della riga INDEX
+   privata dell'estensione `.md` (es. `CONVENZIONI.md` → stem
+   `CONVENZIONI`; `INTEGRAZIONI.md` → stem `INTEGRAZIONI`). Non passare
+   path, non passare `.md`.
+4. Ogni stem deve matchare la regex `^[a-zA-Z0-9_-]+$` (stessa
+   `NAME_PATTERN` applicata da `load_codebase_doc`). Voci dell'INDEX che
+   non rispettano questa regex non sono caricabili e non vanno scritte
+   in `context-needed:`.
+5. **Annota la lista degli stem caricati**: andrà scritta tale e quale
+   nel frontmatter `context-needed:` di `PLAN.md` al passo 8b.
 
-- **STRUTTURA.md** → decidere dove posizionare file nuovi.
-- **CONVENZIONI.md** → specificare naming, stile, pattern da seguire.
-- **ARCHITETTURA.md** → rispettare i layer e le astrazioni esistenti.
-- **TESTING.md** → allineare gli step di test ai pattern esistenti.
-- **CRITICITA.md** → evitare di peggiorare debito tecnico noto.
+Default sicuro: se da `TASK.md`/`DISCUSS.md` non riesci a inferire i
+doc rilevanti (task ambiguo, contesto sottile), carica `ARCHITETTURA`
+e `CONVENZIONI` e annota gli stessi due stem in `context-needed:`.
+Questa è una scelta di giudizio sull'INDEX, **non** una tabella
+tipo-task → doc: rileggi l'INDEX e rivedi la scelta se vedi un doc
+chiaramente più pertinente.
+
+Caso "nessun doc codebase necessario": se il task tocca esclusivamente
+file di processo (template di prompt, doc di design, skill, ecc.) e
+nessun doc di `.pi/codebase/` cambierà o vincolerà gli step, è
+**legittimo e atteso** annotare la lista vuota — al passo 8b scriverai
+`context-needed: []` nel frontmatter. La chiave va sempre emessa, anche
+se vuota.
 
 #### 3-bis. Carica i file codice (mirato)
 
@@ -209,6 +228,12 @@ Proposta di piano — T-NNN (<M> step, stima totale: <X>h)
 Poi per ciascuno, nella risposta completa, mostra anche scope + verify
 (sotto la tabella, come schede numerate).
 
+In parallelo alla scomposizione, **fissa anche la lista degli stem**
+`context-needed:` che le fasi a valle dovranno caricare (vedi
+§3-codebase). Va dichiarata al dev insieme alla proposta di piano,
+così che eventuali aggiunte/rimozioni di step possano riflettersi
+anche sui doc richiesti.
+
 ### 6. Iterazione di approvazione
 
 Chiedi al dev:
@@ -235,6 +260,13 @@ Se siamo in re-run:
   `steps/archive/` con `git mv`, preservandone il nome. Se in `archive/`
   esiste già un file con lo stesso nome, aggiungi un suffisso `-<YYYYMMDD>`.
 - Gli step `done` restano in `steps/` col loro numero.
+- **Ricalcola `context-needed:` da zero** sulla base dello stato corrente
+  di `TASK.md` + `DISCUSS.md` (e degli step `done` preservati): non
+  ereditare la lista dal vecchio `PLAN.md`. Se l'evoluzione del task ha
+  cambiato gli ambiti di codice toccati, anche la lista degli stem deve
+  cambiare di conseguenza. Vale lo stesso default sicuro di §3-codebase
+  (`ARCHITETTURA` + `CONVENZIONI` se ambiguo; `[]` se davvero nessun doc
+  codebase serve).
 
 ### 8. Scrivi i file
 
@@ -279,9 +311,17 @@ Convenzioni:
 
 #### 8b. `PLAN.md`
 
-Crea (o riscrivi) `PLAN.md` secondo `docs/task-layout.md` §2.3:
+Crea (o riscrivi) `PLAN.md` secondo `task-layout.md` §3.3. La prima cosa
+nel file è il **blocco frontmatter YAML** con la chiave
+`context-needed:` — la lista degli stem decisa al passo §3-codebase
+(eventualmente raffinata in §5). La chiave va **sempre emessa**, anche
+quando vuota (`context-needed: []`).
 
 ```markdown
+---
+context-needed: [<STEM1>, <STEM2>]
+---
+
 # Plan — T-NNN
 
 > Ultimo aggiornamento: YYYY-MM-DD
@@ -306,6 +346,16 @@ Crea (o riscrivi) `PLAN.md` secondo `docs/task-layout.md` §2.3:
 - YYYY-MM-DD: <replan / prima generazione / ...>
   - <cosa è cambiato in 1 riga>
 ```
+
+Vincoli sui valori di `context-needed:`:
+
+- Sono **stem** (senza estensione `.md`, senza path). Una voce INDEX
+  `- CONVENZIONI.md: …` diventa `CONVENZIONI`.
+- Ogni stem matcha `^[a-zA-Z0-9_-]+$` (stessa `NAME_PATTERN` di
+  `load_codebase_doc`).
+- La lista vuota è valida e va scritta come `context-needed: []`.
+- Vietati: `[CONVENZIONI.md]`, `[.pi/codebase/CONVENZIONI]`, path
+  assoluti, glob. Vedi i contro-esempi in `task-layout.md` §3.3.
 
 ### 9. Commit & push
 

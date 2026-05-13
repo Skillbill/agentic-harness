@@ -133,35 +133,38 @@ Scopo: farsi un'idea precisa di cosa va fatto prima di toccare
 codice. Non leggere tutti gli step degli altri (troppo rumore): basta
 che tu abbia presente lo step corrente nel suo contesto di piano.
 
-#### 4-codebase. Carica i documenti della mappa codebase
+#### 4-codebase. Carica i documenti della mappa codebase (da `context-needed:`)
 
-Carica selettivamente i documenti di `.pi/codebase/` pertinenti
-allo step corrente. Usa la tabella di corrispondenza:
+`/ah:task-next-step` è un **consumatore** della chiave `context-needed:`
+in `PLAN.md`, non un selettore autonomo. Non esiste una tabella
+tipo-step → doc: la selezione è già stata fatta da `/ah:task-plan` e
+materializzata nel frontmatter (vedi `task-layout.md` §3.3).
 
-| Tipo di step (da `## Execute`) | Documenti da caricare |
-|---|---|
-| UI, frontend, componenti | `.pi/codebase/CONVENZIONI.md`, `.pi/codebase/STRUTTURA.md` |
-| API, backend, endpoint | `.pi/codebase/ARCHITETTURA.md`, `.pi/codebase/CONVENZIONI.md` |
-| Database, schema, modelli | `.pi/codebase/ARCHITETTURA.md`, `.pi/codebase/STACK.md` |
-| Testing | `.pi/codebase/TESTING.md`, `.pi/codebase/CONVENZIONI.md` |
-| Integrazione, API esterne | `.pi/codebase/INTEGRAZIONI.md`, `.pi/codebase/STACK.md` |
-| Refactoring, cleanup | `.pi/codebase/CRITICITA.md`, `.pi/codebase/ARCHITETTURA.md` |
-| Setup, configurazione | `.pi/codebase/STACK.md`, `.pi/codebase/STRUTTURA.md` |
+Procedura:
 
-Se il tipo non è chiaro, carica `ARCHITETTURA.md` + `CONVENZIONI.md`
-come default sicuro.
+1. Leggi il frontmatter YAML in cima a `PLAN.md` (già caricato al
+   passo 4) ed estrai la lista `context-needed: [...]`.
+2. Per ciascuno stem nella lista, chiama
+   `load_codebase_doc({ name: "<stem>" })` — uno per chiamata. Gli stem
+   sono già normalizzati (senza estensione `.md`, senza path) e
+   rispettano `^[a-zA-Z0-9_-]+$`.
+3. **Non caricare altri doc di `.pi/codebase/` per euristica di
+   categoria.** Se la lista è vuota (`context-needed: []`), non
+   caricare nulla: il task è stato dichiarato senza dipendenze dalla
+   mappa codebase, ed è una scelta significativa del piano.
+4. Se la chiave è assente del tutto (PLAN legacy generato prima di
+   questa convenzione), trattalo come lista vuota e annotalo in
+   `## Log`: «PLAN.md senza `context-needed:`; nessun doc codebase
+   caricato; considera replan se lo step richiede contesto codice».
 
-Usa questi documenti durante l'implementazione per:
+Regola di contraddizione: se un doc caricato contraddice `## Execute`,
+segui `## Execute` e annota la contraddizione in `## Log`.
 
-- **STRUTTURA.md** → posizionare i file nuovi nella directory corretta.
-- **CONVENZIONI.md** → rispettare naming, stile codice, pattern di import.
-- **ARCHITETTURA.md** → rispettare layer, astrazioni, flusso dati.
-- **TESTING.md** → scrivere test coerenti con i pattern esistenti.
-- **CRITICITA.md** → non peggiorare debito tecnico noto.
-
-Se un documento della mappa contiene indicazioni che **contraddicono**
-quanto scritto nello step (`## Execute`), segui lo step: il piano ha
-precedenza sulla mappa globale. Annota la contraddizione nel `## Log`.
+Gap a runtime: se durante l'implementazione lo step appare richiedere
+un doc codebase **non** dichiarato in `context-needed:`, **non
+caricarlo silenziosamente**. Annota in `## Log` lo stem mancante e la
+ragione, poi proponi al dev di fare `replan` via `/ah:task-next-step`
+così che `context-needed:` venga ricalcolato dal produttore.
 
 #### 4-bis. Carica i file codice pertinenti
 

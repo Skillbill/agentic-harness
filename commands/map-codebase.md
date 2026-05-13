@@ -1,5 +1,5 @@
 ---
-description: Analizza la codebase e produce 7 documenti strutturati in .pi/codebase/
+description: Analizza la codebase e produce 8 documenti strutturati in .pi/codebase/ (7 tematici + INDEX.md)
 argument-hint: "[opzionale: area specifica da mappare, es. 'server' o 'configurator']"
 ---
 
@@ -7,13 +7,14 @@ Sei l'Assistente del workflow SCRUM-lite del progetto. Il dev vuole
 **mappare la codebase** per produrre documenti di riferimento strutturati
 che le fasi successive (plan, execute, verify) useranno come contesto.
 
-Output: cartella `.pi/codebase/` con 7 documenti Markdown strutturati.
+Output: cartella `.pi/codebase/` con 8 documenti Markdown (7 tematici + un `INDEX.md` machine-parsabile).
 
 ## Scopo
 
 Analizzare la codebase esistente e produrre una mappa strutturata in 7
-documenti, ciascuno focalizzato su un aspetto diverso del sistema. Questi
-documenti sono **consumati** dai comandi successivi:
+documenti tematici più un `INDEX.md` di indice, ciascuno focalizzato su
+un aspetto diverso del sistema. Questi documenti sono **consumati** dai
+comandi successivi:
 
 | Tipo di fase/task                      | Documenti caricati                          |
 |----------------------------------------|---------------------------------------------|
@@ -94,7 +95,7 @@ Attendi la risposta del dev.
 mkdir -p .pi/codebase
 ```
 
-I 7 documenti attesi:
+Gli 8 documenti attesi:
 - `STACK.md` (stack tecnologico)
 - `INTEGRAZIONI.md` (servizi esterni e API)
 - `ARCHITETTURA.md` (pattern, layer, flusso dati)
@@ -102,6 +103,7 @@ I 7 documenti attesi:
 - `CONVENZIONI.md` (stile codice, naming, pattern)
 - `TESTING.md` (framework, pattern, coverage)
 - `CRITICITA.md` (debito tecnico, bug noti, aree fragili)
+- `INDEX.md` (path + 1-line summary per doc, machine-parsed by the extension)
 
 ### 3. Mapping sequenziale — 4 passate
 
@@ -166,7 +168,48 @@ Esplora:
 Scrivi:
 - `.pi/codebase/CRITICITA.md` — Debito tecnico, bug noti, sicurezza, performance, aree fragili
 
-### 4. Scan di sicurezza pre-commit
+### 4. Genera INDEX.md
+
+Dopo aver scritto i 7 documenti tematici, produci `.pi/codebase/INDEX.md`:
+un indice machine-parsabile con **una riga per ciascun file `.md`** in
+`.pi/codebase/` (escludendo `INDEX.md` stesso).
+
+**Formato di ogni riga:**
+
+```
+<relPath>: <one-line summary ≤ 120 char>
+```
+
+dove:
+- `<relPath>` è il path del file relativo a `.pi/codebase/` (es. `STACK.md`).
+- `<one-line summary>` è la prima intestazione `# ` del documento, oppure,
+  se assente, la prima riga di corpo non vuota; tagliata a 120 caratteri.
+
+Ogni riga **deve** matchare la regex:
+
+```
+^[A-Za-z0-9_\-\./]+\.md: .{1,120}$
+```
+
+Esempio (illustrativo):
+
+```
+STACK.md: Stack Tecnologico
+INTEGRAZIONI.md: Integrazioni Esterne
+ARCHITETTURA.md: Architettura
+STRUTTURA.md: Struttura della Codebase
+CONVENZIONI.md: Convenzioni di Codice
+TESTING.md: Pattern di Testing
+CRITICITA.md: Criticità della Codebase
+```
+
+L'estensione che consuma questi documenti **preferisce un `INDEX.md`
+presente su disco** rispetto al proprio fallback in-memory lazy:
+rigenerare `INDEX.md` dopo modifiche ai documenti tematici è quindi
+**raccomandato ma non obbligatorio** — in assenza, l'estensione ricostruisce
+l'indice al volo.
+
+### 5. Scan di sicurezza pre-commit
 
 ```bash
 grep -rE '(sk-[a-zA-Z0-9]{20,}|ghp_[a-zA-Z0-9]{36}|AKIA[A-Z0-9]{16}|xox[baprs]-|-----BEGIN.*PRIVATE KEY|eyJ[a-zA-Z0-9_-]+\.eyJ)' .pi/codebase/*.md 2>/dev/null && echo "⚠️ SEGRETI TROVATI" || echo "✅ Nessun segreto rilevato"
@@ -175,7 +218,7 @@ grep -rE '(sk-[a-zA-Z0-9]{20,}|ghp_[a-zA-Z0-9]{36}|AKIA[A-Z0-9]{16}|xox[baprs]-|
 Se trovati segreti → STOP, mostra i match, chiedi conferma al dev prima
 di proseguire.
 
-### 5. Verifica output
+### 6. Verifica output
 
 ```bash
 ls -la .pi/codebase/
@@ -183,10 +226,12 @@ wc -l .pi/codebase/*.md
 ```
 
 Verifica:
-- Tutti i 7 documenti esistono
-- Nessun documento vuoto (ciascuno dovrebbe avere > 20 righe)
+- Tutti gli 8 documenti esistono (7 tematici + `INDEX.md`)
+- Nessun documento tematico vuoto (ciascuno dovrebbe avere > 20 righe)
+- `INDEX.md` ha esattamente una riga per ciascun altro `.md` e ogni riga
+  matcha `^[A-Za-z0-9_\-\./]+\.md: .{1,120}$`
 
-### 6. Output finale
+### 7. Output finale
 
 ```
 🗺️  Mappa della codebase completata.
@@ -199,6 +244,7 @@ Creati in .pi/codebase/:
 - TESTING.md ([N] righe) — Struttura test e pratiche
 - INTEGRAZIONI.md ([N] righe) — Servizi esterni e API
 - CRITICITA.md ([N] righe) — Debito tecnico e problemi noti
+- INDEX.md ([N] righe) — Indice machine-parsabile (path + summary per doc)
 
 Comandi git suggeriti:
   git add .pi/codebase/

@@ -70,20 +70,20 @@ l'agente **propone di generarla inline** eseguendo la logica di
 
 ### Caricamento selettivo
 
-Le fasi non caricano tutti i 7 documenti: selezionano quelli pertinenti
-al tipo di lavoro usando questa tabella di corrispondenza:
+Le fasi non caricano tutti i 7 documenti: la selezione è **per-task**
+ed è dichiarata nel frontmatter YAML `context-needed:` in cima a
+`PLAN.md` (vedi §3.3). `PLAN.md` è l'autorità: discuss/execute/verify
+caricano via `load_codebase_doc` esattamente i doc elencati lì —
+niente di più, niente di meno. La lista può essere vuota
+(`context-needed: []`) per task che non hanno bisogno di contesto
+codebase.
 
-| Tipo di lavoro | Documenti caricati |
-|---|---|
-| UI, frontend, componenti | `CONVENZIONI.md`, `STRUTTURA.md` |
-| API, backend, endpoint | `ARCHITETTURA.md`, `CONVENZIONI.md` |
-| Database, schema, modelli | `ARCHITETTURA.md`, `STACK.md` |
-| Testing | `TESTING.md`, `CONVENZIONI.md` |
-| Integrazione, API esterne | `INTEGRAZIONI.md`, `STACK.md` |
-| Refactoring, cleanup | `CRITICITA.md`, `ARCHITETTURA.md` |
-| Setup, configurazione | `STACK.md`, `STRUTTURA.md` |
-
-Se il tipo non è chiaro, `ARCHITETTURA.md` + `CONVENZIONI.md` come default.
+Quando `PLAN.md` non esiste ancora (tipicamente durante `/task-discuss`,
+o per il primo `/task-plan`), la fase ricade sull'**INDEX**
+(`.pi/codebase/INDEX.md`) — un elenco compatto `<path>: <summary>` —
+e usa il proprio giudizio per chiamare `load_codebase_doc` solo sui
+documenti pertinenti. Non esiste più una tabella statica tipo-task →
+documento: la scelta è esplicita per ogni task.
 
 ### Aggiornamento
 
@@ -171,9 +171,30 @@ Struttura:
 ### 3.3 `PLAN.md` — indice del piano (creato da `/task-plan`)
 
 `PLAN.md` **non contiene il dettaglio degli step**: è un indice ordinato,
-più gli aspetti trasversali al piano.
+più gli aspetti trasversali al piano. In cima a `PLAN.md` vive un blocco
+YAML frontmatter con la chiave `context-needed:` che dichiara quali
+documenti di `.pi/codebase/` le fasi successive devono caricare via
+`load_codebase_doc`.
+
+**Regole della chiave `context-needed:`**
+
+- Valore: lista YAML di **stem** dei file sotto `.pi/codebase/`, cioè
+  il nome senza estensione `.md`.
+- Ogni stem deve matchare la regex `^[a-zA-Z0-9_-]+$` (la stessa
+  applicata da `load_codebase_doc`).
+- La lista vuota (`context-needed: []`) è **legale e significativa**:
+  indica un task che non necessita di contesto codebase (es. modifiche
+  a documenti di processo, pulizia di file di prompt).
+- Tutti i comandi che emettono `PLAN.md` (a partire da `/task-plan`)
+  **devono** scrivere la chiave, anche se vuota. Parser e fasi
+  downstream tollerano l'assenza della chiave per retro-compatibilità,
+  ma il template ufficiale la richiede sempre.
 
 ```markdown
+---
+context-needed: [CONVENZIONI, STRUTTURA]
+---
+
 # Plan — T-NNN
 
 ## Strategia
@@ -192,6 +213,35 @@ Una o due righe sul "come" complessivo, derivate da TASK.md + DISCUSS.md.
 ## Aggiornamenti del piano
 - YYYY-MM-DD: ...
 ```
+
+**Esempio: lista vuota.**
+
+```yaml
+---
+context-needed: []
+---
+```
+
+Significa: "Le fasi successive non devono caricare alcun doc da
+`.pi/codebase/`." È il valore corretto per task che toccano solo
+file di processo (es. template, prompt, doc di design).
+
+**Contro-esempio: estensioni e percorsi sono vietati.**
+
+```yaml
+# SBAGLIATO — include l'estensione .md
+context-needed: [CONVENZIONI.md, STRUTTURA.md]
+
+# SBAGLIATO — include un percorso
+context-needed: [.pi/codebase/CONVENZIONI]
+
+# GIUSTO — solo lo stem
+context-needed: [CONVENZIONI, STRUTTURA]
+```
+
+Lo stem corrisponde alla parte di `relPath` in `INDEX.md` privata
+dell'estensione `.md`: una riga `- CONVENZIONI.md: …` nell'INDEX
+diventa lo stem `CONVENZIONI` in `context-needed:`.
 
 ### 3.4 `steps/NN-<slug>.md` — un file per step
 

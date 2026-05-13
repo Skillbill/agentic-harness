@@ -1,0 +1,18 @@
+=== ah-task-verify file existence + head ===
+-rw-rw-r-- 1 toto toto 9871 May 12 17:25 skills/ah-task-verify/INSTRUCTIONS.md
+--- first 5 lines ---
+---
+
+
+Sei l'Assistente del workflow SCRUM-lite del progetto. Il dev ha chiuso tutti
+(o quasi tutti) gli step del piano e vuole una **verifica sistematica
+
+=== presence of context-needed in ah-task-verify (should be absent per plan) ===
+0
+0 matches (expected — verify is unchanged)
+
+=== git diff name-only for skills/ah-task-verify across the slice (sanity) ===
+5e01208 clear contest
+skills/ah-task-verify/INSTRUCTIONS.md
+6fa01c6 Task structure
+skills/ah-task-verify/INSTRUCTIONS.md

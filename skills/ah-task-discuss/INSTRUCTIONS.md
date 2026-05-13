@@ -82,21 +82,37 @@ Carica per intero:
 - `DISCUSS.md` se esiste già — contiene gray area già trattate, non
   duplicarle.
 
-**Carica selettivamente dalla mappa codebase** i documenti pertinenti
-al tipo di task (stessa tabella di corrispondenza di `/ah:task-plan`):
+**Carica i doc codebase on-demand via INDEX.** L'INDEX della codebase
+(`.pi/codebase/INDEX.md`, formato `- <relPath>: <summary>`) è già stato
+iniettato in contesto a inizio sessione. Non esiste — e non va usata —
+una tabella statica tipo-task → doc.
 
-| Tipo di task (da TASK.md) | Documenti da caricare |
-|---|---|
-| UI, frontend, componenti | `.pi/codebase/CONVENZIONI.md`, `.pi/codebase/STRUTTURA.md` |
-| API, backend, endpoint | `.pi/codebase/ARCHITETTURA.md`, `.pi/codebase/CONVENZIONI.md` |
-| Database, schema, modelli | `.pi/codebase/ARCHITETTURA.md`, `.pi/codebase/STACK.md` |
-| Testing | `.pi/codebase/TESTING.md`, `.pi/codebase/CONVENZIONI.md` |
-| Integrazione, API esterne | `.pi/codebase/INTEGRAZIONI.md`, `.pi/codebase/STACK.md` |
-| Refactoring, cleanup | `.pi/codebase/CRITICITA.md`, `.pi/codebase/ARCHITETTURA.md` |
-| Setup, configurazione | `.pi/codebase/STACK.md`, `.pi/codebase/STRUTTURA.md` |
+Nota: `/ah:task-discuss` gira **prima** che `PLAN.md` esista, quindi
+**non** esiste ancora la chiave `context-needed:` da consumare. Quella
+chiave è prodotta da `/ah:task-plan` per le fasi a valle; qui scegli i
+doc da zero in base a `TASK.md`.
 
-Se il task tocca più categorie, carica la union. Se il tipo non è chiaro,
-carica `ARCHITETTURA.md` + `CONVENZIONI.md` come default sicuro.
+Procedura:
+
+1. Leggi le voci dell'INDEX (già in contesto) e identifica, leggendo
+   `TASK.md` (contesto, componenti, obiettivo), gli **stem dei doc** che
+   ti servono davvero per ancorare le gray area al codice — quelli che
+   condizioneranno la formulazione delle domande o le risposte. Non
+   caricare per categoria né per inerzia.
+2. Per ciascun doc scelto, chiama `load_codebase_doc({ name: "<stem>" })`
+   — uno per chiamata. Lo stem è la `relPath` della riga INDEX privata
+   dell'estensione `.md` (es. `CONVENZIONI.md` → stem `CONVENZIONI`).
+   Non passare path, non passare `.md`. Gli stem devono matchare la
+   regex `^[a-zA-Z0-9_-]+$` (`NAME_PATTERN` di `load_codebase_doc`).
+3. Se serve più dettaglio di quello esposto dai doc, leggi i file
+   sorgente in backtick con `read` (mirato).
+
+Default sicuro: se da `TASK.md` non riesci a inferire quali doc
+servono (task ambiguo, intro sottile), carica `ARCHITETTURA` e
+`CONVENZIONI` via `load_codebase_doc` e prosegui — è una scelta di
+giudizio sull'INDEX, non un fallback meccanico, e va rivista se vedi
+nell'INDEX un doc chiaramente più pertinente. Discuss è sensibile a
+input patologici: meglio due doc generici che zero contesto.
 
 Non caricare `PLAN.md`, `steps/`, `VERIFY.md`: sono fasi successive,
 non entrano nella discuss.

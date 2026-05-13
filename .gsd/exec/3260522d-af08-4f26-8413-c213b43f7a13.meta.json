@@ -1,0 +1,18 @@
+{
+  "id": "3260522d-af08-4f26-8413-c213b43f7a13",
+  "runtime": "bash",
+  "purpose": "Confirm ah-task-verify is untouched (no S02 keywords introduced)",
+  "script_chars": 607,
+  "started_at": "2026-05-12T15:31:23.020Z",
+  "finished_at": "2026-05-12T15:31:23.040Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 20,
+  "stdout_bytes": 630,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "/home/toto/.gsd/projects/b9d617286a81/worktrees/M001/.gsd/exec/3260522d-af08-4f26-8413-c213b43f7a13.stdout",
+  "stderr_path": "/home/toto/.gsd/projects/b9d617286a81/worktrees/M001/.gsd/exec/3260522d-af08-4f26-8413-c213b43f7a13.stderr"
+}

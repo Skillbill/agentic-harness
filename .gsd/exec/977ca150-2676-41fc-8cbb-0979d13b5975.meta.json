@@ -1,0 +1,18 @@
+{
+  "id": "977ca150-2676-41fc-8cbb-0979d13b5975",
+  "runtime": "bash",
+  "purpose": "S01 slice verification: T01-T04 verify commands",
+  "script_chars": 1420,
+  "started_at": "2026-05-12T15:11:32.203Z",
+  "finished_at": "2026-05-12T15:11:32.775Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 572,
+  "stdout_bytes": 955,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "/home/toto/.gsd/projects/b9d617286a81/worktrees/M001/.gsd/exec/977ca150-2676-41fc-8cbb-0979d13b5975.stdout",
+  "stderr_path": "/home/toto/.gsd/projects/b9d617286a81/worktrees/M001/.gsd/exec/977ca150-2676-41fc-8cbb-0979d13b5975.stderr"
+}
