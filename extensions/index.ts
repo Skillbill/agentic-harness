@@ -12,6 +12,7 @@ import { checkPiCompat } from "../lib/check-pi-compat.js";
 import {
   type AhConfig,
   AH_CONFIG_DEFAULTS,
+  ensureAhConfigFile,
   languageDisplayName,
   readAhConfig,
 } from "../lib/ah-config.js";
@@ -118,14 +119,34 @@ export default function (pi: ExtensionAPI) {
 
     // R-0005: read consumer-side AH config (content language, etc.). Never
     // throws — readAhConfig downgrades all errors to console warnings.
+    // From v0.8.1, also auto-create `.pi/ah-config.json` when it's missing
+    // so the consumer's content-language choice is always explicit, with
+    // the value detected from existing `.pi/codebase/*.md` content
+    // (Italian for legacy v0.7.x consumers, English otherwise).
     try {
-      const cfg = readAhConfig(process.cwd());
+      const cwd = process.cwd();
+      const ensureResult = ensureAhConfigFile(cwd);
+      if (ensureResult.action === "written") {
+        const writtenName = languageDisplayName(ensureResult.lang);
+        const reason =
+          ensureResult.source === "detected"
+            ? "detected from existing .pi/codebase/*.md content"
+            : "AH default";
+        console.log(
+          `[agentic-harness] 📝 Created .pi/ah-config.json (contentLanguage: ${writtenName} — ${reason}). ` +
+            `Commit it to share the choice with your team.`,
+        );
+      }
+
+      const cfg = readAhConfig(cwd);
       currentAhConfig = cfg;
       const langName = languageDisplayName(cfg.contentLanguage);
       const source =
-        cfg.contentLanguage === AH_CONFIG_DEFAULTS.contentLanguage
-          ? "default"
-          : "from .pi/ah-config.json";
+        ensureResult.action === "exists"
+          ? "from .pi/ah-config.json"
+          : ensureResult.action === "written"
+            ? `auto-created (${ensureResult.source})`
+            : `default — write failed, in-memory fallback`;
       console.log(`[agentic-harness] 🌐 Content language: ${langName} (${source})`);
     } catch (err) {
       console.error("[agentic-harness] read-ah-config crashed:", err);

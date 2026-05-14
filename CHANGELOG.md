@@ -8,6 +8,18 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 
 ## [Unreleased]
 
+## [0.8.1] — 2026-05-14
+
+### Added
+- **(R-0005)** Auto-creation of `.pi/ah-config.json` at `session_start` when the file is missing, so the consumer's content-language choice is always explicit and committable instead of relying on AH's silent in-memory default. Implementation in `lib/ah-config.ts:ensureAhConfigFile` + wire-up in `extensions/index.ts`. The written `contentLanguage` is chosen with this priority:
+  1. **Detected** (`source: "detected"`): if AH finds Italian function words across the existing `.pi/codebase/*.md` content (legacy v0.7.x consumers whose docs were authored under AH's old implicit-Italian default), the file is written with `"contentLanguage": "it"` to preserve the existing voice. Heuristic: at least 3 distinct unambiguous Italian markers (e.g. `della`, `degli`, `perché`, `sono`, `quando`, `tutti`) anywhere in the combined doc bodies, `INDEX.md` excluded.
+  2. **Default** (`source: "default"`): otherwise — new consumers, empty `.pi/codebase/`, or content that looks English — the file is written with `"contentLanguage": "en"`.
+- A `📝 Created .pi/ah-config.json (contentLanguage: <X> — <reason>). Commit it to share the choice with your team.` line is logged at `session_start` whenever the file was auto-created.
+- The existing `🌐 Content language` log now reports `auto-created (detected)` / `auto-created (default)` / `from .pi/ah-config.json` / `default — write failed, in-memory fallback` so the source of the resolved language is always visible.
+
+### Migration
+- No action required from the dev. On the first `session_start` after upgrading to v0.8.1, AH writes `.pi/ah-config.json` if absent. Consumers that already committed the file are untouched. Consumers like Efesto whose `.pi/codebase/*.md` were generated in Italian get `"contentLanguage": "it"` automatically and can simply `git add .pi/ah-config.json && git commit` to pin the choice.
+
 ## [0.8.0] — 2026-05-14
 
 ### Breaking
@@ -97,7 +109,8 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 ### Migration
 - No action required — first public release.
 
-[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.8.1...HEAD
+[0.8.1]: https://github.com/Skillbill/agentic-harness/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/Skillbill/agentic-harness/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/Skillbill/agentic-harness/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/Skillbill/agentic-harness/compare/v0.5.0...v0.6.0
