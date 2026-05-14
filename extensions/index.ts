@@ -1,15 +1,19 @@
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { readdirSync, readFileSync, existsSync } from "node:fs";
 import { join, basename, dirname, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { execSync } from "node:child_process";
-import { registerPrompt } from "./register-prompt.js";
-import { registerContextInspector } from "./context-inspector.js";
-import { buildCodebaseIndex } from './codebase-index.js';
-import { registerLoadCodebaseDoc } from './load-codebase-doc.js';
+import { registerPrompt } from "../lib/register-prompt.js";
+import { registerContextInspector } from "../lib/context-inspector.js";
+import { buildCodebaseIndex } from "../lib/codebase-index.js";
+import { registerLoadCodebaseDoc } from "../lib/load-codebase-doc.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const commandsDir = join(__dirname, "commands");
+// repoRoot = parent di extensions/ — è la dir radice dell'estensione,
+// quella dove vivono prompts/, skills/, templates/, package.json.
+// $EXT_DIR nei prompt template viene risolto a questo valore.
+const repoRoot = dirname(__dirname);
+const promptsDir = join(repoRoot, "prompts");
 
 /**
  * Recursively collect all .md files under a directory.
@@ -71,10 +75,10 @@ export default function (pi: ExtensionAPI) {
   // Tool: load_codebase_doc — on-demand path-safe loader for .pi/codebase/*.md
   registerLoadCodebaseDoc(pi);
 
-  for (const file of readdirSync(commandsDir)) {
+  for (const file of readdirSync(promptsDir)) {
     if (!file.endsWith(".md")) continue;
     const name = `ah:${basename(file, ".md")}`;
-    registerPrompt(pi, name, join(commandsDir, file), __dirname);
+    registerPrompt(pi, name, join(promptsDir, file), repoRoot);
   }
 
   pi.on("session_start", async (_event, _ctx) => {

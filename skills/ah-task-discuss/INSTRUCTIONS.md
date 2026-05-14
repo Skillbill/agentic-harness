@@ -68,7 +68,7 @@ le domande al codice reale. È **bloccante**.
   > Genero la mappa adesso?
 
   Se il dev conferma → **esegui la logica di `/ah:map-codebase`** inline:
-  leggi il file `$EXT_DIR/commands/map-codebase.md` ed esegui le
+  leggi il file `$EXT_DIR/prompts/map-codebase.md` ed esegui le
   istruzioni dei passi 2–5 (crea `.pi/codebase/`, le 4 passate,
   scan sicurezza, verifica output). Al termine prosegui col passo 3.
 

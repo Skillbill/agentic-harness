@@ -64,7 +64,7 @@ Niente branch, niente altri file, niente `--force`. Vedi `AGENTS.md` →
    - Se `.pi/codebase/` esiste, la mappa va aggiornata per riflettere
      le modifiche introdotte dal task appena chiuso.
    - Esegui la logica di `/ah:map-codebase` inline: leggi il file
-     `$EXT_DIR/commands/map-codebase.md` ed esegui le istruzioni dei
+     `$EXT_DIR/prompts/map-codebase.md` ed esegui le istruzioni dei
      passi 2–5 (le 4 passate di mapping). Quando la mappa esiste
      già, usa la modalità "Rigenera" (cancella e rimappa).
    - Al termine, i file aggiornati in `.pi/codebase/` vanno inclusi
