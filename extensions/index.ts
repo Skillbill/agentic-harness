@@ -8,6 +8,7 @@ import { registerContextInspector } from "../lib/context-inspector.js";
 import { buildCodebaseIndex } from "../lib/codebase-index.js";
 import { registerLoadCodebaseDoc } from "../lib/load-codebase-doc.js";
 import { migrateConsumer } from "../lib/migrate-consumer.js";
+import { checkPiCompat } from "../lib/check-pi-compat.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // repoRoot = parent di extensions/ — è la dir radice dell'estensione,
@@ -82,7 +83,17 @@ export default function (pi: ExtensionAPI) {
     registerPrompt(pi, name, join(promptsDir, file), repoRoot);
   }
 
-  pi.on("session_start", async (_event, _ctx) => {
+  pi.on("session_start", async (_event, ctx) => {
+    // R-0004: verify that the currently loaded PI runtime satisfies AH's
+    // declared peerDependencies range. Runs before migrateConsumer because
+    // if PI is too old the migration step might itself call APIs that
+    // don't exist yet — better to warn the user up front. Non-blocking.
+    try {
+      await checkPiCompat(pi, ctx);
+    } catch (err) {
+      console.error("[agentic-harness] check-pi-compat crashed:", err);
+    }
+
     // R-0003: bring the consumer project in line with the currently installed
     // AH version. Runs once per session; non-blocking on error so that a
     // broken migration never wedges AH startup.
