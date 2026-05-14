@@ -8,7 +8,7 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 
 ## [Unreleased]
 
-## [0.7.0] — 2026-05-14
+## [0.8.0] — 2026-05-14
 
 ### Breaking
 - AH is now **English-only**: prompts, skills, top-level docs, console logs, and migration `description` strings are all authored in English. Italian-speaking consumers that want their generated content to stay in Italian must commit `.pi/ah-config.json` with `{"configVersion":"1","contentLanguage":"it"}`. The default `contentLanguage` when the config file is absent is `"en"` — this replaces the implicit Italian default that existed up to v0.6.0.
@@ -18,7 +18,7 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 - **(R-0004)** AH ↔ PI compatibility check at `session_start` (`lib/check-pi-compat.ts`): compares AH's `peerDependencies["@earendil-works/pi-coding-agent"]` against the `VERSION` exported by the PI runtime. On mismatch, warns the user through a simultaneous triple notification — `console.warn` + `ctx.ui.notify('warning')` (toast in PI's TUI footer) + `pi.sendMessage({ display: true })` (persistent message in the scrollback). Non-blocking: AH keeps registering commands/tools/hooks. Minimal in-house semver matcher (supports `X.Y.Z`, `^X.Y.Z`, `~X.Y.Z`, `>=X.Y.Z`); unrecognized ranges return `null` and the check is skipped with a single diagnostic `console.warn`.
 - **(R-0005)** `.pi/ah-config.json` schema with `configVersion: "1"` and `contentLanguage` (free-form locale code, default `"en"`). Read at `session_start` by `lib/ah-config.ts`. The reader never throws: any failure path downgrades to a single `console.warn` and falls back to defaults. The resolved language is logged once at `session_start` as `🌐 Content language: <Display name> (<code>)`.
 - Languages are surfaced to prompts as `$CONTENT_LANG` (display name, e.g. `"English"`) and `$CONTENT_LANG_CODE` (raw code, e.g. `"en"`), substituted by `lib/register-prompt.ts` in every prompt body. All shipped prompts and skills now carry an `**Output language**: ... MUST be written in **$CONTENT_LANG**` directive so generated content honors the consumer's choice. Unknown locale codes pass through to prompts unchanged, so future languages work without an AH code change.
-- **(R-0003)** First real consumer migration ships in `lib/migrations/v0_7_0.ts` — idempotent rename of the 5 Italian-named codebase docs to English, plus rewrite of references in `.pi/codebase/INDEX.md` and keys in `.pi/codebase/.cache.json`. No git mutations.
+- **(R-0003)** First real consumer migration ships in `lib/migrations/v0_8_0.ts` — idempotent rename of the 5 Italian-named codebase docs to English, plus rewrite of references in `.pi/codebase/INDEX.md` and keys in `.pi/codebase/.cache.json`. No git mutations.
 - `WORKFLOW.md`: FAQ on `.pi/git/` — clarifies that PI v0.74.0 already drops a self-managed `.gitignore` in that directory and the consumer only needs to track it (no entry in the root `.gitignore`).
 - `WORKFLOW.md`: FAQ on when the `Package Updates Available` banner triggers — PI tracks the upstream commit ref, not `package.json#version`, so on unpinned installs every commit on AH's `main` causes the banner. Three paths documented (`pi update`, pin to a tag, ignore) and the implication for the consumer migration framework (migrations fire on the semver version, not the ref).
 - New `Consumer migration` section in `CLAUDE.md` and requirements **R-0004**, **R-0005** in `REQUIREMENTS.md`.
@@ -30,6 +30,17 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 ### Migration
 - No dev action required for the rename: on the first `session_start` after upgrading, the consumer migration runner renames the 5 Italian-named `.pi/codebase/*.md` docs in place (idempotent rename, no `git` calls) and rewrites the corresponding entries in `INDEX.md` and `.cache.json`. If you want AH-generated content to remain in Italian, drop `.pi/ah-config.json` at the consumer root with the body `{ "configVersion": "1", "contentLanguage": "it" }`.
 - The R-0004 PI-compat check is purely diagnostic and activates only if the running PI version does not satisfy the range declared in `peerDependencies`; otherwise it is silent.
+
+## [0.7.0] — 2026-05-14
+
+### Added
+- **(R-0003)** Consumer migration framework: `lib/migrate-consumer.ts` (runner) + `lib/migrations/{index,types}.ts` (registry). Marker `<consumerRoot>/.pi/ah-version` tracks the last AH version applied to the project. Migration list shipped empty at this release — v0.6.0 is the baseline and the framework writes the marker without applying anything yet.
+- **(R-0003)** `CHANGELOG.md` adopted in Keep a Changelog 1.1.0 format, populated retroactively from v0.1.0 through v0.6.0.
+- **(R-0003)** GitHub Action `.github/workflows/release.yml`: on push of a `vX.Y.Z` tag, extracts the matching CHANGELOG section with POSIX `awk` and creates the GitHub Release with that body (zero external deps, `gh` CLI preinstalled on the runners).
+- New `Consumer migration` section in `CLAUDE.md` and requirement **R-0003** in `REQUIREMENTS.md`.
+
+### Migration
+- No action required. The framework is staged but inert at this release: AH writes `.pi/ah-version` on `session_start` if absent, but the migration registry is empty.
 
 ## [0.6.0] — 2026-05-14
 
@@ -86,7 +97,8 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 ### Migration
 - No action required — first public release.
 
-[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/Skillbill/agentic-harness/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/Skillbill/agentic-harness/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/Skillbill/agentic-harness/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/Skillbill/agentic-harness/compare/v0.4.0...v0.5.0

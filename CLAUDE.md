@@ -76,13 +76,13 @@ Add `@vX.Y.Z` to pin the version (recommended for CI / reproducible team setups)
 
 ## Consumer migration
 
-When a consumer project upgrades AH (e.g. v0.6.0 → v0.7.0 via `pi update`), AH automatically applies any compatibility steps to the project at the next PI `session_start`. This prevents the consumer from drifting out of sync with conventions / file layout / frontmatter changed by the new AH version. Codified in R-0003 of `REQUIREMENTS.md`.
+When a consumer project upgrades AH (e.g. v0.7.0 → v0.8.0 via `pi update`), AH automatically applies any compatibility steps to the project at the next PI `session_start`. This prevents the consumer from drifting out of sync with conventions / file layout / frontmatter changed by the new AH version. Codified in R-0003 of `REQUIREMENTS.md`.
 
 **Architecture** (`extensions/index.ts` calls `migrateConsumer` inside the `session_start` handler):
 
 - **Marker**: `<consumerRoot>/.pi/ah-version`, plain text containing `X.Y.Z` (or JSON `{"version":"x.y.z"}` — both formats accepted on read). Absent = first install. Written by AH after every successful migration step.
 - **Runner**: `lib/migrate-consumer.ts` reads its own installed version from the adjacent `package.json`, reads the marker, computes the pending set (`marker < target ≤ installed`, semver order), and runs them one at a time, checkpointing the marker after each success.
-- **Registry**: `lib/migrations/index.ts` exports `MIGRATIONS: readonly ConsumerMigration[]` (see `lib/migrations/types.ts` for the contract). Empty list at v0.6.0; the first entry ships in v0.7.0 (`v0_7_0.ts` — rename of the 5 Italian-named codebase docs to English).
+- **Registry**: `lib/migrations/index.ts` exports `MIGRATIONS: readonly ConsumerMigration[]` (see `lib/migrations/types.ts` for the contract). Empty list at v0.6.0 and v0.7.0; the first entry ships in v0.8.0 (`v0_8_0.ts` — rename of the 5 Italian-named codebase docs to English).
 
 **Invariants**:
 - **Idempotency** mandatory: every `apply` must be safe to re-run (e.g. `mkdirSync(..., { recursive: true })`, rename only if source exists and target does not).

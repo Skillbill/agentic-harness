@@ -3,9 +3,9 @@ import { join } from "node:path";
 import type { ConsumerMigration } from "./types.js";
 
 /**
- * v0.7.0 — Rename the 5 Italian-named `.pi/codebase/*.md` docs to English.
+ * v0.8.0 — Rename the 5 Italian-named `.pi/codebase/*.md` docs to English.
  *
- * Why: AH became English-only at v0.7.0. The 5 thematic docs that used
+ * Why: AH became English-only at v0.8.0. The 5 thematic docs that used
  * Italian basenames (INTEGRAZIONI, ARCHITETTURA, STRUTTURA, CONVENZIONI,
  * CRITICITA) are renamed in every consumer project to the new English
  * basenames. `STACK.md` and `TESTING.md` are unchanged (already English).
@@ -27,7 +27,7 @@ const RENAMES: ReadonlyArray<readonly [string, string]> = [
 ];
 
 export const migration: ConsumerMigration = {
-  version: "0.7.0",
+  version: "0.8.0",
   description: "Rename .pi/codebase docs from Italian to English filenames",
   apply: async (consumerRoot) => {
     const codebaseDir = join(consumerRoot, ".pi", "codebase");
