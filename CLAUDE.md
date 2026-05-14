@@ -50,11 +50,16 @@ templates/, procedures/ — referenced by prompts via $EXT_DIR
 
 ## How to release a new version
 
-1. Bump `version` in `package.json` (semver).
-2. Commit + push to `main`.
-3. Create an **annotated git tag** `vX.Y.Z` and a corresponding **GitHub Release** (not a draft) on `Skillbill/agentic-harness`.
+1. **Aggiorna `CHANGELOG.md`**: sposta i bullet da `## [Unreleased]` a una nuova sezione `## [X.Y.Z] — YYYY-MM-DD`. Includi la sotto-sezione `Migration` (anche solo "Nessuna azione richiesta." se è il caso). Aggiungi il reference-link `[X.Y.Z]: …compare/v(X.Y.Z-1)...vX.Y.Z` in coda al file.
+2. Bump `version` in `package.json` (semver).
+3. Se la release richiede step di compatibilità lato consumer automatizzabili, aggiungi `lib/migrations/v<MAJOR>_<MINOR>_<PATCH>.ts` e registralo in `lib/migrations/index.ts` (vedi § Consumer migration).
+4. Commit + push su `main`.
+5. Crea un **annotated git tag** `vX.Y.Z` e pushalo (`git push origin vX.Y.Z`).
+6. La GitHub Action `.github/workflows/release.yml` triggera sul tag, estrae la sezione `[X.Y.Z]` dal CHANGELOG via `awk` POSIX e crea automaticamente la GitHub Release con quel body. Non c'è bisogno di intervento manuale sulla UI.
 
 At next pi startup, users with an **unpinned** git install (`pi install git:github.com/Skillbill/agentic-harness` or with `-l`) will see PI's native `Package Updates Available` banner pointing at this package. They then run `pi update` (global) or `pi update --extension git:github.com/Skillbill/agentic-harness` (precise) to pull the new ref. Users with a **pinned** install (`@vX.Y.Z`) are skipped by `pi update` — to upgrade, they re-`pi install` with the new ref.
+
+Dopo il `pi update`, alla prima sessione PI con la nuova versione di AH, il framework di consumer migration (vedi § Consumer migration) applica automaticamente eventuali step di compatibilità sul progetto consumer.
 
 ## Install scopes
 
@@ -64,6 +69,26 @@ AH can be installed at either scope (PI v0.74.0 supports both natively, no AH co
 - **Project-local**: `pi install -l git:github.com/Skillbill/agentic-harness` — written to `<cwd>/.pi/settings.json`, committable to share with the team. PI auto-installs project packages on startup if missing.
 
 Add `@vX.Y.Z` to pin the version (recommended for CI / reproducible team setups).
+
+## Consumer migration
+
+Quando un progetto consumer aggiorna AH (es. v0.6.0 → v0.7.0 via `pi update`), AH applica automaticamente eventuali step di compatibilità sul progetto al successivo `session_start` di PI. Questo evita che il consumer si trovi out-of-sync con convenzioni / file layout / frontmatter modificati dalla nuova versione di AH. Codificato in R-0003 di `REQUIREMENTS.md`.
+
+**Architettura** (`extensions/index.ts` chiama `migrateConsumer` dentro l'handler `session_start`):
+
+- **Marker**: `<consumerRoot>/.pi/ah-version`, plain text con `X.Y.Z` (o JSON `{"version":"x.y.z"}` — entrambi i formati accettati in lettura). Assente = prima installazione. Scritto da AH dopo ogni step di migration riuscito.
+- **Runner**: `lib/migrate-consumer.ts` legge la propria versione installata dal `package.json` adiacente, legge il marker, calcola le pending (`marker < target ≤ installed` in ordine semver) e le esegue una alla volta facendo checkpoint del marker dopo ogni successo.
+- **Registry**: `lib/migrations/index.ts` esporta `MIGRATIONS: readonly ConsumerMigration[]` (vedi `lib/migrations/types.ts` per il contratto). Lista vuota a v0.6.0; la prima entry arriverà con v0.7.0.
+
+**Invarianti**:
+- **Idempotenza** obbligatoria: ogni `apply` deve essere safe da rieseguire (es. `mkdirSync(..., { recursive: true })`, rename solo se source esiste e target no).
+- **No git mutations**: la Git Safety Rule vale anche dentro le migration. Possono mutare file in `.pi/` o nel working tree, ma `git add/commit/push/checkout` restano del dev.
+- **Failure non-blocking**: se una migration fallisce, AH logga l'errore, lascia il marker all'ultimo step riuscito e continua a caricarsi. Il dev sistema e rilancia la sessione.
+
+**Per aggiungere una migration**:
+1. Crea `lib/migrations/v<MAJOR>_<MINOR>_<PATCH>.ts` con `export const migration: ConsumerMigration = { version, description, apply }`.
+2. Importa e aggiungi all'array di `lib/migrations/index.ts` mantenendo l'ordine semver.
+3. Documenta lo step nella sezione `Migration` della versione corrispondente in `CHANGELOG.md`.
 
 ## Authoritative contracts — read before changing prompts
 
