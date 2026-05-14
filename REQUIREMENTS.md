@@ -69,6 +69,32 @@ A partire da v0.7.0 AH adotta un workflow di release formalizzato e un meccanism
 - Step di compatibilità che toccano il filesystem del consumer vivono come **codice di migration**, non come istruzioni testuali nel changelog (anche se vanno comunque documentati nella sezione `Migration` corrispondente).
 - Il tag pushato attiva la GitHub Release automaticamente: non serve creare la release a mano sulla UI di GitHub.
 
+### R-0004 — PI peer-version compatibility check
+
+A partire da v0.8.0 AH verifica al `session_start` che la versione di PI in esecuzione soddisfi il range dichiarato in `package.json#peerDependencies["@earendil-works/pi-coding-agent"]`. Su mismatch l'utente nel progetto consumer viene avvisato in modo chiaro; AH continua comunque a caricare commands/tools/hooks (warn loud, non-blocking).
+
+**Razionale**: PI v0.74.0 non valida da solo le peerDependencies di un'estensione. Senza questo check, una versione di AH che richiede API più recenti (o più vecchie) di quelle effettivamente esposte dalla PI installata fallisce solo a runtime — tipicamente nel mezzo di un turno LLM, con uno stack trace opaco. Il check sposta il fallimento da "crash silenzioso a metà task" a "warning visibile al primo `session_start`".
+
+**Decisioni**:
+
+- **Sorgente di verità**: `peerDependencies["@earendil-works/pi-coding-agent"]` di `package.json` di AH. Niente campo dedicato `pi.compatibility`: il range è già lì, è già la convenzione npm/Pi standard, e il dev di AH lo aggiorna comunque ad ogni release in cui adotta API nuove di PI.
+- **Sorgente runtime per la versione di PI**: named export `VERSION` da `@earendil-works/pi-coding-agent` (vedi `dist/config.d.ts` di PI v0.74.0). Niente lookup via `getPackageJsonPath()` — meno indirezione.
+- **Matcher semver minimale in casa** (`lib/check-pi-compat.ts:satisfies`): supporta `X.Y.Z` (esatto), `^X.Y.Z`, `~X.Y.Z`, `>=X.Y.Z`. Range più esotici (es. `0.74.x || 0.75.x`) restituiscono `null` → skip + diagnostic warn ("range non riconosciuto"). Coerente con la filosofia zero-deps di AH (vedi anche la `release.yml` `awk`-only di R-0003): niente pacchetto `semver` aggiunto.
+- **Warn loud, non-blocking**: su mismatch reale AH emette un warning su **tre canali** simultanei e prosegue il caricamento.
+  1. `console.warn` — coerente con il logging `[agentic-harness] …` esistente.
+  2. `ctx.ui.notify(msg, "warning")` — toast nel footer TUI di PI (guard su `ctx.hasUI` perché in print/RPC mode l'UI non c'è).
+  3. `pi.sendMessage({ customType: "ah-pi-compat-warning", content, display: true })` — messaggio persistente nello scrollback della sessione, non scompare. La triplice copertura è intenzionale: l'utente che ignora il toast trova comunque il messaggio in alto, e chi avvia in modalità non-TUI vede comunque il `console.warn`.
+- **Mai blocking**: anche su mismatch grave AH continua a registrare prompts/tools/hooks. La decisione "fermare" la lasciamo all'utente che, una volta visto il warning, sceglie se sistemare la versione o procedere. Coerente con la policy non-blocking di `migrateConsumer` (R-0003).
+- **Mai throw**: il modulo si auto-isola con try/catch; l'handler `session_start` di `extensions/index.ts` ha comunque un suo try/catch di salvaguardia.
+- **Hook**: registrato dentro l'handler `session_start` esistente di `extensions/index.ts`, **prima** di `migrateConsumer`. Razionale: se PI è troppo vecchia, la migration potrebbe usare API mancanti e crashare prima di vedere il warning compat.
+
+**Conseguenze per il dev di AH**:
+
+- Aggiornare `peerDependencies["@earendil-works/pi-coding-agent"]` **prima** del tag ogni volta che si adottano API di una PI più recente. Il check protegge l'utente solo se questo campo è onesto.
+- Se serve un range più esotico di quelli supportati, prima estendere `satisfies()` in `lib/check-pi-compat.ts` (e relativa checklist di verifica), poi taggare.
+
+**Fuori scope**: estendere il check a `typebox` (altra peerDep). `typebox` arriva da PI come transitiva e non è praticamente sostituibile dall'utente — un mismatch indica un problema lato PI, non lato consumer.
+
 ## Fuori scope
 
 - Distribuzione di estensioni di terze parti diverse da AH.
@@ -95,3 +121,4 @@ A partire da v0.7.0 AH adotta un workflow di release formalizzato e un meccanism
 - **v0.5.0**: cleanup — OTA custom rimosso dopo aver osservato il banner nativo di PI. R-0001 invariato.
 - **v0.6.0**: test release per validare il banner nativo di PI in una catena di rilasci consecutivi (nessun cambiamento di codice).
 - **v0.7.0** (pianificata): introduce R-0003 — `CHANGELOG.md` (Keep a Changelog), GitHub Action `release.yml`, framework di consumer migration (`lib/migrate-consumer.ts` + `lib/migrations/`). Lista di migration inizialmente vuota: la baseline è v0.6.0.
+- **v0.8.0** (pianificata): introduce R-0004 — peer-version compatibility check (`lib/check-pi-compat.ts`) eseguito al `session_start` prima di `migrateConsumer`. Warn loud non-blocking su tre canali (console + UI toast + persistent message).

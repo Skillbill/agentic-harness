@@ -9,8 +9,12 @@ In aggiunta alle sezioni standard di Keep a Changelog (`Added`, `Changed`, `Depr
 ## [Unreleased]
 
 ### Added
+- Check di compatibilità AH ↔ PI al `session_start` (`lib/check-pi-compat.ts`): confronta `peerDependencies["@earendil-works/pi-coding-agent"]` di AH con la `VERSION` esportata dal runtime di PI. Su mismatch avvisa l'utente via tripla notifica simultanea — `console.warn` + `ctx.ui.notify('warning')` (toast nel footer TUI) + `pi.sendMessage({ display: true })` (messaggio persistente nello scrollback). Non-blocking: AH continua a registrare commands/tools/hooks. Matcher semver minimale in casa (supporta `X.Y.Z`, `^X.Y.Z`, `~X.Y.Z`, `>=X.Y.Z`); range non riconosciuti restituiscono `null` e il check viene saltato con un diagnostic `console.warn`. Codificato in **R-0004** (`REQUIREMENTS.md`).
 - `WORKFLOW.md`: FAQ su `.pi/git/` — chiarisce che PI v0.74.0 piazza già un `.gitignore` self-managed nella directory e il consumer deve solo trackarlo (no entry nel `.gitignore` root).
 - `WORKFLOW.md`: FAQ su quando triggera il banner `Package Updates Available` — PI traccia il commit ref upstream, non `package.json#version`, quindi su install unpinned ogni commit di `main` di AH causa il banner. Documentate le tre vie (`pi update`, pinning a tag, ignore) e l'implicazione sul framework di consumer migration (le migration scattano sulla versione semver, non sul ref).
+
+### Migration
+- Nessuna azione richiesta. Il check è puramente diagnostico e si attiva solo se la versione di PI in uso non soddisfa il range dichiarato in `peerDependencies`; in tutti gli altri casi è silenzioso.
 
 ## [0.7.0] — 2026-05-14
 
