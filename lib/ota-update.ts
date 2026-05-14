@@ -141,11 +141,15 @@ async function runPiUpdate(info: InstallInfo): Promise<PiUpdateResult> {
   // una seconda entry quando `pi update` non riconosce il match.
   // Fallback: PI_PACKAGE_SPEC canonico per repo+default branch.
   const spec = info.source ?? PI_PACKAGE_SPEC;
-  // `-l` per project-local install: aggiorna l'entry in <cwd>/.pi/settings.json
-  // anziché quella globale (per parità con `pi install -l`).
-  const args = info.scope === "local"
-    ? ["update", "--extension", spec, "-l"]
-    : ["update", "--extension", spec];
+  // NB: `pi update` non supporta `-l` (PI v0.74.0): quell'opzione esiste
+  // solo per install/remove. Per gli install project-local affidiamo a pi
+  // la risoluzione dell'entry corretta: il subprocess eredita il cwd, e
+  // pi cerca prima in `<cwd>/.pi/settings.json` poi in
+  // `~/.pi/agent/settings.json` (regola "project wins"). Quindi lanciando
+  // pi da una dir con project settings, è quell'entry che viene
+  // aggiornata. Lo scope rilevato resta utile per la label UX nel dialog
+  // e per riusare `info.source` come spec esatta.
+  const args = ["update", "--extension", spec];
   try {
     const { stdout, stderr } = await execFileP("pi", args, {
       timeout: PI_UPDATE_TIMEOUT_MS,
