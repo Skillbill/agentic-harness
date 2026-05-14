@@ -7,6 +7,7 @@ import { registerPrompt } from "../lib/register-prompt.js";
 import { registerContextInspector } from "../lib/context-inspector.js";
 import { buildCodebaseIndex } from "../lib/codebase-index.js";
 import { registerLoadCodebaseDoc } from "../lib/load-codebase-doc.js";
+import { migrateConsumer } from "../lib/migrate-consumer.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // repoRoot = parent di extensions/ — è la dir radice dell'estensione,
@@ -82,6 +83,15 @@ export default function (pi: ExtensionAPI) {
   }
 
   pi.on("session_start", async (_event, _ctx) => {
+    // R-0003: bring the consumer project in line with the currently installed
+    // AH version. Runs once per session; non-blocking on error so that a
+    // broken migration never wedges AH startup.
+    try {
+      await migrateConsumer(pi, process.cwd());
+    } catch (err) {
+      console.error("[agentic-harness] migrate-consumer crashed:", err);
+    }
+
     // Detect current task
     currentTask = detectCurrentTask(process.cwd());
 
