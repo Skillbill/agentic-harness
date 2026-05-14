@@ -99,13 +99,13 @@ Quando un progetto consumer aggiorna AH (es. v0.6.0 → v0.7.0 via `pi update`),
 
 If you change either of these, the prompts under `prompts/` and the skills under `skills/` likely need matching updates — they reference these contracts by behavior, not by import.
 
-## 🔒 Git Safety Rule (load-bearing, non-negotiable)
+## 🔒 Git Safety Rule — scope
 
-The agent **never** runs git commands that mutate state (`add`, `commit`, `push`, `checkout -b`, `merge`, `rebase`, `reset`, `gh pr create`, …). Read-only commands (`status`, `log`, `diff`, `branch --show-current`, `remote -v`) are always fine. When a task needs a state-changing command, **propose it to the dev** as text — do not execute it. All prompts under `prompts/` follow this rule.
+> **Heads up to whoever is reading this CLAUDE.md while editing the AH repo itself**: la Git Safety Rule **non ti riguarda**. Vincola l'**agente che gira in un progetto consumer** quando AH è caricata lì — cioè i prompt sotto `prompts/` (eseguiti via `pi.sendUserMessage`) e il codice delle consumer-migration (eseguito al `session_start` di PI nel consumer). Quando invece stai lavorando su questo repo (`Skillbill/agentic-harness`) come dev di AH, le operazioni git mutanti (`add` / `commit` / `push` / branch / PR) sono normali — su richiesta dell'utente.
 
-The **only** declared exception is `/ah:task-new` (`prompts/task-new.md:17-39`): it may run `git add` / `commit` / `push` for exactly the one new `TASK.md` file in the backlog, only on `main`, only with a mirror-checked porcelain status. Do not extend this exception to other commands without an equivalent declared block.
+La regola autoritativa, con elenco dei comandi vietati, l'eccezione `/ah:task-new`, e l'override "committa tu" / "push it", vive in **`WORKFLOW.md` § Git Safety Rule**. Quel file è caricato come contesto dai prompt di AH dentro i consumer; questo `CLAUDE.md` no.
 
-If the dev explicitly says "committa tu" / "push it", that's a per-invocation override and is allowed.
+Implicazione per le **consumer migration** (`lib/migrations/v*.ts`): quando girano nel consumer mutano `<consumerRoot>/.pi/...` o il working tree del consumer, ma **non** eseguono `git add` / `commit` / `push` / `checkout`. Vedi R-0003.
 
 ## Inner-cycle skills
 
