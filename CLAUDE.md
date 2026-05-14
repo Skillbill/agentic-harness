@@ -25,7 +25,7 @@ pi install git:github.com/Skillbill/agentic-harness@v0.1.0   # pinned
 
 3. **Context injection** — two `before_agent_start` handlers run per LLM turn. The first injects `.pi/codebase/INDEX.md` (or builds an equivalent index via `lib/codebase-index.ts` if INDEX.md is missing) **once per session**, cached in closure. The second re-detects the current task on every turn (so branch switches are picked up mid-session) and injects a `current-task-context` block with the `TASK.md` frontmatter. Both messages use `display: false` — they're invisible to the user but consume tokens; see the dated note in `extensions/index.ts` for the rationale on what was *removed* from this injection.
 
-4. **OTA update** — a `session_start` handler with `event.reason === "startup"` guard fires `lib/ota-update.ts:maybeProposeUpdate` as **fire-and-forget**. It queries GitHub Releases (`https://api.github.com/repos/Skillbill/agentic-harness/releases/latest`) with a 6h TTL cache under `~/.pi/agent/.cache/agentic-harness-ota.json`, and on a newer version asks `ctx.ui.confirm(...)`. On accept it runs `pi update --extension git:github.com/Skillbill/agentic-harness` via `execFile` and calls `ctx.reload()` (terminal — no code after). Any network / exec / parsing error is silenced — the check is best-effort and must never block startup. See R-0002 in `REQUIREMENTS.md`.
+4. **OTA update** — a `session_start` handler with `event.reason === "startup"` guard fires `lib/ota-update.ts:maybeProposeUpdate` as **fire-and-forget**. It queries GitHub Releases (`https://api.github.com/repos/Skillbill/agentic-harness/releases/latest`) with a 6h TTL cache under `~/.pi/agent/.cache/agentic-harness-ota.json`, and on a newer version asks `ctx.ui.confirm(...)`. On accept it runs `pi update --extension <spec>` via `execFile` (with `-l` if the install was project-local) and calls `ctx.reload()` (terminal — no code after). Behaviour is driven by `lib/install-info.ts:detectInstallInfo`, which reads PI settings (`.pi/settings.json` for project-local, `~/.pi/agent/settings.json` for global) and returns `{ scope, pinned, source }`: **pinned installs skip the prompt entirely** (because `pi update` would skip them per PI docs), and the exact source spec from settings is reused when running `pi update`. Any network / exec / parsing error is silenced — the check is best-effort and must never block startup. See R-0002 in `REQUIREMENTS.md`.
 
 `lib/context-inspector.ts` is a self-contained observability module: it taps `before_provider_request` / `after_provider_response` / `message_end` and writes per-session NDJSON logs under `.pi/context-inspector/<timestamp>_<sid>/`. It must remain non-mutating — its provider-request handler always returns `undefined`.
 
@@ -45,6 +45,7 @@ lib/                    — helpers imported by extensions/index.ts; NOT auto-lo
   plan-context.ts/.js, context-audit.ts/.js
   version.ts            — reads version from package.json
   ota-update.ts         — OTA check + reload (R-0002)
+  install-info.ts       — detect PI install scope/pinning from settings
 prompts/*.md            — registered as /ah:* commands
 skills/ah-task-*/INSTRUCTIONS.md — inner-cycle skills
 templates/, procedures/ — referenced by prompts via $EXT_DIR
@@ -55,9 +56,18 @@ templates/, procedures/ — referenced by prompts via $EXT_DIR
 1. Bump `version` in `package.json` (semver).
 2. Commit + push to `main`.
 3. Create an **annotated git tag** `vX.Y.Z` and a corresponding **GitHub Release** (not a draft) on `Skillbill/agentic-harness`. The OTA check queries `/releases/latest` so the release **must be published** to be detected.
-4. Users on unpinned installs get prompted on next pi startup. Users on pinned installs (`@vX.Y.Z`) are skipped by `pi update` — they must re-`pi install` with the new ref to upgrade.
+4. Users on unpinned installs get prompted on next pi startup. Users on pinned installs (`@vX.Y.Z`) **never see the prompt** — AH detects pinning from PI settings and stays silent, since `pi update` would skip them. To upgrade a pinned install, re-`pi install` with the new ref.
 
-Known limitation (v1): if a user is on an unpinned install and `HEAD` of `main` is ahead of the latest tagged release, the OTA prompt may still appear because the comparison is `tag_name` vs `package.json#version` of the installed snapshot.
+## Install scopes (global vs project-local)
+
+AH can be installed in two scopes; the OTA flow adapts to either:
+
+- **Global** (`pi install git:github.com/Skillbill/agentic-harness`) — written to `~/.pi/agent/settings.json`. OTA runs `pi update --extension <spec>`.
+- **Project-local** (`pi install -l git:github.com/Skillbill/agentic-harness`) — written to `<cwd>/.pi/settings.json` (committable, shared with team). OTA runs `pi update --extension <spec> -l` so the project entry is the one refreshed.
+
+The detection is automatic: `lib/install-info.ts:detectInstallInfo` reads project settings first (PI rule: project wins on conflict), then global. If neither contains an entry referencing AH (by repo path fragment or by resolved local path == `repoRoot`), the OTA stays silent — there is nothing to update.
+
+Known limitation (v1): if a user is on an unpinned git install and `HEAD` of `main` is ahead of the latest tagged release, the OTA prompt may still appear because the comparison is `tag_name` vs `package.json#version` of the installed snapshot.
 
 ## Authoritative contracts — read before changing prompts
 
