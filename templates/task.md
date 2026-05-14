@@ -10,26 +10,26 @@ created: {{DATE}}
 updated: {{DATE}}
 ---
 
-## Contesto
+## Context
 
-<!-- Perché questo task esiste? Quale problema risolve? Quale feature abilita? -->
+<!-- Why does this task exist? What problem does it solve? What feature does it enable? -->
 
-## Obiettivo
+## Goal
 
-<!-- Descrizione concreta di cosa va fatto. Scope chiaro. -->
+<!-- Concrete description of what must be done. Clear scope. -->
 
 ## Definition of Done
 
-- [ ] Implementazione completa
-- [ ] `npm run lint` passa nei componenti toccati
-- [ ] `npm run typecheck` passa (se applicabile: server, configurator, nvd, e2e-server-tests)
-- [ ] `npm run build` passa nei componenti toccati
-- [ ] Test aggiornati/aggiunti se applicabile (e2e-server-tests, hmi, ecc.)
-- [ ] Se schema DB: migrazione Liquibase creata e testata
-- [ ] Documentazione aggiornata (AGENTS.md, README dei componenti, config/)
-- [ ] Backward compatibility verificata (vincolo di progetto)
-- [ ] PR aperta e approvata
+- [ ] Implementation complete
+- [ ] `npm run lint` passes in the touched components
+- [ ] `npm run typecheck` passes (if applicable: server, configurator, nvd, e2e-server-tests)
+- [ ] `npm run build` passes in the touched components
+- [ ] Tests updated/added if applicable (e2e-server-tests, hmi, etc.)
+- [ ] If DB schema: Liquibase migration created and tested
+- [ ] Documentation updated (AGENTS.md, component READMEs, config/)
+- [ ] Backward compatibility verified (project constraint)
+- [ ] PR opened and approved
 
 ## Log
 
-<!-- Il dev aggiunge qui note durante il lavoro. -->
+<!-- The dev adds notes here during the work. -->

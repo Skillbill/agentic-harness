@@ -5,120 +5,155 @@ created: 2026-05-14
 updated: 2026-05-14
 ---
 
-# REQUIREMENTS — Aggiornamento OTA dell'estensione AH per PI
+# REQUIREMENTS — OTA update of the AH extension for PI
 
-## Contesto
+## Context
 
-`agentic-harness` (AH) è un'estensione di [`@earendil-works/pi-coding-agent`](https://www.npmjs.com/package/@earendil-works/pi-coding-agent) (PI). Oggi l'estensione viene installata manualmente clonando/copiando il sorgente nella directory delle estensioni di PI, e gli aggiornamenti richiedono un intervento esplicito del dev.
+`agentic-harness` (AH) is an extension for [`@earendil-works/pi-coding-agent`](https://www.npmjs.com/package/@earendil-works/pi-coding-agent) (PI). Today the extension is installed manually by cloning/copying the source into PI's extensions directory, and updates require an explicit dev intervention.
 
-Questa feature introduce una distribuzione "ufficiale" di AH come **Pi Package** installabile via `pi install git:...`, e un meccanismo OTA (over-the-air) che, all'avvio di un ambiente PI con AH installata, verifica la presenza di una nuova versione e — previa conferma del dev — la applica e ricarica l'estensione.
+This feature introduces an "official" distribution of AH as a **Pi Package** installable via `pi install git:...`, and an OTA (over-the-air) mechanism that, at startup of a PI environment with AH installed, checks for a new version and — subject to dev confirmation — applies it and reloads the extension.
 
-Obiettivo macro: ridurre l'attrito di adozione e di aggiornamento di AH, mantenendo il controllo del dev sulle modifiche applicate al proprio ambiente.
+Top-level objective: reduce the friction of adopting and updating AH while keeping the dev in control of the changes applied to their environment.
 
-## Requisiti
+## Requirements
 
-### R-0001 — Installazione via `pi install`
+### R-0001 — Installation via `pi install`
 
-AH è un'estensione di PI e può essere installata con il comando `pi install`.
+AH is a PI extension and can be installed with the `pi install` command.
 
-**Decisioni**:
-- **Canale**: Git (GitHub) — install via `pi install git:github.com/Skillbill/agentic-harness[@<ref>]`. Nessun publish su npm in v1.
-- **Identità**: `name = "@skillbill/agentic-harness"` in `package.json` (scoped sull'organizzazione Skillbill).
-- **Layout PI**: convention dirs — `extensions/index.ts` (entry), `prompts/` (slash commands), `skills/` (skills). Helper TS in `lib/` esclusi dalle convention dirs e raggiunti via import relativi.
-- **Manifest PI**: il campo `pi` di `package.json` punta esplicitamente a `extensions/index.ts`, `skills`, `prompts` (cintura di sicurezza: l'auto-discovery non promuove i file `.ts` in `lib/` a estensioni separate).
-- **Peer dependencies**: `@earendil-works/pi-coding-agent` e `typebox` (entrambe fornite da PI, non bundlate da AH — vedi `docs/packages.md` di PI).
+**Decisions**:
+- **Channel**: Git (GitHub) — install via `pi install git:github.com/Skillbill/agentic-harness[@<ref>]`. No npm publish in v1.
+- **Identity**: `name = "@skillbill/agentic-harness"` in `package.json` (scoped to the Skillbill org).
+- **PI layout**: convention dirs — `extensions/index.ts` (entry), `prompts/` (slash commands), `skills/` (skills). TS helpers in `lib/` excluded from the convention dirs and reached via relative imports.
+- **PI manifest**: the `pi` field of `package.json` points explicitly at `extensions/index.ts`, `skills`, `prompts` (safety belt: auto-discovery does not promote `.ts` files in `lib/` to standalone extensions).
+- **Peer dependencies**: `@earendil-works/pi-coding-agent` and `typebox` (both provided by PI, not bundled by AH — see PI's `docs/packages.md`).
 
-### R-0002 — ~~Check OTA all'avvio e aggiornamento on-demand~~ → DECLINATO in v0.5.0
+### R-0002 — ~~Startup OTA check and on-demand update~~ → DECLINED in v0.5.0
 
-> **Stato**: declinato. Implementato in v0.1.0 (PR #1) + v0.2.0 (PR #2) + v0.3.0 (PR #3 fix), poi rimosso in v0.5.0.
+> **Status**: declined. Implemented in v0.1.0 (PR #1) + v0.2.0 (PR #2) + v0.3.0 (PR #3 fix), then removed in v0.5.0.
 >
-> **Rationale**: PI v0.74.0 mostra **nativamente** un banner `Package Updates Available` allo startup quando un pacchetto installato ha un nuovo ref upstream — vedi screenshot in PR del cleanup. L'OTA custom di AH duplicava questa notifica con UX leggermente più ricca (modal interattivo, `ctx.reload()` automatico) ma:
+> **Rationale**: PI v0.74.0 **natively** displays a `Package Updates Available` banner at startup when an installed package has a new upstream ref — see screenshot in the cleanup PR. AH's custom OTA duplicated this notification with slightly richer UX (interactive modal, automatic `ctx.reload()`) but:
 >
-> - aggiungeva ~280 righe tra modulo OTA, install-info, version-reader, cache I/O e dialog;
-> - introduceva edge case di manutenzione (cache stale, network errors, `pi update` flag invalidi, install-path detection, pinning detection);
-> - mostrava il prompt **in concorrenza** col banner PI nativo, creando rumore visivo;
-> - dipendeva da `ctx.reload()` con behaviour subtle (terminal, perde state in-memory) e dal subprocess `pi update`.
+> - added ~280 lines across the OTA module, install-info, version-reader, cache I/O, and dialog;
+> - introduced maintenance edge cases (stale cache, network errors, invalid `pi update` flags, install-path detection, pinning detection);
+> - displayed the prompt **in competition** with the native PI banner, creating visual noise;
+> - relied on `ctx.reload()` with subtle behavior (terminal-only, loses in-memory state) and on the `pi update` subprocess.
 >
-> **Decisione**: rimosso tutto il codice OTA. AH delega completamente al meccanismo nativo di PI. L'utente lancia `pi update` (o `pi update --extension git:...`) quando vuole, da terminale, fuori dalla sessione pi.
+> **Decision**: removed all OTA code. AH delegates entirely to PI's native mechanism. The user runs `pi update` (or `pi update --extension git:...`) at will, from the terminal, outside the pi session.
 >
-> **Conseguenze per l'utente**:
-> - Su unpinned install: PI mostra il banner; un comando manuale aggiorna il pacchetto. Niente reload automatico — l'utente riavvia `pi` per ricaricare il nuovo codice.
-> - Su pinned install (`@vX.Y.Z`): PI segue la sua semantica standard (`pi update` salta i pinned). Per upgradare: `pi install` con il nuovo ref.
+> **Consequences for the user**:
+> - On unpinned install: PI shows the banner; a manual command updates the package. No automatic reload — the user restarts `pi` to load the new code.
+> - On pinned install (`@vX.Y.Z`): PI follows its standard semantics (`pi update` skips pinned packages). To upgrade: `pi install` with the new ref.
 >
-> Vedi `CLAUDE.md` § *How to release a new version* e § *Install scopes* per il flow operativo aggiornato.
+> See `CLAUDE.md` § *How to release a new version* and § *Install scopes* for the updated operational flow.
 
 ### R-0003 — Versioning, Changelog & Consumer Migration
 
-A partire da v0.7.0 AH adotta un workflow di release formalizzato e un meccanismo di **consumer migration** applicato automaticamente al `session_start` di PI. Obiettivo: quando un progetto consumer aggiorna AH (es. v0.6.0 → v0.7.0 via `pi update`), AH deve essere in grado di portare lo stato del progetto in coerenza con la nuova versione senza interventi manuali del dev.
+Starting from v0.7.0 AH adopts a formalized release workflow and a **consumer migration** mechanism applied automatically at PI's `session_start`. Goal: when a consumer project upgrades AH (e.g. v0.6.0 → v0.7.0 via `pi update`), AH must be able to bring the project state in line with the new version without any manual intervention from the dev.
 
-**Decisioni**:
+**Decisions**:
 
-- **CHANGELOG.md** in root, formato [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/), SemVer. Sezioni standard + sezione `Migration` per versione (italiano, prosa o pseudocodice). Popolato retroattivamente da v0.1.0. Shipped col Pi Package (incluso in `package.json#files`).
-- **GitHub Action** `.github/workflows/release.yml`: trigger su tag `v*.*.*`, estrae la sezione corrispondente da `CHANGELOG.md` con `awk` POSIX zero-deps e crea la release via `gh release create` (preinstallato sui runner GitHub-hosted). Niente `npm install`, niente actions di terze parti — minimizziamo la supply chain.
-- **Marker consumer**: `<consumerRoot>/.pi/ah-version`. Lettura tollerante: accetta plain text (`0.7.0\n`) o JSON `{ "version": "x.y.z" }`. Scritto da AH dopo ogni step di migration riuscito (checkpoint).
-- **Migration framework**: `lib/migrate-consumer.ts` (runner) + `lib/migrations/index.ts` (registry) + `lib/migrations/types.ts` (contratto `ConsumerMigration`) + `lib/migrations/v<M>_<m>_<p>.ts` (entries). Signature unica: `apply(consumerRoot, pi) => Promise<void>`. Ordine di applicazione: semver ascendente, con filtro `marker < target ≤ installed`.
-- **Idempotenza**: invariante obbligatoria — ogni `apply` deve essere safe da rieseguire (`mkdirSync(..., { recursive: true })`, `if (!existsSync) ...`, rename solo se source esiste e target no).
-- **Git Safety Rule** invariata: le migration **non eseguono** comandi git mutanti. Possono mutare file sotto `.pi/` e nel working tree, ma staging/commit/push restano del dev.
-- **Failure non-blocking**: errore su una migration → marker fermo all'ultimo step riuscito, errore stampato, AH continua a caricarsi. L'utente sistema e rilancia la sessione.
-- **Hook**: registrato dentro l'handler `session_start` esistente di `extensions/index.ts`, non in `before_agent_start`. Razionale: la migration è un'azione one-shot per sessione; `before_agent_start` gira per ogni turno LLM (come confermano gli handler `codebase-index` e `current-task-context` già presenti che fanno re-detection ad ogni turno) e non è il livello giusto.
-- **Lista iniziale**: vuota. v0.6.0 è baseline; il framework esiste e scrive il marker, ma non applica nulla. La prima migration arriva con v0.7.0.
+- **CHANGELOG.md** at root, [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/) format, SemVer. Standard sections + a `Migration` section per version (English, prose or pseudocode). Populated retroactively from v0.1.0. Shipped with the Pi Package (included in `package.json#files`).
+- **GitHub Action** `.github/workflows/release.yml`: triggers on `v*.*.*` tags, extracts the matching section from `CHANGELOG.md` with POSIX `awk` (zero deps) and creates the release via `gh release create` (preinstalled on GitHub-hosted runners). No `npm install`, no third-party actions — we minimize the supply chain.
+- **Consumer marker**: `<consumerRoot>/.pi/ah-version`. Tolerant read: accepts plain text (`0.7.0\n`) or JSON `{ "version": "x.y.z" }`. Written by AH after every successful migration step (checkpoint).
+- **Migration framework**: `lib/migrate-consumer.ts` (runner) + `lib/migrations/index.ts` (registry) + `lib/migrations/types.ts` (`ConsumerMigration` contract) + `lib/migrations/v<M>_<m>_<p>.ts` (entries). Single signature: `apply(consumerRoot, pi) => Promise<void>`. Application order: ascending semver, with filter `marker < target ≤ installed`.
+- **Idempotency**: mandatory invariant — every `apply` must be safe to re-run (`mkdirSync(..., { recursive: true })`, `if (!existsSync) ...`, rename only if source exists and target does not).
+- **Git Safety Rule** unchanged: migrations **never run** mutating git commands. They may mutate files under `.pi/` and in the working tree, but staging/commit/push remain the dev's responsibility.
+- **Failure non-blocking**: error on a migration → marker stays at the last successful step, error printed, AH keeps loading. The user fixes and relaunches the session.
+- **Hook**: registered inside the existing `session_start` handler of `extensions/index.ts`, not in `before_agent_start`. Rationale: the migration is a one-shot action per session; `before_agent_start` fires for every LLM turn (as confirmed by the existing `codebase-index` and `current-task-context` handlers which re-detect at every turn) and is not the right layer.
+- **Initial list**: empty. v0.6.0 is the baseline; the framework exists and writes the marker but applies nothing. The first migration arrives with v0.7.0.
 
-**Conseguenze per il dev di AH** (vedi `CLAUDE.md` § *How to release a new version* e § *Consumer migration*):
+**Update (v0.7.0)**: the first real consumer migration ships in `lib/migrations/v0_7_0.ts` — an idempotent rename of the 5 Italian-named codebase docs to English (`INTEGRAZIONI.md → INTEGRATIONS.md`, etc.), plus rewrite of references in `INDEX.md` and keys in `.cache.json`. This confirms the framework works end-to-end: the marker advances, the rename is idempotent, no git mutations are emitted, and failures remain non-blocking.
 
-- Ogni release richiede un aggiornamento di `CHANGELOG.md` **prima** del tag.
-- Step di compatibilità che toccano il filesystem del consumer vivono come **codice di migration**, non come istruzioni testuali nel changelog (anche se vanno comunque documentati nella sezione `Migration` corrispondente).
-- Il tag pushato attiva la GitHub Release automaticamente: non serve creare la release a mano sulla UI di GitHub.
+**Consequences for the AH dev** (see `CLAUDE.md` § *How to release a new version* and § *Consumer migration*):
+
+- Every release requires a `CHANGELOG.md` update **before** tagging.
+- Compatibility steps that touch the consumer filesystem live as **migration code**, not as textual instructions in the changelog (though they must still be documented in the corresponding `Migration` section).
+- A pushed tag triggers the GitHub Release automatically: no need to create the release by hand in the GitHub UI.
 
 ### R-0004 — PI peer-version compatibility check
 
-A partire da v0.8.0 AH verifica al `session_start` che la versione di PI in esecuzione soddisfi il range dichiarato in `package.json#peerDependencies["@earendil-works/pi-coding-agent"]`. Su mismatch l'utente nel progetto consumer viene avvisato in modo chiaro; AH continua comunque a caricare commands/tools/hooks (warn loud, non-blocking).
+Starting from v0.8.0 AH verifies at `session_start` that the running PI version satisfies the range declared in `package.json#peerDependencies["@earendil-works/pi-coding-agent"]`. On a mismatch the user in the consumer project is clearly notified; AH still keeps loading commands/tools/hooks (warn loud, non-blocking).
 
-**Razionale**: PI v0.74.0 non valida da solo le peerDependencies di un'estensione. Senza questo check, una versione di AH che richiede API più recenti (o più vecchie) di quelle effettivamente esposte dalla PI installata fallisce solo a runtime — tipicamente nel mezzo di un turno LLM, con uno stack trace opaco. Il check sposta il fallimento da "crash silenzioso a metà task" a "warning visibile al primo `session_start`".
+**Rationale**: PI v0.74.0 does not validate an extension's peerDependencies on its own. Without this check, an AH version that requires APIs newer (or older) than those actually exposed by the installed PI only fails at runtime — typically in the middle of an LLM turn, with an opaque stack trace. The check moves the failure from "silent crash mid-task" to "visible warning at first `session_start`".
 
-**Decisioni**:
+**Decisions**:
 
-- **Sorgente di verità**: `peerDependencies["@earendil-works/pi-coding-agent"]` di `package.json` di AH. Niente campo dedicato `pi.compatibility`: il range è già lì, è già la convenzione npm/Pi standard, e il dev di AH lo aggiorna comunque ad ogni release in cui adotta API nuove di PI.
-- **Sorgente runtime per la versione di PI**: named export `VERSION` da `@earendil-works/pi-coding-agent` (vedi `dist/config.d.ts` di PI v0.74.0). Niente lookup via `getPackageJsonPath()` — meno indirezione.
-- **Matcher semver minimale in casa** (`lib/check-pi-compat.ts:satisfies`): supporta `X.Y.Z` (esatto), `^X.Y.Z`, `~X.Y.Z`, `>=X.Y.Z`. Range più esotici (es. `0.74.x || 0.75.x`) restituiscono `null` → skip + diagnostic warn ("range non riconosciuto"). Coerente con la filosofia zero-deps di AH (vedi anche la `release.yml` `awk`-only di R-0003): niente pacchetto `semver` aggiunto.
-- **Warn loud, non-blocking**: su mismatch reale AH emette un warning su **tre canali** simultanei e prosegue il caricamento.
-  1. `console.warn` — coerente con il logging `[agentic-harness] …` esistente.
-  2. `ctx.ui.notify(msg, "warning")` — toast nel footer TUI di PI (guard su `ctx.hasUI` perché in print/RPC mode l'UI non c'è).
-  3. `pi.sendMessage({ customType: "ah-pi-compat-warning", content, display: true })` — messaggio persistente nello scrollback della sessione, non scompare. La triplice copertura è intenzionale: l'utente che ignora il toast trova comunque il messaggio in alto, e chi avvia in modalità non-TUI vede comunque il `console.warn`.
-- **Mai blocking**: anche su mismatch grave AH continua a registrare prompts/tools/hooks. La decisione "fermare" la lasciamo all'utente che, una volta visto il warning, sceglie se sistemare la versione o procedere. Coerente con la policy non-blocking di `migrateConsumer` (R-0003).
-- **Mai throw**: il modulo si auto-isola con try/catch; l'handler `session_start` di `extensions/index.ts` ha comunque un suo try/catch di salvaguardia.
-- **Hook**: registrato dentro l'handler `session_start` esistente di `extensions/index.ts`, **prima** di `migrateConsumer`. Razionale: se PI è troppo vecchia, la migration potrebbe usare API mancanti e crashare prima di vedere il warning compat.
+- **Source of truth**: `peerDependencies["@earendil-works/pi-coding-agent"]` in AH's `package.json`. No dedicated `pi.compatibility` field: the range is already there, it's already the standard npm/Pi convention, and the AH dev updates it on every release that adopts new PI APIs anyway.
+- **Runtime source for the PI version**: named export `VERSION` from `@earendil-works/pi-coding-agent` (see PI v0.74.0's `dist/config.d.ts`). No lookup via `getPackageJsonPath()` — fewer hops.
+- **Minimal in-house semver matcher** (`lib/check-pi-compat.ts:satisfies`): supports `X.Y.Z` (exact), `^X.Y.Z`, `~X.Y.Z`, `>=X.Y.Z`. More exotic ranges (e.g. `0.74.x || 0.75.x`) return `null` → skip + diagnostic warn ("range not recognized"). Consistent with AH's zero-deps philosophy (see also the `awk`-only `release.yml` for R-0003): no `semver` package added.
+- **Warn loud, non-blocking**: on a real mismatch AH emits a warning on **three channels** simultaneously and continues loading.
+  1. `console.warn` — consistent with the existing `[agentic-harness] …` logging.
+  2. `ctx.ui.notify(msg, "warning")` — toast in PI's TUI footer (guarded by `ctx.hasUI` because in print/RPC mode no UI exists).
+  3. `pi.sendMessage({ customType: "ah-pi-compat-warning", content, display: true })` — persistent message in the session scrollback; it does not disappear. The triple coverage is intentional: a user who ignores the toast still finds the message scrolled above, and someone launching in non-TUI mode still sees the `console.warn`.
+- **Never blocking**: even on a severe mismatch AH keeps registering prompts/tools/hooks. The decision to "stop" is left to the user, who — once the warning is visible — chooses whether to fix the version or proceed. Consistent with the non-blocking policy of `migrateConsumer` (R-0003).
+- **Never throws**: the module self-isolates with try/catch; the `session_start` handler in `extensions/index.ts` also has its own safeguard try/catch.
+- **Hook**: registered inside the existing `session_start` handler of `extensions/index.ts`, **before** `migrateConsumer`. Rationale: if PI is too old, the migration might use missing APIs and crash before the compat warning is seen.
 
-**Conseguenze per il dev di AH**:
+**Consequences for the AH dev**:
 
-- Aggiornare `peerDependencies["@earendil-works/pi-coding-agent"]` **prima** del tag ogni volta che si adottano API di una PI più recente. Il check protegge l'utente solo se questo campo è onesto.
-- Se serve un range più esotico di quelli supportati, prima estendere `satisfies()` in `lib/check-pi-compat.ts` (e relativa checklist di verifica), poi taggare.
+- Update `peerDependencies["@earendil-works/pi-coding-agent"]` **before** tagging every time newer PI APIs are adopted. The check protects the user only if this field is honest.
+- If a more exotic range than those supported is needed, first extend `satisfies()` in `lib/check-pi-compat.ts` (and the relevant verification checklist), then tag.
 
-**Fuori scope**: estendere il check a `typebox` (altra peerDep). `typebox` arriva da PI come transitiva e non è praticamente sostituibile dall'utente — un mismatch indica un problema lato PI, non lato consumer.
+**Out of scope**: extending the check to `typebox` (the other peerDep). `typebox` arrives from PI as a transitive dep and is not practically replaceable by the user — a mismatch indicates a PI-side problem, not a consumer-side one.
 
-## Fuori scope
+### R-0005 — AH ships English-only; consumer chooses content language via `.pi/ah-config.json`
 
-- Distribuzione di estensioni di terze parti diverse da AH.
-- Publish su npm registry (cambia il canale ma non il requisito R-0001 — può essere una iterazione successiva).
+Starting from v0.7.0 AH's authoring language is **English** across the board: prompts, skills, top-level docs (`WORKFLOW.md`, `task-layout.md`, `REQUIREMENTS.md`, `CLAUDE.md`, `CHANGELOG.md`), console logs, and migration `description` fields. The natural language of the **content generated by AH inside a consumer project** (the body of `TASK.md`, `DISCUSS.md`, `PLAN.md`, `VERIFY.md`, and the prose of `.pi/codebase/*.md`) is instead chosen by the consumer via a small config file committed at the project root.
 
-## Vincoli di progetto
+**Rationale**: a single English source of truth is easier to maintain and review by non-Italian-speaking contributors and makes AH legible to the wider Pi ecosystem. At the same time, each consumer team retains the freedom to localize its own working documents — many of which are read by non-technical stakeholders who may prefer the team's working language.
 
-- Rispetto della **Git Safety Rule** (`CLAUDE.md`): l'estensione non muta git state nel repo del dev.
-- Compatibilità con i contratti autoritativi esistenti (`WORKFLOW.md`, `task-layout.md`).
-- L'estensione resta caricata da PI tramite il `default export` di `extensions/index.ts`.
+**Decisions**:
 
-## Decisioni storicizzate
+- **Config file**: `<consumerRoot>/.pi/ah-config.json`, JSON, committable. Shape:
+  ```json
+  { "configVersion": "1", "contentLanguage": "en" }
+  ```
+  - `configVersion` is a string and is currently `"1"`. It governs future schema evolutions of this same file; bump only on breaking-shape changes.
+  - `contentLanguage` is a free-form code (e.g. `"en"`, `"it"`, `"fr"`). Unknown codes are **not rejected**: they are surfaced to prompts as-is, so the consumer can experiment with future languages without an AH code change.
+- **Default**: when the file is absent or unreadable, AH falls back to `contentLanguage = "en"`. This is the new global default, replacing the implicit Italian default that existed up to v0.6.0.
+- **Filenames are never localized**: `TASK.md`, `DISCUSS.md`, `PLAN.md`, `VERIFY.md`, `INDEX.md`, and the 7 codebase docs keep the exact names AH defines, in every locale. Only the **prose inside** these files honors `contentLanguage`.
+- **Error handling**: `readAhConfig` never throws. Missing file, invalid JSON, wrong shape, permission errors — every failure path downgrades to a single `console.warn` and returns the default config. AH always boots.
+- **Surface to prompts**: `lib/register-prompt.ts` substitutes two new placeholders in every prompt body — `$CONTENT_LANG` (display name, e.g. `"English"`, `"Italian"`) and `$CONTENT_LANG_CODE` (raw code, e.g. `"en"`, `"it"`) — and every shipped prompt / skill carries an `**Output language**: ... MUST be written in **$CONTENT_LANG**` directive so the LLM honors the consumer's choice when generating content.
+- **Visibility**: the resolved language is logged once at `session_start` in `extensions/index.ts` (`🌐 Content language: English (en)`), so the dev sees immediately what AH thinks the project's working language is.
 
-1. *PI offre già primitive per `pi install` e per il reload di un'estensione?* → **Sì**. `pi install`/`pi update` documentati in `docs/packages.md` di PI v0.74.0 (npm, git, https, local paths). Reload via `ctx.reload()` o riavvio sessione.
-2. *Il check OTA gira dentro `index.ts` o come hook dedicato?* → **N/A**: R-0002 declinato in v0.5.0. PI ha un banner nativo `Package Updates Available` che copre il caso d'uso senza codice custom.
-3. *La proposta di aggiornamento passa per `pi.sendUserMessage` o per un canale UI dedicato?* → **N/A**: R-0002 declinato. Nessun prompt custom: l'utente vede il banner PI e lancia `pi update` manualmente.
+**Implementation pointers**:
 
-## Storia dei rilasci
+- `lib/ah-config.ts` — typed reader, default fallback, single `console.warn` on any failure.
+- `lib/register-prompt.ts` — placeholder substitution for `$CONTENT_LANG` / `$CONTENT_LANG_CODE`.
+- `extensions/index.ts` — calls `readAhConfig` at `session_start` and emits the `🌐 Content language: …` log line.
+- `lib/migrations/v0_7_0.ts` — consumer-side rename of the 5 Italian-named codebase docs (`INTEGRAZIONI.md`, `ARCHITETTURA.md`, `STRUTTURA.md`, `CONVENZIONI.md`, `CRITICITA.md`) to their English counterparts (`INTEGRATIONS.md`, `ARCHITECTURE.md`, `STRUCTURE.md`, `CONVENTIONS.md`, `TECHNICAL_DEBT.md`), with rewrite of `.pi/codebase/INDEX.md` references and `.pi/codebase/.cache.json` keys.
 
-- **v0.1.0** (PR #1): Pi Package distribuibile (R-0001) + OTA custom completo (R-0002).
-- **v0.2.0** (PR #2): scope detection (project-local vs global) + pinning detection per OTA.
-- **v0.3.0** (PR #3): fix `pi update -l` (l'opzione non esiste lato PI).
-- **v0.4.0**: test release per validare il flow OTA end-to-end (nessun cambiamento di codice).
-- **v0.5.0**: cleanup — OTA custom rimosso dopo aver osservato il banner nativo di PI. R-0001 invariato.
-- **v0.6.0**: test release per validare il banner nativo di PI in una catena di rilasci consecutivi (nessun cambiamento di codice).
-- **v0.7.0** (pianificata): introduce R-0003 — `CHANGELOG.md` (Keep a Changelog), GitHub Action `release.yml`, framework di consumer migration (`lib/migrate-consumer.ts` + `lib/migrations/`). Lista di migration inizialmente vuota: la baseline è v0.6.0.
-- **v0.8.0** (pianificata): introduce R-0004 — peer-version compatibility check (`lib/check-pi-compat.ts`) eseguito al `session_start` prima di `migrateConsumer`. Warn loud non-blocking su tre canali (console + UI toast + persistent message).
+**Consequences for the AH dev**:
+
+- New prompts, skills, docs, and migration `description` strings must be authored in English. Don't reintroduce Italian.
+- When adding a placeholder substitution beyond `$CONTENT_LANG` / `$CONTENT_LANG_CODE`, mirror the same defensive style (substitution, not parsing): the prompt body remains the spec.
+- The default `contentLanguage = "en"` is **a behavioral default**, not a policy: a consumer is free to commit `.pi/ah-config.json` with `"contentLanguage": "it"` and expect AH-generated content to stay in Italian.
+
+## Out of scope
+
+- Distribution of third-party extensions other than AH.
+- Publishing on the npm registry (changes the channel but not requirement R-0001 — can be a later iteration).
+
+## Project constraints
+
+- Compliance with the **Git Safety Rule** (`CLAUDE.md`): the extension does not mutate git state in the dev's repo.
+- Compatibility with the existing authoritative contracts (`WORKFLOW.md`, `task-layout.md`).
+- The extension stays loaded by PI through the `default export` of `extensions/index.ts`.
+
+## Historicized decisions
+
+1. *Does PI already offer primitives for `pi install` and for reloading an extension?* → **Yes**. `pi install`/`pi update` documented in `docs/packages.md` of PI v0.74.0 (npm, git, https, local paths). Reload via `ctx.reload()` or session restart.
+2. *Does the OTA check run inside `index.ts` or as a dedicated hook?* → **N/A**: R-0002 declined in v0.5.0. PI has a native `Package Updates Available` banner that covers the use case without custom code.
+3. *Does the update proposal go through `pi.sendUserMessage` or a dedicated UI channel?* → **N/A**: R-0002 declined. No custom prompt: the user sees the PI banner and runs `pi update` manually.
+
+## Release history
+
+- **v0.1.0** (PR #1): Distributable Pi Package (R-0001) + complete custom OTA (R-0002).
+- **v0.2.0** (PR #2): scope detection (project-local vs global) + pinning detection for OTA.
+- **v0.3.0** (PR #3): fix `pi update -l` (the option does not exist in PI).
+- **v0.4.0**: test release to validate the OTA flow end-to-end (no code changes).
+- **v0.5.0**: cleanup — custom OTA removed after observing PI's native banner. R-0001 unchanged.
+- **v0.6.0**: test release to validate PI's native banner in a chain of consecutive releases (no code changes).
+- **v0.7.0**: introduces R-0003 — `CHANGELOG.md` (Keep a Changelog), GitHub Action `release.yml`, consumer migration framework (`lib/migrate-consumer.ts` + `lib/migrations/`). Also introduces R-0005 — AH becomes English-only and the consumer picks content language via `.pi/ah-config.json`. The first real migration (`lib/migrations/v0_7_0.ts`) renames the 5 Italian-named codebase docs.
+- **v0.8.0** (planned): introduces R-0004 — peer-version compatibility check (`lib/check-pi-compat.ts`) run at `session_start` before `migrateConsumer`. Warn loud non-blocking on three channels (console + UI toast + persistent message).

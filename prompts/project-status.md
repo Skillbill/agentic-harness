@@ -1,66 +1,68 @@
 ---
-description: Progress bar del progetto e stato dei task in lavorazione
+description: Project progress bar and status of in-flight tasks
 ---
 
-Sei l'agente del workflow SCRUM-lite del progetto. Produci un report **conciso**
-e **visuale** dello stato del progetto. Niente testo esplicativo, niente
-suggerimenti, niente next steps.
+You are the SCRUM-lite workflow assistant for this project. Produce a **concise**
+and **visual** report of project status. No explanatory text, no
+suggestions, no next steps.
+
+**Output language**: any natural-language output you produce for the dev (summaries, descriptions, PR bodies, commit-message *prose*) MUST be in **$CONTENT_LANG**. Identifiers, file paths, branch names, commit prefixes (e.g. `feat(T-001/01):`) stay as the convention dictates.
 
 ## 🔒 Git Safety Rule
-Solo letture. Nessuna modifica a file o git.
+Read-only. No changes to files or git.
 
-## Passi
+## Steps
 
-1. **Scansiona `.pi/tasks/{backlog,in-progress,review,done}/T-*/TASK.md`**.
-   Per ogni file estrai dal frontmatter: `id`, `title`, `status`, `estimate`,
+1. **Scan `.pi/tasks/{backlog,in-progress,review,done}/T-*/TASK.md`**.
+   For each file extract from the frontmatter: `id`, `title`, `status`, `estimate`,
    `assignee`, `branch`.
 
-   **⚠ Fonte autorevole per i task attivi (non `done`, non `backlog`)**:
-   il TASK.md su `main` può essere stale (status/progress aggiornati solo
-   sul feature branch e non ancora mergiati). Per ogni task che ha un campo
-   `branch` nel frontmatter:
-   - Prova `git show <branch>:<path-del-TASK.md>` (locale).
-   - Se il branch locale non esiste, prova `origin/<branch>`.
-   - Se nemmeno il remote esiste, usa il file su disco (fallback).
-   Usa il frontmatter risultante (`status`, `progress`, `updated`) come
-   versione autorevole. Questo può spostare un task da `in-progress` a
-   `review` (o viceversa) rispetto alla directory in cui si trova su `main`.
+   **⚠ Authoritative source for active tasks (not `done`, not `backlog`)**:
+   the TASK.md on `main` may be stale (status/progress updated only
+   on the feature branch and not yet merged). For each task with a
+   `branch` field in the frontmatter:
+   - Try `git show <branch>:<path-of-TASK.md>` (local).
+   - If the local branch doesn't exist, try `origin/<branch>`.
+   - If the remote doesn't exist either, use the file on disk (fallback).
+   Use the resulting frontmatter (`status`, `progress`, `updated`) as the
+   authoritative version. This may move a task from `in-progress` to
+   `review` (or vice versa) relative to the directory it sits in on `main`.
 
-2. **Calcola avanzamento progetto**:
+2. **Compute project progress**:
    - `total   = backlog + in-progress + review + done`
    - `closed  = done`
    - `active  = in-progress + review`
-   - `pct_done = round(closed / total * 100)`  (0 se `total == 0`)
+   - `pct_done = round(closed / total * 100)`  (0 if `total == 0`)
 
-3. **Per ogni task in `in-progress/`**, determina % e fase:
+3. **For each task in `in-progress/`**, determine % and phase:
 
-   **Solo per il current task** (quello sul branch git corrente) esegui
-   l'ispezione completa:
+   **Only for the current task** (the one on the current git branch) run
+   the full inspection:
 
-   a. **% di DoD**:
-      - Leggi la sezione `## Definition of Done` del TASK.md.
-      - Conta le checkbox `- [x]` e `- [ ]`.
-      - `pct = round(checked / total_items * 100)` (0 se nessuna checkbox).
+   a. **% of DoD**:
+      - Read the `## Definition of Done` section of TASK.md.
+      - Count the `- [x]` and `- [ ]` checkboxes.
+      - `pct = round(checked / total_items * 100)` (0 if no checkboxes).
 
-   b. **Fase del ciclo interno** — controlla gli artefatti nella directory
-      del task (`.pi/tasks/in-progress/T-NNN-<slug>/`):
-      - `DISCUSS.md` non esiste → `discuss`
-      - `PLAN.md` non esiste → `plan`
-      - `steps/` vuoto o assente → `plan`
-      - Almeno uno step non è `done` → `execute` (mostra `done/totale`)
-      - `VERIFY.md` non esiste → `verify`
-      - Tutto completo → `✔ ready`
+   b. **Inner-cycle phase** — check the artifacts in the task directory
+      (`.pi/tasks/in-progress/T-NNN-<slug>/`):
+      - `DISCUSS.md` doesn't exist → `discuss`
+      - `PLAN.md` doesn't exist → `plan`
+      - `steps/` empty or absent → `plan`
+      - At least one step is not `done` → `execute` (show `done/total`)
+      - `VERIFY.md` doesn't exist → `verify`
+      - Everything complete → `✔ ready`
 
-   **Per gli altri task in-progress** (non current): fidati del frontmatter.
-   - `pct` = campo `progress` dal frontmatter (se `null` o assente → `0`).
-   - Fase = non ispezionare artefatti; mostra `[-]` (stato non verificato).
+   **For other in-progress tasks** (not current): trust the frontmatter.
+   - `pct` = `progress` field from frontmatter (if `null` or absent → `0`).
+   - Phase = do not inspect artifacts; show `[-]` (unverified state).
 
-4. **Render** — usa esattamente questo formato, nient'altro:
+4. **Render** — use exactly this format, nothing else:
 
    ```
-   📊 Project — <oggi YYYY-MM-DD>        🎯 T-003 Add web camera support
+   📊 Project — <today YYYY-MM-DD>        🎯 T-003 Add web camera support
 
-   Progetto  [██████░░░░░░░░░░░░░░]  30%   (3/10 done · 2 active · 5 backlog)
+   Project   [██████░░░░░░░░░░░░░░]  30%   (3/10 done · 2 active · 5 backlog)
 
    In progress
    ▶ T-003  ███████░░░░░░  58%  Add web camera support            (toto, 4h)  [execute 3/5]
@@ -74,23 +76,23 @@ Solo letture. Nessuna modifica a file o git.
      T-011  DTS module setup                                      (-, 8h)
    ```
 
-   Regole di rendering:
-   - **Current task**: rileva il task corrente dal branch git (`feature/T-NNN-…`).
-     Se trovato, mostralo nell'header dopo la data: `🎯 T-NNN <titolo>`.
-     Nel blocco "In progress", il task corrente ha il prefisso `▶` invece di ` `.
-     Se non c'è un task corrente (non su branch feature/), ometti `🎯` dall'header.
-   - Progress bar del progetto: **20 caratteri** (`█` pieni, `░` vuoti).
-   - Progress bar per task in-progress: **13 caratteri** (`█` / `░`).
-   - Titolo troncato a 40 caratteri con `…` se eccede.
-   - Assignee/estimate tra parentesi; se mancano mostra `-`.
-   - **Fase ciclo interno**: per ogni task in-progress, mostra la fase tra
-     parentesi quadre dopo `(assignee, stima)`. Formato: `[discuss]`,
-     `[plan]`, `[execute N/M]` (step done/totale), `[verify]`, `[✔ ready]`.
-   - Sezione "In review" senza barra: solo ID, titolo, (assignee, stima).
-   - **Sezione "Backlog"**: elenca tutti i task in `backlog/` senza barra
-     di progresso. Formato: solo ID, titolo troncato, (assignee, stima).
-   - **Omettere** sezioni vuote (se nessun in-progress, non stampare il blocco
-     "In progress"; idem review, idem backlog).
-   - Se `total == 0`, stampa solo: `📊 Project — <oggi>  (nessun task)`.
-   - **NON** aggiungere altro output: niente consigli, niente "next steps",
-     niente leggenda, niente spiegazioni. Solo il blocco qui sopra.
+   Rendering rules:
+   - **Current task**: detect the current task from the git branch (`feature/T-NNN-…`).
+     If found, show it in the header after the date: `🎯 T-NNN <title>`.
+     In the "In progress" block, the current task gets the prefix `▶` instead of ` `.
+     If there is no current task (not on a feature/ branch), omit `🎯` from the header.
+   - Project progress bar: **20 chars** (`█` filled, `░` empty).
+   - Per-task progress bar for in-progress tasks: **13 chars** (`█` / `░`).
+   - Title truncated to 40 chars with `…` if it exceeds.
+   - Assignee/estimate in parentheses; if missing show `-`.
+   - **Inner-cycle phase**: for each in-progress task, show the phase in
+     square brackets after `(assignee, estimate)`. Format: `[discuss]`,
+     `[plan]`, `[execute N/M]` (steps done/total), `[verify]`, `[✔ ready]`.
+   - "In review" section without bar: just ID, title, (assignee, estimate).
+   - **"Backlog" section**: list all tasks in `backlog/` without a progress
+     bar. Format: just ID, truncated title, (assignee, estimate).
+   - **Omit** empty sections (if no in-progress, don't print the
+     "In progress" block; same for review, same for backlog).
+   - If `total == 0`, print only: `📊 Project — <today>  (no tasks)`.
+   - **DO NOT** add any other output: no advice, no "next steps",
+     no legend, no explanations. Only the block above.

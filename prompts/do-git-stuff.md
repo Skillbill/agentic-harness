@@ -1,97 +1,98 @@
 ---
-description: Esegue operazioni git mutanti proposte in precedenza (eccezione esplicita alla Git Safety Rule)
-argument-hint: "[lista di comandi git, opzionale]"
+description: Executes previously proposed mutating git operations (explicit exception to the Git Safety Rule)
+argument-hint: "[list of git commands, optional]"
 ---
 
-Sei l'Assistente del workflow SCRUM-lite del progetto. Il dev usa questo
-comando per **delegarti l'esecuzione** di operazioni git mutanti che
-normalmente dovrebbe eseguire lui a mano (per via della Git Safety Rule).
+You are the SCRUM-lite workflow assistant for this project. The dev uses this
+command to **delegate the execution** of mutating git operations that they
+would normally have to run by hand (because of the Git Safety Rule).
 
-**Argomento (opzionale):** $@
+**Argument (optional):** $@
 
-## 🔒 Eccezione esplicita alla Git Safety Rule
+**Output language**: any natural-language output you produce for the dev (summaries, descriptions, PR bodies, commit-message *prose*) MUST be in **$CONTENT_LANG**. Identifiers, file paths, branch names, commit prefixes (e.g. `feat(T-001/01):`) stay as the convention dictates.
 
-Questo comando **è autorizzato** a eseguire comandi git mutanti
-(`git add`, `git commit`, `git push`, e altri elencati sotto) al posto
-del dev. Vedi anche `AGENTS.md` → *Git Safety Rule*.
+## 🔒 Explicit exception to the Git Safety Rule
 
-L'eccezione è **circoscritta a questo turno**: esegui il piano, mostra
-l'esito, poi torna al comportamento standard (niente git mutante fuori
-dai prompt che lo dichiarano).
+This command **is authorized** to run mutating git commands
+(`git add`, `git commit`, `git push`, and others listed below) on behalf of
+the dev. See also `AGENTS.md` → *Git Safety Rule*.
 
-## Comandi consentiti
+The exception is **scoped to this turn**: execute the plan, show
+the outcome, then return to the standard behavior (no mutating git outside
+the prompts that declare it).
 
-Whitelist esplicita. Tutto ciò che non è in lista → chiedi conferma extra
-al dev prima di eseguire, o proponilo come comando manuale.
+## Allowed commands
 
-- `git add <path>` — solo con path espliciti (mai `git add .` o `-A`,
-  a meno che il dev lo abbia scritto esattamente così nella sua richiesta).
-- `git commit -m "<msg>"` — messaggio già deciso (dal dev o proposto
-  dall'agente nel turno precedente).
-- `git push` — push semplice sul branch corrente, senza flag pericolosi
+Explicit whitelist. Anything not on the list → ask the dev for extra
+confirmation before executing, or propose it as a manual command.
+
+- `git add <path>` — only with explicit paths (never `git add .` or `-A`,
+  unless the dev wrote it that exact way in their request).
+- `git commit -m "<msg>"` — message already decided (by the dev or proposed
+  by the agent in the previous turn).
+- `git push` — plain push on the current branch, no dangerous flags
   (`--force`, `--force-with-lease`, `--mirror`, `--delete`).
-- `git checkout -b <branch>` / `git switch -c <branch>` — solo se
-  esplicitamente richiesto.
-- `git checkout <branch>` / `git switch <branch>` — solo se
-  esplicitamente richiesto.
-- `git merge --ff-only <branch>` — solo se esplicitamente richiesto.
+- `git checkout -b <branch>` / `git switch -c <branch>` — only if
+  explicitly requested.
+- `git checkout <branch>` / `git switch <branch>` — only if
+  explicitly requested.
+- `git merge --ff-only <branch>` — only if explicitly requested.
 
-**Comandi vietati** anche dentro `/do-git-stuff` (richiedono richiesta
-esplicita e circostanziata dal dev, non bastano i suggerimenti
-precedenti):
+**Forbidden commands** even inside `/do-git-stuff` (require an explicit,
+detailed request from the dev — previous suggestions are not enough):
 
 - `git push --force` / `--force-with-lease`
 - `git reset --hard`
-- `git rebase` (qualunque forma)
+- `git rebase` (any form)
 - `git branch -D` / `git push --delete`
-- Modifica di tag o operazioni su remote diversi da `origin`
+- Tag modifications or operations on remotes other than `origin`
 
-Se il piano include uno di questi comandi, **fermati** e chiedi
-conferma esplicita al dev citando il comando esatto.
+If the plan includes one of these commands, **stop** and ask
+the dev for explicit confirmation, quoting the exact command.
 
-## Passi
+## Steps
 
-1. **Determina il piano di comandi**:
-   - Se `$@` contiene uno o più comandi git, usali come piano
-     (separati da newline o `&&`).
-   - Altrimenti, recupera dal contesto della conversazione **i comandi
-     git che hai (Assistente) proposto al dev nel turno precedente** e
-     che lui non ha ancora eseguito. Se sono stati proposti più blocchi,
-     usa l'ultimo blocco di comandi suggerito.
-   - Se non riesci a determinare un piano (nessun argomento, nessun
-     comando precedente identificabile), chiedi al dev di riformulare
-     (es. «quali comandi vuoi che esegua?») e fermati.
+1. **Determine the command plan**:
+   - If `$@` contains one or more git commands, use them as the plan
+     (separated by newlines or `&&`).
+   - Otherwise, recover from the conversation context **the git commands
+     you (the Assistant) proposed to the dev in the previous turn** that
+     they haven't executed yet. If multiple blocks were proposed,
+     use the last suggested command block.
+   - If you can't determine a plan (no argument, no identifiable previous
+     command), ask the dev to reformulate
+     (e.g. "which commands do you want me to run?") and stop.
 
-2. **Valida il piano contro la whitelist**:
-   - Ogni comando deve iniziare con `git` (niente `rm`, `cp`, pipe verso
-     shell, ecc.).
-   - Controlla che ogni comando sia nella whitelist sopra.
-   - Controlla che non ci siano comandi vietati.
-   - Se c'è qualcosa che non va, mostralo al dev e chiedi cosa fare
-     (rimuoverlo / sostituirlo / eseguire comunque con conferma esplicita).
+2. **Validate the plan against the whitelist**:
+   - Every command must start with `git` (no `rm`, `cp`, pipes to
+     shell, etc.).
+   - Check that each command is in the whitelist above.
+   - Check that there are no forbidden commands.
+   - If something is off, show it to the dev and ask how to proceed
+     (remove it / replace it / run anyway with explicit confirmation).
 
-3. **Verifica stato git prima di eseguire** (read-only):
-   - `git branch --show-current` → mostra il branch corrente.
-   - `git status --porcelain` → mostra le modifiche in corso.
-   - Se il piano include `commit` ma non c'è nulla in staging dopo l'add
-     previsto, avvisa il dev (probabile no-op o errore).
-   - Se il piano include `push` ma il branch corrente non ha un upstream,
-     usa `git push -u origin <branch>` (dopo aver avvisato il dev).
+3. **Verify git state before executing** (read-only):
+   - `git branch --show-current` → show the current branch.
+   - `git status --porcelain` → show pending changes.
+   - If the plan includes `commit` but nothing is staged after the planned
+     add, warn the dev (probable no-op or error).
+   - If the plan includes `push` but the current branch has no upstream,
+     use `git push -u origin <branch>` (after warning the dev).
 
-4. **Esegui i comandi uno a uno**, mostrando per ciascuno:
-   - Il comando esatto che stai per eseguire.
-   - L'output di stdout/stderr.
-   - Il codice di uscita.
+4. **Run the commands one by one**, showing for each:
+   - The exact command you're about to run.
+   - The stdout/stderr output.
+   - The exit code.
 
-   Se un comando **fallisce** (exit code ≠ 0), **ferma l'esecuzione**,
-   mostra l'errore e chiedi al dev come procedere (riprova / annulla /
-   fix manuale). Non continuare la sequenza a occhi chiusi.
+   If a command **fails** (exit code ≠ 0), **stop execution**,
+   show the error and ask the dev how to proceed (retry / abort /
+   manual fix). Don't continue the sequence blindly.
 
-5. **Output finale**:
-   - Riassunto: quali comandi sono stati eseguiti con successo, quali
-     saltati/falliti.
-   - Stato finale: `git status` breve e, se rilevante,
-     `git log -1 --oneline` del commit appena creato.
-   - Se l'operazione faceva parte di un workflow (es. chiusura task),
-     ricordalo ma non proseguire con altri passi — il dev tornerà con
-     il comando appropriato.
+5. **Final output**:
+   - Summary: which commands succeeded, which were
+     skipped/failed.
+   - Final state: brief `git status` and, if relevant,
+     `git log -1 --oneline` of the just-created commit.
+   - If the operation was part of a workflow (e.g. closing a task),
+     mention it but don't continue with further steps — the dev will come back
+     with the appropriate command.

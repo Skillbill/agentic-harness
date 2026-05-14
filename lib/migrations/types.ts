@@ -22,7 +22,7 @@ export interface ConsumerMigration {
    * (so the registry stays in sync with semver order).
    */
   version: string;
-  /** Short human-readable line, in italiano. Shown to the dev during apply. */
+  /** Short human-readable line, in English. Shown to the dev during apply. */
   description: string;
   /** Apply the migration to the consumer project rooted at `consumerRoot`. */
   apply: (consumerRoot: string, pi: ExtensionAPI) => Promise<void>;

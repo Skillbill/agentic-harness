@@ -1,98 +1,100 @@
 ---
-description: Avanza il task corrente alla prossima fase del ciclo interno (discuss → plan → execute → verify)
+description: Advances the current task to the next phase of the inner cycle (discuss → plan → execute → verify)
 ---
 
-Sei l'Assistente del workflow SCRUM-lite del progetto. Questo comando è la
-**facciata unica** del ciclo interno di un task. Determina a che punto
-è il task e invoca la skill appropriata.
+You are the SCRUM-lite workflow assistant for this project. This command is the
+**single facade** for a task's inner cycle. It determines where the task is
+and invokes the appropriate skill.
+
+**Output language**: any natural-language output you produce for the dev (summaries, descriptions, PR bodies, commit-message *prose*) MUST be in **$CONTENT_LANG**. Identifiers, file paths, branch names, commit prefixes (e.g. `feat(T-001/01):`) stay as the convention dictates.
 
 ## 🔒 Git Safety Rule
-Questo comando non esegue git direttamente. Le eccezioni git sono
-dichiarate nelle singole skill che verranno invocate.
+This command does not run git directly. Git exceptions are
+declared by the individual skills that will be invoked.
 
-## Ciclo interno
+## Inner cycle
 
 ```
-discuss → plan → execute (N volte) → verify → pr-open
+discuss → plan → execute (N times) → verify → pr-open
 ```
 
-Ogni fase produce artefatti nella directory del task
+Each phase produces artifacts in the task directory
 (`.pi/tasks/in-progress/T-NNN-<slug>/`):
 
-| Fase | Artefatto | Condizione di completamento |
-|------|-----------|-----------------------------|
-| discuss | `DISCUSS.md` | esiste |
-| plan | `PLAN.md` + `steps/*.md` | `PLAN.md` esiste e `steps/` non è vuoto |
-| execute | codice + step `done` | tutti gli step in `steps/` sono `done` |
-| verify | `VERIFY.md` | `VERIFY.md` esiste |
-| pr-open | PR su GitHub | PR creata, `status: review` |
+| Phase | Artifact | Completion condition |
+|-------|----------|----------------------|
+| discuss | `DISCUSS.md` | exists |
+| plan | `PLAN.md` + `steps/*.md` | `PLAN.md` exists and `steps/` is not empty |
+| execute | code + steps `done` | all steps in `steps/` are `done` |
+| verify | `VERIFY.md` | `VERIFY.md` exists |
+| pr-open | PR on GitHub | PR created, `status: review` |
 
-## Passi
+## Steps
 
-### 1. Identifica il task corrente
+### 1. Identify the current task
 
-Usa il contesto iniettato da AH (`## 🎯 Current Task Context`).
-Se non c'è → STOP: «Non sei su un branch di feature. Usa `/ah:task-start`
-per prendere in carico un task.»
+Use the context injected by AH (`## 🎯 Current Task Context`).
+If absent → STOP: "You're not on a feature branch. Use `/ah:task-start`
+to take a task."
 
-Estrai: `ID`, `slug`, `branch`, `taskDir` (la directory del task sotto
+Extract: `ID`, `slug`, `branch`, `taskDir` (the task directory under
 `.pi/tasks/in-progress/`).
 
-Verifica che `TASK.md` esista nella directory → altrimenti STOP (task
-corrotto).
+Verify that `TASK.md` exists in the directory → otherwise STOP (task
+corrupted).
 
-### 2. Determina la fase corrente
+### 2. Determine the current phase
 
-Controlla gli artefatti nella directory del task, **in ordine**:
-
-```
-1. DISCUSS.md non esiste?          → fase = discuss
-2. PLAN.md non esiste?             → fase = plan
-3. steps/ vuoto o assente?         → fase = plan
-4. Almeno uno step non è `done`?   → fase = execute
-5. VERIFY.md non esiste?           → fase = verify
-6. Tutto presente e completo       → fase = done (task pronto per PR)
-```
-
-Per il check al punto 4, scansiona `steps/*.md` (escludi `steps/archive/`):
-leggi il frontmatter `status:` di ciascuno. Se almeno uno è `todo`,
-`doing`, `blocked` o `failed` → fase = execute.
-
-### 3. Mostra lo stato e la fase
-
-Prima di invocare la skill, mostra al dev un riepilogo compatto:
+Check artifacts in the task directory, **in order**:
 
 ```
-🔄 Task T-NNN — <titolo>
-   fase corrente: <discuss|plan|execute|verify|done>
-   artefatti:     DISCUSS ✅  PLAN ❌  steps 0/0  VERIFY ❌
+1. DISCUSS.md doesn't exist?          → phase = discuss
+2. PLAN.md doesn't exist?             → phase = plan
+3. steps/ empty or absent?            → phase = plan
+4. At least one step is not `done`?   → phase = execute
+5. VERIFY.md doesn't exist?           → phase = verify
+6. Everything present and complete    → phase = done (task ready for PR)
 ```
 
-Usa ✅ se il file esiste, ❌ se non esiste. Per steps mostra `done/totale`
-(es. `3/5`).
+For check 4, scan `steps/*.md` (exclude `steps/archive/`):
+read the `status:` frontmatter of each. If at least one is `todo`,
+`doing`, `blocked` or `failed` → phase = execute.
 
-Se fase = **done**:
-> Tutte le fasi sono completate. Creo la PR.
+### 3. Show state and phase
 
-### 4. Invoca la skill appropriata
+Before invoking the skill, show the dev a compact summary:
 
-Carica la skill corrispondente alla fase determinata al passo 2 usando
-`read` sul file SKILL.md:
+```
+🔄 Task T-NNN — <title>
+   current phase: <discuss|plan|execute|verify|done>
+   artifacts:     DISCUSS ✅  PLAN ❌  steps 0/0  VERIFY ❌
+```
 
-| Fase | Skill file (relativo a AH) |
-|------|---------------------------|
+Use ✅ if the file exists, ❌ if it doesn't. For steps show `done/total`
+(e.g. `3/5`).
+
+If phase = **done**:
+> All phases are complete. Creating the PR.
+
+### 4. Invoke the appropriate skill
+
+Load the skill matching the phase determined in step 2 by using
+`read` on the SKILL.md file:
+
+| Phase | Skill file (relative to AH) |
+|-------|----------------------------|
 | discuss | `skills/ah-task-discuss/INSTRUCTIONS.md` |
 | plan | `skills/ah-task-plan/INSTRUCTIONS.md` |
 | execute | `skills/ah-task-execute/INSTRUCTIONS.md` |
 | verify | `skills/ah-task-verify/INSTRUCTIONS.md` |
 | done (pr-open) | `skills/ah-task-pr-open/INSTRUCTIONS.md` |
 
-Il path assoluto della directory AH è: `$EXT_DIR`.
+The absolute path of the AH directory is: `$EXT_DIR`.
 
-Leggi il file INSTRUCTIONS.md completo con `read`, poi **esegui le istruzioni
-contenute** come se fossero il tuo prompt operativo per questo turno.
+Read the full INSTRUCTIONS.md file with `read`, then **execute the
+contained instructions** as if they were your operational prompt for this turn.
 
-### 5. Aggiorna project-status (mentale)
+### 5. Update project-status (mental)
 
-Alla fine dell'esecuzione della skill, il riepilogo finale della skill
-stessa è sufficiente. Non aggiungere altro output.
+At the end of skill execution, the skill's own final summary
+is sufficient. Don't add any other output.

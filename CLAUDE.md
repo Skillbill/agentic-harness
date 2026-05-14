@@ -31,7 +31,9 @@ pi install git:github.com/Skillbill/agentic-harness@v0.1.0   # pinned
 
 `lib/context-inspector.ts` is a self-contained observability module: it taps `before_provider_request` / `after_provider_response` / `message_end` and writes per-session NDJSON logs under `.pi/context-inspector/<timestamp>_<sid>/`. It must remain non-mutating — its provider-request handler always returns `undefined`.
 
-`lib/codebase-cache.ts` defines the **doc → file-pattern map** used by `/ah:map-codebase` to decide which of the 7 thematic codebase docs (`STACK`, `INTEGRAZIONI`, `ARCHITETTURA`, `STRUTTURA`, `CONVENZIONI`, `TESTING`, `CRITICITA`) is stale after a diff. Two entries are "special": `STRUTTURA.md` regenerates on any add/delete (topology trigger), and `CRITICITA.md` is broad with a content filter for TODO/FIXME markers. Editing `PATTERN_MAP` directly changes what map-codebase regenerates incrementally.
+`lib/codebase-cache.ts` defines the **doc → file-pattern map** used by `/ah:map-codebase` to decide which of the 7 thematic codebase docs (`STACK`, `INTEGRATIONS`, `ARCHITECTURE`, `STRUCTURE`, `CONVENTIONS`, `TESTING`, `TECHNICAL_DEBT`) is stale after a diff. Two entries are "special": `STRUCTURE.md` regenerates on any add/delete (topology trigger), and `TECHNICAL_DEBT.md` is broad with a content filter for TODO/FIXME markers. Editing `PATTERN_MAP` directly changes what map-codebase regenerates incrementally.
+
+`lib/ah-config.ts` is a third configuration input alongside `package.json` (release metadata) and `.pi/ah-version` (consumer migration marker). It reads `<consumerRoot>/.pi/ah-config.json` at `session_start` and exposes `{ configVersion, contentLanguage }`. `configVersion` is currently `"1"`; `contentLanguage` is the locale code (default `"en"`) that drives the natural language of AH-generated content inside the consumer — body of `TASK.md`, `DISCUSS.md`, `PLAN.md`, `VERIFY.md`, and the prose of `.pi/codebase/*.md`. Filenames are never localized. The reader never throws: any failure path downgrades to a single `console.warn` and the defaults are used. `lib/register-prompt.ts` substitutes the resolved values into every prompt body as `$CONTENT_LANG` (display name, e.g. `"English"`) and `$CONTENT_LANG_CODE` (raw code), so every shipped prompt / skill carries an `**Output language**` directive that honors the consumer's choice. See R-0005 in `REQUIREMENTS.md`.
 
 ### Directory layout
 
@@ -52,16 +54,16 @@ templates/, procedures/ — referenced by prompts via $EXT_DIR
 
 ## How to release a new version
 
-1. **Aggiorna `CHANGELOG.md`**: sposta i bullet da `## [Unreleased]` a una nuova sezione `## [X.Y.Z] — YYYY-MM-DD`. Includi la sotto-sezione `Migration` (anche solo "Nessuna azione richiesta." se è il caso). Aggiungi il reference-link `[X.Y.Z]: …compare/v(X.Y.Z-1)...vX.Y.Z` in coda al file.
+1. **Update `CHANGELOG.md`**: move the bullets from `## [Unreleased]` to a new `## [X.Y.Z] — YYYY-MM-DD` section. Include the `Migration` sub-section (even if it's just "No action required."). Append the reference link `[X.Y.Z]: …compare/v(X.Y.Z-1)...vX.Y.Z` at the bottom of the file.
 2. Bump `version` in `package.json` (semver).
-3. Se la release richiede step di compatibilità lato consumer automatizzabili, aggiungi `lib/migrations/v<MAJOR>_<MINOR>_<PATCH>.ts` e registralo in `lib/migrations/index.ts` (vedi § Consumer migration).
-4. Commit + push su `main`.
-5. Crea un **annotated git tag** `vX.Y.Z` e pushalo (`git push origin vX.Y.Z`).
-6. La GitHub Action `.github/workflows/release.yml` triggera sul tag, estrae la sezione `[X.Y.Z]` dal CHANGELOG via `awk` POSIX e crea automaticamente la GitHub Release con quel body. Non c'è bisogno di intervento manuale sulla UI.
+3. If the release requires automatable consumer-side compatibility steps, add `lib/migrations/v<MAJOR>_<MINOR>_<PATCH>.ts` and register it in `lib/migrations/index.ts` (see § Consumer migration).
+4. Commit + push to `main`.
+5. Create an **annotated git tag** `vX.Y.Z` and push it (`git push origin vX.Y.Z`).
+6. The `.github/workflows/release.yml` GitHub Action triggers on the tag, extracts the `[X.Y.Z]` section from CHANGELOG via POSIX `awk`, and creates the GitHub Release with that body automatically. No manual UI intervention needed.
 
 At next pi startup, users with an **unpinned** git install (`pi install git:github.com/Skillbill/agentic-harness` or with `-l`) will see PI's native `Package Updates Available` banner pointing at this package. They then run `pi update` (global) or `pi update --extension git:github.com/Skillbill/agentic-harness` (precise) to pull the new ref. Users with a **pinned** install (`@vX.Y.Z`) are skipped by `pi update` — to upgrade, they re-`pi install` with the new ref.
 
-Dopo il `pi update`, alla prima sessione PI con la nuova versione di AH, il framework di consumer migration (vedi § Consumer migration) applica automaticamente eventuali step di compatibilità sul progetto consumer.
+After `pi update`, at the first PI session with the new AH version, the consumer migration framework (see § Consumer migration) automatically applies any compatibility steps to the consumer project.
 
 ## Install scopes
 
@@ -74,23 +76,23 @@ Add `@vX.Y.Z` to pin the version (recommended for CI / reproducible team setups)
 
 ## Consumer migration
 
-Quando un progetto consumer aggiorna AH (es. v0.6.0 → v0.7.0 via `pi update`), AH applica automaticamente eventuali step di compatibilità sul progetto al successivo `session_start` di PI. Questo evita che il consumer si trovi out-of-sync con convenzioni / file layout / frontmatter modificati dalla nuova versione di AH. Codificato in R-0003 di `REQUIREMENTS.md`.
+When a consumer project upgrades AH (e.g. v0.6.0 → v0.7.0 via `pi update`), AH automatically applies any compatibility steps to the project at the next PI `session_start`. This prevents the consumer from drifting out of sync with conventions / file layout / frontmatter changed by the new AH version. Codified in R-0003 of `REQUIREMENTS.md`.
 
-**Architettura** (`extensions/index.ts` chiama `migrateConsumer` dentro l'handler `session_start`):
+**Architecture** (`extensions/index.ts` calls `migrateConsumer` inside the `session_start` handler):
 
-- **Marker**: `<consumerRoot>/.pi/ah-version`, plain text con `X.Y.Z` (o JSON `{"version":"x.y.z"}` — entrambi i formati accettati in lettura). Assente = prima installazione. Scritto da AH dopo ogni step di migration riuscito.
-- **Runner**: `lib/migrate-consumer.ts` legge la propria versione installata dal `package.json` adiacente, legge il marker, calcola le pending (`marker < target ≤ installed` in ordine semver) e le esegue una alla volta facendo checkpoint del marker dopo ogni successo.
-- **Registry**: `lib/migrations/index.ts` esporta `MIGRATIONS: readonly ConsumerMigration[]` (vedi `lib/migrations/types.ts` per il contratto). Lista vuota a v0.6.0; la prima entry arriverà con v0.7.0.
+- **Marker**: `<consumerRoot>/.pi/ah-version`, plain text containing `X.Y.Z` (or JSON `{"version":"x.y.z"}` — both formats accepted on read). Absent = first install. Written by AH after every successful migration step.
+- **Runner**: `lib/migrate-consumer.ts` reads its own installed version from the adjacent `package.json`, reads the marker, computes the pending set (`marker < target ≤ installed`, semver order), and runs them one at a time, checkpointing the marker after each success.
+- **Registry**: `lib/migrations/index.ts` exports `MIGRATIONS: readonly ConsumerMigration[]` (see `lib/migrations/types.ts` for the contract). Empty list at v0.6.0; the first entry ships in v0.7.0 (`v0_7_0.ts` — rename of the 5 Italian-named codebase docs to English).
 
-**Invarianti**:
-- **Idempotenza** obbligatoria: ogni `apply` deve essere safe da rieseguire (es. `mkdirSync(..., { recursive: true })`, rename solo se source esiste e target no).
-- **No git mutations**: la Git Safety Rule vale anche dentro le migration. Possono mutare file in `.pi/` o nel working tree, ma `git add/commit/push/checkout` restano del dev.
-- **Failure non-blocking**: se una migration fallisce, AH logga l'errore, lascia il marker all'ultimo step riuscito e continua a caricarsi. Il dev sistema e rilancia la sessione.
+**Invariants**:
+- **Idempotency** mandatory: every `apply` must be safe to re-run (e.g. `mkdirSync(..., { recursive: true })`, rename only if source exists and target does not).
+- **No git mutations**: the Git Safety Rule applies inside migrations too. They may mutate files in `.pi/` or in the working tree, but `git add/commit/push/checkout` remain the dev's responsibility.
+- **Failure non-blocking**: if a migration fails, AH logs the error, leaves the marker at the last successful step, and keeps loading. The dev fixes and relaunches the session.
 
-**Per aggiungere una migration**:
-1. Crea `lib/migrations/v<MAJOR>_<MINOR>_<PATCH>.ts` con `export const migration: ConsumerMigration = { version, description, apply }`.
-2. Importa e aggiungi all'array di `lib/migrations/index.ts` mantenendo l'ordine semver.
-3. Documenta lo step nella sezione `Migration` della versione corrispondente in `CHANGELOG.md`.
+**To add a migration**:
+1. Create `lib/migrations/v<MAJOR>_<MINOR>_<PATCH>.ts` with `export const migration: ConsumerMigration = { version, description, apply }`. Keep `description` in English.
+2. Import and add it to the array in `lib/migrations/index.ts` preserving semver order.
+3. Document the step in the `Migration` section of the corresponding version in `CHANGELOG.md`.
 
 ## Authoritative contracts — read before changing prompts
 
@@ -101,11 +103,11 @@ If you change either of these, the prompts under `prompts/` and the skills under
 
 ## 🔒 Git Safety Rule — scope
 
-> **Heads up to whoever is reading this CLAUDE.md while editing the AH repo itself**: la Git Safety Rule **non ti riguarda**. Vincola l'**agente che gira in un progetto consumer** quando AH è caricata lì — cioè i prompt sotto `prompts/` (eseguiti via `pi.sendUserMessage`) e il codice delle consumer-migration (eseguito al `session_start` di PI nel consumer). Quando invece stai lavorando su questo repo (`Skillbill/agentic-harness`) come dev di AH, le operazioni git mutanti (`add` / `commit` / `push` / branch / PR) sono normali — su richiesta dell'utente.
+> **Heads up to whoever is reading this CLAUDE.md while editing the AH repo itself**: the Git Safety Rule **does not apply to you**. It constrains the **agent running inside a consumer project** when AH is loaded there — i.e. the prompts under `prompts/` (executed via `pi.sendUserMessage`) and the consumer-migration code (executed at PI's `session_start` in the consumer). When you instead work on this repo (`Skillbill/agentic-harness`) as an AH dev, mutating git operations (`add` / `commit` / `push` / branch / PR) are perfectly normal — on the user's request.
 
-La regola autoritativa, con elenco dei comandi vietati, l'eccezione `/ah:task-new`, e l'override "committa tu" / "push it", vive in **`WORKFLOW.md` § Git Safety Rule**. Quel file è caricato come contesto dai prompt di AH dentro i consumer; questo `CLAUDE.md` no.
+The authoritative rule — list of forbidden commands, the `/ah:task-new` exception, and the "you commit it" / "push it" override — lives in **`WORKFLOW.md` § Git Safety Rule**. That file is loaded as context by AH's prompts inside consumers; this `CLAUDE.md` is not.
 
-Implicazione per le **consumer migration** (`lib/migrations/v*.ts`): quando girano nel consumer mutano `<consumerRoot>/.pi/...` o il working tree del consumer, ma **non** eseguono `git add` / `commit` / `push` / `checkout`. Vedi R-0003.
+Implication for **consumer migrations** (`lib/migrations/v*.ts`): when they run inside the consumer they mutate `<consumerRoot>/.pi/...` or the consumer's working tree, but they **never** run `git add` / `commit` / `push` / `checkout`. See R-0003.
 
 ## Inner-cycle skills
 
@@ -119,6 +121,6 @@ Implicazione per le **consumer migration** (`lib/migrations/v*.ts`): quando gira
 
 ## Conventions when editing this repo
 
-- Prompts under `prompts/` and `skills/` are in **Italian**. Match the existing voice when editing them; new prompts should also be in Italian unless the user requests otherwise.
+- Prompts under `prompts/` and `skills/` are in **English**. New prompts MUST stay in English. The natural language of the content the LLM generates inside a consumer is driven separately by `.pi/ah-config.json#contentLanguage` and surfaced into prompt bodies as `$CONTENT_LANG` / `$CONTENT_LANG_CODE` — never hard-code a language in a prompt.
 - Commit message format for AH itself follows the same `feat(T-NNN/NN): …` / `chore(T-NNN): …` patterns documented in `task-layout.md:373-381` when you're operating inside the task cycle. For ad-hoc commits to this extension's own code, no specific format is enforced.
 - `.pi/codebase/.cache.json` is gitignored; the 7 thematic docs under `.pi/codebase/` are versioned in the consumer project, not here.

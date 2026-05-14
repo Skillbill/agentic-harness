@@ -9,11 +9,17 @@ import { buildCodebaseIndex } from "../lib/codebase-index.js";
 import { registerLoadCodebaseDoc } from "../lib/load-codebase-doc.js";
 import { migrateConsumer } from "../lib/migrate-consumer.js";
 import { checkPiCompat } from "../lib/check-pi-compat.js";
+import {
+  type AhConfig,
+  AH_CONFIG_DEFAULTS,
+  languageDisplayName,
+  readAhConfig,
+} from "../lib/ah-config.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-// repoRoot = parent di extensions/ — è la dir radice dell'estensione,
-// quella dove vivono prompts/, skills/, templates/, package.json.
-// $EXT_DIR nei prompt template viene risolto a questo valore.
+// repoRoot = parent of extensions/ — the root of the AH extension,
+// where prompts/, skills/, templates/, and package.json live.
+// `$EXT_DIR` in prompt templates is resolved to this path.
 const repoRoot = dirname(__dirname);
 const promptsDir = join(repoRoot, "prompts");
 
@@ -70,8 +76,15 @@ function detectCurrentTask(cwd: string): { id: string; title: string; branch: st
 export default function (pi: ExtensionAPI) {
   let currentTask: ReturnType<typeof detectCurrentTask> = null;
 
-  // Context Inspector: monitora token/payload upload e download per
-  // ottimizzazione fine durante i task.
+  // R-0005: consumer-side content-language preference. Read once at
+  // session_start and re-read defensively per command invocation via
+  // `getCurrentAhConfig` so a mid-session edit takes effect on the next
+  // `/ah:*` call without restart.
+  let currentAhConfig: AhConfig = { ...AH_CONFIG_DEFAULTS };
+  const getCurrentAhConfig = () => currentAhConfig;
+
+  // Context Inspector: tracks token/payload upload and download for
+  // fine-grained tuning during tasks.
   registerContextInspector(pi);
 
   // Tool: load_codebase_doc — on-demand path-safe loader for .pi/codebase/*.md
@@ -80,7 +93,7 @@ export default function (pi: ExtensionAPI) {
   for (const file of readdirSync(promptsDir)) {
     if (!file.endsWith(".md")) continue;
     const name = `ah:${basename(file, ".md")}`;
-    registerPrompt(pi, name, join(promptsDir, file), repoRoot);
+    registerPrompt(pi, name, join(promptsDir, file), repoRoot, getCurrentAhConfig);
   }
 
   pi.on("session_start", async (_event, ctx) => {
@@ -101,6 +114,21 @@ export default function (pi: ExtensionAPI) {
       await migrateConsumer(pi, process.cwd());
     } catch (err) {
       console.error("[agentic-harness] migrate-consumer crashed:", err);
+    }
+
+    // R-0005: read consumer-side AH config (content language, etc.). Never
+    // throws — readAhConfig downgrades all errors to console warnings.
+    try {
+      const cfg = readAhConfig(process.cwd());
+      currentAhConfig = cfg;
+      const langName = languageDisplayName(cfg.contentLanguage);
+      const source =
+        cfg.contentLanguage === AH_CONFIG_DEFAULTS.contentLanguage
+          ? "default"
+          : "from .pi/ah-config.json";
+      console.log(`[agentic-harness] 🌐 Content language: ${langName} (${source})`);
+    } catch (err) {
+      console.error("[agentic-harness] read-ah-config crashed:", err);
     }
 
     // Detect current task

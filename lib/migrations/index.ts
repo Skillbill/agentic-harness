@@ -1,14 +1,15 @@
 import type { ConsumerMigration } from "./types.js";
+import { migration as v0_7_0 } from "./v0_7_0.js";
 
 /**
  * Registry of consumer migrations, ordered by semver ascending.
  *
- * Empty as of v0.6.0 (baseline). To add a migration:
+ * To add a migration:
  *
  *   1. Create `lib/migrations/v<MAJOR>_<MINOR>_<PATCH>.ts` exporting:
  *        export const migration: ConsumerMigration = { version, description, apply };
- *   2. Add `import { migration as v<...> } from "./v<...>.js";` below
- *      and insert it in the array in correct semver order.
+ *   2. Add `import { migration as v<...> } from "./v<...>.js";` above
+ *      and insert it in the array below in correct semver order.
  *   3. Document the behavior in `CHANGELOG.md` under that version's
  *      `Migration` section (the doc-side counterpart of the code change).
  *
@@ -16,5 +17,5 @@ import type { ConsumerMigration } from "./types.js";
  * the source order semver-ascending for readability.
  */
 export const MIGRATIONS: readonly ConsumerMigration[] = [
-  // (none — v0.6.0 is the baseline; first entry will land in v0.7.0)
+  v0_7_0,
 ];
