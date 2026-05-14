@@ -7,6 +7,8 @@ import { registerPrompt } from "../lib/register-prompt.js";
 import { registerContextInspector } from "../lib/context-inspector.js";
 import { buildCodebaseIndex } from "../lib/codebase-index.js";
 import { registerLoadCodebaseDoc } from "../lib/load-codebase-doc.js";
+import { readAhVersion } from "../lib/version.js";
+import { maybeProposeUpdate, type OtaCtx } from "../lib/ota-update.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // repoRoot = parent di extensions/ — è la dir radice dell'estensione,
@@ -80,6 +82,18 @@ export default function (pi: ExtensionAPI) {
     const name = `ah:${basename(file, ".md")}`;
     registerPrompt(pi, name, join(promptsDir, file), repoRoot);
   }
+
+  // OTA: check di aggiornamento solo al primo avvio della sessione PI
+  // (reason === "startup"). Fire-and-forget: niente await, niente errori
+  // che si propagano fuori — non deve mai bloccare lo startup.
+  // Vedi lib/ota-update.ts e REQUIREMENTS.md R-0002.
+  const ahVersion = readAhVersion(repoRoot);
+  pi.on("session_start", async (event, ctx) => {
+    if ((event as { reason?: string }).reason !== "startup") return;
+    void maybeProposeUpdate(ctx as unknown as OtaCtx, ahVersion).catch(() => {
+      // silenzio: il check OTA è best-effort
+    });
+  });
 
   pi.on("session_start", async (_event, _ctx) => {
     // Detect current task
