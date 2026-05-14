@@ -9,6 +9,8 @@ import { buildCodebaseIndex } from "../lib/codebase-index.js";
 import { registerLoadCodebaseDoc } from "../lib/load-codebase-doc.js";
 import { readAhVersion } from "../lib/version.js";
 import { maybeProposeUpdate, type OtaCtx } from "../lib/ota-update.js";
+import { detectInstallInfo } from "../lib/install-info.js";
+import { homedir } from "node:os";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // repoRoot = parent di extensions/ — è la dir radice dell'estensione,
@@ -86,11 +88,15 @@ export default function (pi: ExtensionAPI) {
   // OTA: check di aggiornamento solo al primo avvio della sessione PI
   // (reason === "startup"). Fire-and-forget: niente await, niente errori
   // che si propagano fuori — non deve mai bloccare lo startup.
-  // Vedi lib/ota-update.ts e REQUIREMENTS.md R-0002.
+  // detectInstallInfo guida due decisioni:
+  //   - pinned (source ha @ref) → niente prompt
+  //   - scope local → `pi update -l` (aggiorna l'entry di project settings)
+  // Vedi lib/ota-update.ts, lib/install-info.ts e REQUIREMENTS.md R-0002.
   const ahVersion = readAhVersion(repoRoot);
   pi.on("session_start", async (event, ctx) => {
     if ((event as { reason?: string }).reason !== "startup") return;
-    void maybeProposeUpdate(ctx as unknown as OtaCtx, ahVersion).catch(() => {
+    const installInfo = detectInstallInfo(process.cwd(), homedir(), repoRoot);
+    void maybeProposeUpdate(ctx as unknown as OtaCtx, ahVersion, installInfo).catch(() => {
       // silenzio: il check OTA è best-effort
     });
   });
