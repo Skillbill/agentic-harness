@@ -24,6 +24,8 @@ This is an explicit exception to the Git Safety Rule in AGENTS.md.
 - **After the discuss phase**:
   ```bash
   git add .pi/tasks/in-progress/<ID>-<slug>/DISCUSS.md
+  # only if step 7.5 produced a new/amended R-NNNN:
+  git add .pi/REQUIREMENTS.md
   git commit -m "chore(<ID>): update DISCUSS"
   git push
   ```
@@ -32,7 +34,9 @@ Constraints before every commit:
 
 1. **Task feature branch**: `git branch --show-current` must
    be `feature/<ID>-<slug>`.
-2. **Targeted `git add`**: exact file path, never `.` or `-A`.
+2. **Targeted `git add`**: exact file paths, never `.` or `-A`. The only
+   paths legal in this turn are the task's `DISCUSS.md` and, if step 7.5
+   touched it, `.pi/REQUIREMENTS.md`.
 3. **`git push`**: no force, no other branches, no tags.
 4. If there are unexpected files in the working tree, **do not commit**:
    show the state and propose the commands to the dev.
@@ -118,6 +122,27 @@ pathological inputs: better two generic docs than zero context.
 
 Do not load `PLAN.md`, `steps/`, `VERIFY.md`: they are later phases,
 they do not enter the discuss.
+
+### 3-bis. Load the project requirements (REQUIREMENTS.md)
+
+Read `<consumerRoot>/.pi/REQUIREMENTS.md` if it exists. It is the
+**intent layer** of the project — enumerated `R-NNNN` requirements that
+constrain the discussion. Treat it as full read-context for this phase.
+
+Procedure:
+
+1. If the file does **not** exist: print a one-line advisory
+   (`(no .pi/REQUIREMENTS.md found — requirements will be proposed
+   inline at /ah:task-new or in step 7.5 below.)`) and skip to step 4.
+2. If `TASK.md` declares `implements: [R-NNNN, ...]` in its frontmatter,
+   load **those R-NNNN entries front and center** as the primary
+   constraint frame for the discussion. Cite them by id when formulating
+   gray-area questions.
+3. Surface the **other R-NNNN** as a compact one-line-per-entry index
+   (`R-NNNN — title`), kept in context so step 7.5 can act on them
+   without re-reading the file.
+4. **Do not** mutate REQUIREMENTS.md in this step. Mutations only happen
+   in step 7.5, after the dev has approved the post-discuss change.
 
 ### 4. Propose the gray area menu
 
@@ -220,6 +245,62 @@ Ask:
 If `modify <section>` → redo **only that turn** and return to the
 summary. If `cancel` → exit without touching `DISCUSS.md`.
 
+### 7.5 Requirements impact (optional REQUIREMENTS.md update)
+
+After the dev confirms `DISCUSS.md` at step 7, ask **one** question
+about the requirements layer:
+
+> Should this discussion result in a change to `.pi/REQUIREMENTS.md`?
+> - `new R-NNNN` — add a new requirement that emerged from the
+>   discussion (e.g. a new constraint, a new product expectation);
+> - `amend R-NNNN` — refine an existing R-NNNN (e.g. the discussion
+>   surfaced that the current text was wrong or incomplete);
+> - `no change` — REQUIREMENTS.md stays as-is.
+
+If `.pi/REQUIREMENTS.md` does **not** exist in the project, skip this
+step entirely (no question, no mutation): requirements bootstrap is a
+`/ah:task-new` concern, not this skill's.
+
+Behavior per branch:
+
+- **`new R-NNNN`**: short inline interview, one question at a time:
+  - Short title (≤ 80 chars).
+  - Body: 1–3 sentences in **$CONTENT_LANG** on what must be true of
+    the system.
+  - Rationale: 1 sentence in **$CONTENT_LANG** on why it exists.
+  - Optional `link to current task?` (yes/no). If yes, also append the
+    current `T-NNN` to `TASK.md`'s `implements:` frontmatter list (dedup
+    if already present) and seed the entry's `**Linked tasks**` line
+    with `T-NNN`.
+
+  Compute the next R-NNNN id (max `^### R-(\d{4})` + 1, zero-padded to
+  4 digits). Append the new entry under `## Requirements`, after the
+  last existing entry. Update the file's `updated: <today>` frontmatter
+  field.
+
+- **`amend R-NNNN`**: ask which id. Show the current body of that entry
+  and ask for the replacement text (title, body, and/or rationale —
+  whatever needs to change; the dev may say `keep` for a sub-section
+  that's fine as-is). Apply the replacement **in place**, preserving
+  the `**Linked tasks**` line. Append a one-line audit entry to
+  `## Historicized decisions`:
+
+  ```
+  - R-NNNN amended on YYYY-MM-DD via T-NNN: <one-line reason from the dev>
+  ```
+
+  Update `updated: <today>`.
+
+- **`no change`**: do nothing. REQUIREMENTS.md stays untouched.
+
+**Constraints**:
+
+- Filename is invariant: always `.pi/REQUIREMENTS.md`.
+- Frontmatter keys and `R-NNNN` ids stay English/ASCII; body prose is in
+  **$CONTENT_LANG**.
+- This step must not re-open the gray-area menu of step 4 — it is a
+  separate, one-shot decision.
+
 ### 8. Write `DISCUSS.md`
 
 Path: `.pi/tasks/in-progress/<ID>-<slug>/DISCUSS.md`.
@@ -256,19 +337,27 @@ Writing rules:
 
 **Do not modify `TASK.md`.**
 
-### 9. Commit `DISCUSS.md`
+### 9. Commit `DISCUSS.md` (and REQUIREMENTS.md if step 7.5 touched it)
 
 Constraints (from the §Git Safety Rule above):
 
-a. `git status --porcelain` — only `DISCUSS.md` of the current task.
+a. `git status --porcelain` — the only legal modified paths are
+   `DISCUSS.md` of the current task and, if step 7.5 produced a
+   new/amended R-NNNN, `.pi/REQUIREMENTS.md`. If the working tree shows
+   anything else, do **not** commit.
 b. `git branch --show-current` — `feature/<ID>-<slug>`.
 c. If ok:
    ```bash
    git add .pi/tasks/in-progress/<ID>-<slug>/DISCUSS.md
+   # only if step 7.5 produced a new/amended R-NNNN:
+   git add .pi/REQUIREMENTS.md
    git commit -m "chore(<ID>): update DISCUSS"
    git push
    ```
-   Show the output of each command.
+   Show the output of each command. The commit message stays the same
+   whether or not REQUIREMENTS.md is part of the commit (the impact is
+   already discoverable in the diff and audit-logged in the file's
+   `## Historicized decisions` section).
 d. Otherwise → propose the commands to the dev manually.
 
 ### 10. Final output

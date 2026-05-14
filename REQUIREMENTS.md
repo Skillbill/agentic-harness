@@ -131,6 +131,25 @@ Starting from v0.8.0 AH's authoring language is **English** across the board: pr
 - When adding a placeholder substitution beyond `$CONTENT_LANG` / `$CONTENT_LANG_CODE`, mirror the same defensive style (substitution, not parsing): the prompt body remains the spec.
 - The default `contentLanguage = "en"` is **a behavioral default**, not a policy: a consumer is free to commit `.pi/ah-config.json` with `"contentLanguage": "it"` and expect AH-generated content to stay in Italian.
 
+### R-0006 — Consumer-side `.pi/REQUIREMENTS.md` (project requirements as input)
+
+Starting from v0.9.0 AH manages a single document `<consumerRoot>/.pi/REQUIREMENTS.md` listing the consumer project's requirements as `R-NNNN` entries. The list is treated as an **input** to the task workflow: it is read by `/ah:task-discuss`, `/ah:task-plan`, and `/ah:task-verify`, and is mutated only by `/ah:task-new` (step 2-bis — link to existing R-NNNN, create one inline, or skip) and `/ah:task-discuss` (step 7.5 — new / amend / no change post-discussion). It is **never** harvested at `/ah:task-done` — that phase has no opinion on requirements.
+
+**Decisions**:
+
+- **Location**: `<consumerRoot>/.pi/REQUIREMENTS.md` (single file, never split). Sibling of `.pi/codebase/`, `.pi/tasks/`, `.pi/ah-config.json` — under AH's `.pi/` namespace, not in repo root.
+- **Format**: frontmatter (`project`, `status: living`, `created`, `updated`) + sections `Context` / `Requirements` / `Out of scope` / `Historicized decisions` / `Release history`. Each R-NNNN entry: 1–3 sentence body + `**Rationale**` line + `**Linked tasks**` line maintained automatically. R-NNNN ids are monotonic, zero-padded to 4 digits.
+- **Filename invariance**: always `.pi/REQUIREMENTS.md`, never localized. Body prose is in `$CONTENT_LANG` (per R-0005); identifiers, frontmatter keys, and section headings stay English/ASCII.
+- **Bootstrap**: the v0.9.0 consumer migration (`lib/migrations/v0_9_0.ts`) drops an empty skeleton in `.pi/` on first session after upgrade. Idempotent. No dedicated bootstrap command — R-NNNN entries grow organically through `/ah:task-new` and `/ah:task-discuss`.
+- **Linking**: `TASK.md` frontmatter gains an optional `implements: [R-NNNN, ...]` key (list, `^R-\d{4}$`). Set by `/ah:task-new` (single id or empty), optionally extended by `/ah:task-discuss`. AH appends the task id to the R-NNNN's `**Linked tasks**` line; reverse cleanup on rename/removal is the dev's responsibility (tolerant, never destructive).
+- **Context loading**: skill prompts read REQUIREMENTS.md directly when needed (discuss / plan / verify). **Not** added to `context-needed:` in `PLAN.md` — that list remains scoped to the 7 codebase docs. **Not** injected at `session_start` either: the per-skill Read pattern is sufficient and avoids token waste in unrelated turns.
+- **Git Safety widening**: the existing `/ah:task-new` git-auto-commit exception is widened to allow `.pi/REQUIREMENTS.md` in the same commit, **only** when step 2-bis touched it; the `/ah:task-discuss` exception is widened identically for step 7.5. No other prompt or skill mutates the file.
+
+**Consequences for the AH dev**:
+- Any new prompt/skill that operates on a task and needs intent context should read `.pi/REQUIREMENTS.md` directly, mirroring the §3-bis pattern in discuss/plan and the DoD-Requirements subsection in verify.
+- Do not extend `context-needed:` to cover REQUIREMENTS — keep the two namespaces (codebase docs vs project intent) distinct.
+- When changing the file's structure (sections, frontmatter keys, R-NNNN body fields), update `templates/REQUIREMENTS.md`, the v0.9.0 migration's substitution logic, and the parsing rules in `prompts/task-new.md` step 2-bis and `skills/ah-task-discuss/INSTRUCTIONS.md` step 7.5 together.
+
 ## Out of scope
 
 - Distribution of third-party extensions other than AH.
@@ -159,3 +178,4 @@ Starting from v0.8.0 AH's authoring language is **English** across the board: pr
 - **v0.7.0**: introduces R-0003 — `CHANGELOG.md` (Keep a Changelog), GitHub Action `release.yml`, consumer migration framework (`lib/migrate-consumer.ts` + `lib/migrations/`). Migration list still empty: the framework writes the marker but has nothing to apply yet.
 - **v0.8.0**: introduces R-0004 — peer-version compatibility check (`lib/check-pi-compat.ts`) run at `session_start` before `migrateConsumer`. Warn loud non-blocking on three channels (console + UI toast + persistent message). Also introduces R-0005 — AH becomes English-only (prompts, skills, docs, console logs) and the consumer picks content language via `.pi/ah-config.json`. The first real consumer migration (`lib/migrations/v0_8_0.ts`) renames the 5 Italian-named codebase docs (`INTEGRAZIONI → INTEGRATIONS`, etc.), exercising the migration framework end-to-end.
 - **v0.8.1**: extends R-0005 — AH auto-creates `.pi/ah-config.json` at `session_start` when missing, with a `contentLanguage` chosen by `detectConsumerLanguage` (Italian if existing `.pi/codebase/*.md` content looks Italian — rescues legacy v0.7.x consumers like Efesto; English otherwise). Makes the language choice explicit and committable instead of relying on a silent in-memory default.
+- **v0.9.0**: introduces R-0006 — consumer-side `.pi/REQUIREMENTS.md`. New `templates/REQUIREMENTS.md` skeleton, consumer migration `lib/migrations/v0_9_0.ts` that drops an empty file on first session after upgrade, new `implements:` frontmatter key on `TASK.md`, and integration into `/ah:task-new` (step 2-bis), `/ah:task-discuss` (step 3-bis + 7.5), `/ah:task-plan` (§3-bis read-only), and `/ah:task-verify` (Requirements DoD subsection). `/ah:task-execute` is deliberately unchanged. No new slash command — requirements grow organically.

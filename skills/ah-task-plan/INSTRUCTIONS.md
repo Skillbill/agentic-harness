@@ -111,6 +111,26 @@ Read in full (with `read`, do not assume you already have them in context):
 Do not read `VERIFY.md`: it concerns the global DoD of the task, not
 planning.
 
+#### 3-req. Load the project requirements (REQUIREMENTS.md, read-only)
+
+Read `<consumerRoot>/.pi/REQUIREMENTS.md` if it exists. This is
+**read-only** input for planning — the plan must not mutate this file
+(amendments are a `/ah:task-discuss` concern, not planning).
+
+Procedure:
+
+1. If the file does not exist → skip this sub-step.
+2. If `TASK.md` declares `implements: [R-NNNN, ...]` in its frontmatter,
+   restrict your in-context view to those R-NNNN entries plus any
+   explicitly mentioned in `DISCUSS.md`. Quote the title + body of each
+   relevant R-NNNN at the top of the `## Strategy` section of `PLAN.md`
+   (or summarize them in one line each if more than three) so step
+   files written in §8 can reference the requirement by id.
+3. **Do not** add `REQUIREMENTS` as a stem to `context-needed:`. The
+   `context-needed:` list is scoped to `.pi/codebase/*.md` thematic docs
+   only; REQUIREMENTS.md is loaded by default in discuss/plan/verify
+   and must not appear there.
+
 #### 3-codebase. Load the codebase map documents (on-demand via INDEX)
 
 `/ah:task-plan` is the **sole producer** of the `context-needed:` key

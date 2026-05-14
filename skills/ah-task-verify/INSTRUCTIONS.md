@@ -68,10 +68,16 @@ Read:
 - `.pi/templates/task.md` → `## Definition of Done` section (standard
   items).
 - `TASK.md` → `## Definition of Done` section (task-custom items,
-  gathered during `/task-new`).
+  gathered during `/task-new`) and frontmatter (specifically the
+  `implements:` list — see below).
+- `<consumerRoot>/.pi/REQUIREMENTS.md` if it exists and `implements:`
+  is non-empty — read only the R-NNNN entries declared in `implements:`.
 
-Compose the global DoD block with two subsections: **Standard** (from
-the template) and **Task-specific** (from `TASK.md`, copied as-is).
+Compose the global DoD block with three subsections: **Standard** (from
+the template), **Task-specific** (from `TASK.md`, copied as-is), and
+**Requirements** (advisory R-NNNN checklist — see below; omit the
+subsection entirely if `implements:` is empty or REQUIREMENTS.md is
+absent).
 
 Write the first draft of `VERIFY.md` according to `docs/task-layout.md` §2.5:
 
@@ -94,6 +100,16 @@ Write the first draft of `VERIFY.md` according to `docs/task-layout.md` §2.5:
 - [ ] <custom item 1 copied from TASK.md>
 - [ ] ...
 
+### Requirements
+
+<!-- One advisory line per R-NNNN declared in TASK.md `implements:`.
+Omit this whole subsection if `implements:` is empty or
+.pi/REQUIREMENTS.md is absent. The dev marks each line manually; it is
+NOT a gate (DoD is advisory). -->
+
+- [ ] R-NNNN — <title>: still satisfied after this task?
+- [ ] R-NNNN — <title>: still satisfied after this task?
+
 ## Context audit
 
 <!-- populated by step 6.5 -->
@@ -108,8 +124,15 @@ All checkboxes start `[ ]`.
 #### 2b. Subsequent run (file present): reset state for the new run
 
 Open `VERIFY.md`. Bring **all** the global DoD checkboxes back to `[ ]`
-(the checked section always reflects the latest run, not history —
-decision V-4).
+— including the **Requirements** subsection lines, if present. The
+checked section always reflects the latest run, not history (decision
+V-4).
+
+If `TASK.md`'s `implements:` list has grown since the last run (e.g.
+discuss added a new R-NNNN link), append the new advisory lines to the
+**Requirements** subsection. If it has shrunk, leave the now-orphan
+lines in place but flag them in the run log — manual removal is the
+dev's call (consistent with the "tolerant, never destructive" stance).
 
 The logs of previous runs in `## Verify Log` **remain**. This run
 will add a new entry at the end.
@@ -208,6 +231,10 @@ The non auto-executable checks are:
 - **Backward compatibility**.
 - **PR opened and approved**.
 - All items of the **Task-specific** section of `VERIFY.md`.
+- All items of the **Requirements** section of `VERIFY.md` (if
+  present): each R-NNNN line is an advisory question to the dev —
+  "after this task lands, is this requirement still satisfied?". The
+  dev answers per id.
 
 Show the dev a **single prompt** with the complete list of what is
 still unresolved:

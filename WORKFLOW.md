@@ -93,6 +93,39 @@ architecture, conventions, and patterns.
 The map is **recommended but non-blocking**: the phases work without it,
 just with less context.
 
+### Project requirements (`.pi/REQUIREMENTS.md`) — input layer
+
+`.pi/REQUIREMENTS.md` is a single file managed by AH that lists project
+requirements as enumerated `R-NNNN` entries. Each entry has a short
+title, a 1–3 sentence body, a one-sentence rationale, and a
+`**Linked tasks**` line maintained automatically.
+
+**Requirements are an input, not an output**: they are born when a new
+task is created (`/ah:task-new`'s step 2-bis — link to an existing
+R-NNNN or create one inline) and refined when a task is discussed
+(`/ah:task-discuss`'s step 7.5 — propose `new` / `amend` / `no change`
+post-discussion). They are **never** harvested post-hoc at
+`/ah:task-done`.
+
+The file is created as an empty skeleton by AH's consumer migration on
+first session after upgrading to v0.9.0; its R-NNNN list grows
+organically from the task workflow above. No dedicated bootstrap
+command — the empty skeleton is enough to start.
+
+| Phase                  | Reads REQUIREMENTS.md | May write REQUIREMENTS.md            |
+|------------------------|:---------------------:|--------------------------------------|
+| `/ah:task-new`         | yes (R-NNNN list)     | yes (new R-NNNN + Linked tasks line) |
+| `/ah:task-next-step` (discuss) | yes (full)    | yes (new R-NNNN / amend)             |
+| `/ah:task-next-step` (plan)    | yes (full)    | no                                   |
+| `/ah:task-next-step` (execute) | no            | no                                   |
+| `/ah:task-next-step` (verify)  | yes (linked)  | no                                   |
+| `/ah:task-done`        | no                    | no                                   |
+
+Filename is invariant (`.pi/REQUIREMENTS.md`, never localized); body
+prose follows the consumer's `contentLanguage` per `.pi/ah-config.json`.
+R-NNNN identifiers, frontmatter keys, and section headings stay
+English/ASCII.
+
 ### Inner cycle of the task (skills, invoked by `/ah:task-next-step`)
 
 ```

@@ -119,10 +119,28 @@ status: backlog | in-progress | review | done
 estimate: <N>h | null
 assignee: <username> | null
 branch: feature/T-NNN-<slug> | null
+implements: [R-NNNN, ...]   # optional; empty list `[]` is legal
 created: YYYY-MM-DD
 updated: YYYY-MM-DD
 ---
 ```
+
+**`implements:` key — linking to project requirements**
+
+- Value: YAML list of `R-NNNN` strings (each matches `^R-\d{4}$`), each
+  referring to an entry in `<consumerRoot>/.pi/REQUIREMENTS.md`. The empty
+  list `[]` is legal and means "no declared requirement link".
+- Populated by `/ah:task-new` step 2-bis (the dev picks an existing
+  R-NNNN id, creates one inline, or skips). May be extended by
+  `/ah:task-discuss` step 7.5 when a new R-NNNN is created and the dev
+  opts to link it to the current task.
+- Consumed by `/ah:task-discuss`, `/ah:task-plan`, and `/ah:task-verify`
+  to load the relevant R-NNNN entries as context. **Not** consumed by
+  `/ah:task-execute`.
+- Linked tasks back-references are maintained automatically: when
+  `implements:` is set on a task, AH appends the task id to that
+  R-NNNN's `**Linked tasks**` line in `.pi/REQUIREMENTS.md` (no reverse
+  cleanup on rename / removal — the dev edits by hand).
 
 **Body sections** (slim version, after the simplification of
 `/ah:task-new`):

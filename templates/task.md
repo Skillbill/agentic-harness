@@ -6,6 +6,7 @@ estimate: null
 progress: null
 assignee: null
 branch: null
+implements: {{IMPLEMENTS}}
 created: {{DATE}}
 updated: {{DATE}}
 ---

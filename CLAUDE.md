@@ -97,9 +97,10 @@ When a consumer project upgrades AH (e.g. v0.7.0 → v0.8.0 via `pi update`), AH
 ## Authoritative contracts — read before changing prompts
 
 - **`WORKFLOW.md`** — task lifecycle (`backlog → in-progress → review → done`), branch/commit conventions, the full `/ah:*` command table, and the Git Safety Rule.
-- **`task-layout.md`** — directory layout of a task (`T-NNN-slug/` with `TASK.md` + optional `DISCUSS.md`, `PLAN.md`, `steps/NN-*.md`, `VERIFY.md`), the `discuss → plan → execute → verify` inner cycle contract, and the `context-needed:` frontmatter spec for `PLAN.md` (YAML list of bare stems, regex `^[a-zA-Z0-9_-]+$`, empty list `[]` is legal and meaningful).
+- **`task-layout.md`** — directory layout of a task (`T-NNN-slug/` with `TASK.md` + optional `DISCUSS.md`, `PLAN.md`, `steps/NN-*.md`, `VERIFY.md`), the `discuss → plan → execute → verify` inner cycle contract, the `context-needed:` frontmatter spec for `PLAN.md` (YAML list of bare stems, regex `^[a-zA-Z0-9_-]+$`, empty list `[]` is legal and meaningful), and the `implements: [R-NNNN, ...]` frontmatter key on `TASK.md` that links a task to entries in `<consumerRoot>/.pi/REQUIREMENTS.md`.
+- **`.pi/REQUIREMENTS.md` (consumer-side, R-0006 from v0.9.0)** — AH-managed list of project requirements as `R-NNNN` entries. Read by discuss/plan/verify; mutated only by `/ah:task-new` (step 2-bis) and `/ah:task-discuss` (step 7.5). Created as an empty skeleton by the v0.9.0 consumer migration. Filename is invariant; body is in `$CONTENT_LANG`. Treated as an **input** to task work, never harvested at `/ah:task-done`.
 
-If you change either of these, the prompts under `prompts/` and the skills under `skills/` likely need matching updates — they reference these contracts by behavior, not by import.
+If you change any of these, the prompts under `prompts/` and the skills under `skills/` likely need matching updates — they reference these contracts by behavior, not by import.
 
 ## 🔒 Git Safety Rule — scope
 

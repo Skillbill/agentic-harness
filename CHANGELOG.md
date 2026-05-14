@@ -8,6 +8,29 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 
 ## [Unreleased]
 
+## [0.9.0] — 2026-05-14
+
+### Added
+- **(R-0006)** Consumer-side `.pi/REQUIREMENTS.md` — a single AH-managed document listing the project's requirements as enumerated `R-NNNN` entries (title + 1–3 sentence body + rationale + auto-maintained `**Linked tasks**` line). Read as input by the inner-cycle phases that need the project's intent layer; never harvested at task-done.
+- **(R-0006)** `templates/REQUIREMENTS.md` skeleton consumed by the new v0.9.0 consumer migration (`lib/migrations/v0_9_0.ts`). The migration drops an empty `.pi/REQUIREMENTS.md` on the first `session_start` after upgrade, idempotent and non-destructive (no-op if the file already exists). Single advisory line emitted on creation, same shape as the v0.8.1 `📝 Created .pi/ah-config.json` log.
+- **(R-0006)** Optional `implements: [R-NNNN, ...]` frontmatter key on `TASK.md` linking a task to one or more requirements. Empty list `[]` is legal and meaningful ("no declared requirement link"). Documented in `task-layout.md` §3.1.
+- **(R-0006)** `/ah:task-new` step 2-bis: presents the existing R-NNNN list (or "no entries yet" prompt on a fresh project), accepts an id / `new` (inline mini-interview that assigns the next R-NNNN and pre-seeds the `**Linked tasks**` line) / `skip`. Output language for new R-NNNN bodies honors `$CONTENT_LANG`.
+- **(R-0006)** `/ah:task-discuss` step 3-bis (load REQUIREMENTS as constraint context, with `implements:` R-NNNN front and center) and step 7.5 (post-discussion `new` / `amend` / `no change` one-shot prompt). Amendments append a one-line audit entry to `## Historicized decisions`.
+- **(R-0006)** `/ah:task-plan` §3-bis: reads REQUIREMENTS.md read-only and quotes the relevant R-NNNN at the top of the `## Strategy` section so step files can reference them. **Not** added to `context-needed:` — that key remains scoped to `.pi/codebase/*.md` thematic docs.
+- **(R-0006)** `/ah:task-verify` Requirements DoD subsection: one advisory line per R-NNNN declared in `implements:` ("still satisfied after this task?"). Omitted when the list is empty or REQUIREMENTS.md is absent. Reset on each run (decision V-4 parity); collected together with the other manual checks in step 5.
+- New `Project requirements (.pi/REQUIREMENTS.md) — input layer` section in `WORKFLOW.md` documenting the per-phase read/write matrix.
+- Requirement **R-0006** in `REQUIREMENTS.md`.
+
+### Changed
+- `/ah:task-new` Git Safety exception widened: the auto-commit may now include `.pi/REQUIREMENTS.md` **only if** step 2-bis touched it (new R-NNNN created or `**Linked tasks**` line appended). When the dev chooses `skip`, REQUIREMENTS.md must not appear in the commit. The commit message format is unchanged (`chore(<ID>): add task to backlog — <TITLE>`).
+- `/ah:task-discuss` Git Safety exception widened symmetrically: the post-discuss commit may include `.pi/REQUIREMENTS.md` **only if** step 7.5 produced a new/amended R-NNNN. Commit message unchanged (`chore(<ID>): update DISCUSS`).
+- `templates/task.md` gains `implements: {{IMPLEMENTS}}` in the frontmatter (substituted by `/ah:task-new` to `[R-NNNN]` or `[]`).
+- `CLAUDE.md` "Authoritative contracts" list updated to mention the new REQUIREMENTS contract.
+
+### Migration
+- No dev action required. On the first `session_start` after upgrading to v0.9.0, AH writes an empty `.pi/REQUIREMENTS.md` skeleton if absent (idempotent — does not clobber a dev-authored file). R-NNNN entries then grow organically through `/ah:task-new` and `/ah:task-discuss`. Consumers may also commit the skeleton's `project:` field by hand (it ships as `<TBD>`).
+- `/ah:task-execute` is deliberately unchanged: execute does not read REQUIREMENTS.md (steps are already planned, no decisional surface).
+
 ## [0.8.1] — 2026-05-14
 
 ### Added
@@ -109,7 +132,8 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 ### Migration
 - No action required — first public release.
 
-[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.8.1...HEAD
+[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/Skillbill/agentic-harness/compare/v0.8.1...v0.9.0
 [0.8.1]: https://github.com/Skillbill/agentic-harness/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/Skillbill/agentic-harness/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/Skillbill/agentic-harness/compare/v0.6.0...v0.7.0
