@@ -69,7 +69,7 @@ export const PATTERN_MAP: PatternMap = {
     "docker-compose*.yml",
     "docker-compose*.yaml",
   ],
-  "INTEGRAZIONI.md": [
+  "INTEGRATIONS.md": [
     "package.json",
     "**/package.json",
     "**/.env.example",
@@ -83,7 +83,7 @@ export const PATTERN_MAP: PatternMap = {
     "**/openapi.yml",
     "**/openapi.json",
   ],
-  "ARCHITETTURA.md": [
+  "ARCHITECTURE.md": [
     "**/index.ts",
     "**/index.tsx",
     "**/index.js",
@@ -110,7 +110,7 @@ export const PATTERN_MAP: PatternMap = {
     "core/**",
     "domain/**",
   ],
-  "STRUTTURA.md": {
+  "STRUCTURE.md": {
     __special: "topology",
     topology_trigger: "git diff --diff-filter=AD <cached>..HEAD has any entry",
     extra_patterns: [
@@ -122,7 +122,7 @@ export const PATTERN_MAP: PatternMap = {
       "CLAUDE.md",
     ],
   },
-  "CONVENZIONI.md": [
+  "CONVENTIONS.md": [
     ".eslintrc*",
     "eslint.config.*",
     ".prettierrc*",
@@ -168,7 +168,7 @@ export const PATTERN_MAP: PatternMap = {
     ".github/workflows/*.yml",
     ".github/workflows/*.yaml",
   ],
-  "CRITICITA.md": {
+  "TECHNICAL_DEBT.md": {
     __special: "broad_with_content_filter",
     content_filter:
       "diff line starts with '+' AND matches /(TODO|FIXME|HACK|XXX)/ OR file is a manifest",
@@ -332,7 +332,7 @@ export function decideStaleDocs(
     }
   }
 
-  // STRUTTURA: topology trigger (add/delete) adds the doc even if no extra_patterns match.
+  // STRUCTURE: topology trigger (add/delete) adds the doc even if no extra_patterns match.
   if (opts.topologyChanged) {
     for (const [doc, entry] of Object.entries(patternMap)) {
       if (!Array.isArray(entry) && entry.__special === "topology") {

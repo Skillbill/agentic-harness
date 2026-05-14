@@ -1,30 +1,30 @@
 /**
- * Context Inspector — modulo di agentic-harness.
+ * Context Inspector — agentic-harness module.
  *
- * Monitora in modo fine cosa pi invia al provider LLM e cosa riceve, per
- * ottimizzare i token in upload/download durante i task (Efesto e altri
- * progetti che caricano AH).
+ * Tracks at a fine grain what `pi` sends to the LLM provider and what comes
+ * back, so token usage in upload/download can be tuned across tasks (Efesto
+ * and other projects that load AH).
  *
- * Eventi pi usati (vedi docs/extensions.md di pi):
- *   - before_provider_request  → payload completo in uscita verso il provider
- *   - after_provider_response  → status + headers in ingresso
- *   - message_end              → AssistantMessage con Usage autoritativa
- *   - turn_end                 → contatore turni
- *   - session_start            → (re)inizializza cartella per la sessione
+ * `pi` events used (see pi's docs/extensions.md):
+ *   - before_provider_request  → full outbound payload to the provider
+ *   - after_provider_response  → inbound status + headers
+ *   - message_end              → AssistantMessage with authoritative Usage
+ *   - turn_end                 → turn counter
+ *   - session_start            → (re-)initialize the session folder
  *
- * Output: sotto <cwd>/.pi/context-inspector/<YYYYMMDD-HHMMSS>_<sid8>/
- *   - requests.ndjson   breakdown granulare del payload (1 riga per richiesta)
- *   - responses.ndjson  status + headers (1 riga per risposta)
- *   - usage.ndjson      usage autoritativa per ogni assistant message
- *   - summary.json      totali live
+ * Output: under <cwd>/.pi/context-inspector/<YYYYMMDD-HHMMSS>_<sid8>/
+ *   - requests.ndjson   per-request granular payload breakdown
+ *   - responses.ndjson  per-response status + headers
+ *   - usage.ndjson      authoritative usage for every assistant message
+ *   - summary.json      live totals
  *
- * Comandi registrati:
- *   /ah:ctx-stats   riepilogo leggibile
- *   /ah:ctx-open    apre la cartella della sessione
- *   /ah:ctx-tail N  ultime N richieste dal log
+ * Registered commands:
+ *   /ah:ctx-stats   human-readable summary
+ *   /ah:ctx-open    open the session folder
+ *   /ah:ctx-tail N  last N requests from the log
  *
- * Nota: l'estensione è osservativa. `before_provider_request` ritorna
- * sempre undefined, quindi non altera mai il payload.
+ * Note: this extension is observer-only. `before_provider_request` always
+ * returns undefined, so it never mutates the payload.
  */
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
@@ -76,14 +76,14 @@ function resolveCodebaseDocPath(cwd: string, name: string): ResolveResult {
   return { ok: true, path: candidate };
 }
 
-// ── Stato per sessione ───────────────────────────────────────────────────
+// ── Per-session state ────────────────────────────────────────────────────
 
 interface Totals {
   requests: number;
   turns: number;
   payloadBytes: number;        // Σ bytes di JSON.stringify(payload)
   payloadApproxTokens: number; // ≈ payloadBytes / 4
-  usageInput: number;          // token input autoritativi dal provider
+  usageInput: number;          // authoritative input tokens from the provider
   usageOutput: number;
   usageCacheRead: number;
   usageCacheWrite: number;
@@ -115,8 +115,9 @@ function tsFolder(): string {
 }
 
 function approxTokens(bytes: number): number {
-  // Stima ~4 bytes/token. Serve solo per "ordine di grandezza" pre-risposta.
-  // Il conteggio autoritativo arriva da usage.input del provider.
+  // Rough estimate at ~4 bytes/token. Only useful as an order-of-magnitude
+  // signal before the response arrives. The authoritative count comes from
+  // the provider's usage.input.
   return Math.round(bytes / 4);
 }
 
@@ -304,7 +305,7 @@ function persistContextAudit(sc: SessionCtx, audit: ContextAudit): void {
   }
 }
 
-// ── Analisi del payload ──────────────────────────────────────────────────
+// ── Payload analysis ─────────────────────────────────────────────────────
 
 interface PayloadBreakdown {
   provider?: string;
@@ -327,7 +328,7 @@ interface PayloadBreakdown {
         hasToolCalls?: boolean;
         hasToolResult?: boolean;
         hasImage?: boolean;
-        preview?: string; // primi ~120 char del primo text block
+        preview?: string; // first ~120 chars of the first text block
       }>;
     };
     other: { bytes: number; approxTokens: number; keys: string[] };
@@ -357,7 +358,7 @@ function analyzePayload(payload: any): PayloadBreakdown {
 
   const obj = payload && typeof payload === "object" ? payload : {};
 
-  // system (chiavi tipiche Anthropic / OpenAI / Google)
+  // system (typical keys across Anthropic / OpenAI / Google)
   const systemVal =
     obj.system ?? obj.systemPrompt ?? obj.system_instruction ?? obj.systemInstruction ?? obj.instructions;
   if (systemVal !== undefined && systemVal !== null && systemVal !== "") {
@@ -429,7 +430,7 @@ function analyzePayload(payload: any): PayloadBreakdown {
     };
   }
 
-  // other (tutto ciò che non è system/tools/messages)
+  // other (anything that isn't system/tools/messages)
   const known = new Set([
     "system",
     "systemPrompt",
@@ -455,13 +456,13 @@ function analyzePayload(payload: any): PayloadBreakdown {
   return bd;
 }
 
-// ── Public: registrazione nell'estensione AH ─────────────────────────────
+// ── Public: registration in the AH extension ────────────────────────────
 
 export function registerContextInspector(pi: ExtensionAPI): void {
   pi.on("session_start", async (_event, ctx) => {
     const sid = ctx.sessionManager.getSessionId() ?? "ephemeral";
     current = initSession(process.cwd(), sid);
-    ctx.ui.notify(`[ah:ctx] Context Inspector attivo → ${current.dir}`, "info");
+    ctx.ui.notify(`[ah:ctx] Context Inspector active → ${current.dir}`, "info");
   });
 
   pi.on("before_provider_request", (event, _ctx) => {
@@ -494,7 +495,7 @@ export function registerContextInspector(pi: ExtensionAPI): void {
       /* ignore */
     }
     persistSummary(current);
-    return undefined; // osservativo: non modifichiamo il payload
+    return undefined; // observer-only: we never mutate the payload
   });
 
   pi.on("after_provider_response", (event, _ctx) => {
@@ -578,45 +579,45 @@ export function registerContextInspector(pi: ExtensionAPI): void {
     persistContextAudit(current, audit);
   });
 
-  // ── Comandi ────────────────────────────────────────────────────────
+  // ── Commands ───────────────────────────────────────────────────────
 
   pi.registerCommand("ah:ctx-stats", {
-    description: "Context Inspector: riepilogo token/payload della sessione",
+    description: "Context Inspector: session token/payload summary",
     handler: async (_args, ctx) => {
       if (!current) {
-        ctx.ui.notify("Context Inspector non inizializzato", "warning");
+        ctx.ui.notify("Context Inspector not initialized", "warning");
         return;
       }
       const t = current.totals;
       const lines: string[] = [];
-      lines.push("📊 Context Inspector — sessione corrente");
-      lines.push(`   cartella:     ${current.dir}`);
-      lines.push(`   iniziata:     ${t.startedAt}`);
+      lines.push("📊 Context Inspector — current session");
+      lines.push(`   folder:       ${current.dir}`);
+      lines.push(`   started:      ${t.startedAt}`);
       lines.push("");
-      lines.push("⬆️  Upload (stime da payload JSON)");
-      lines.push(`   richieste:    ${t.requests}`);
-      lines.push(`   turni:        ${t.turns}`);
-      lines.push(`   bytes tot:    ${fmtBytes(t.payloadBytes)}`);
-      lines.push(`   ≈ token:      ${fmtN(t.payloadApproxTokens)}`);
+      lines.push("⬆️  Upload (estimates from JSON payload)");
+      lines.push(`   requests:     ${t.requests}`);
+      lines.push(`   turns:        ${t.turns}`);
+      lines.push(`   total bytes:  ${fmtBytes(t.payloadBytes)}`);
+      lines.push(`   ≈ tokens:     ${fmtN(t.payloadApproxTokens)}`);
       lines.push("");
-      lines.push("⬇️  Usage autoritativa (dal provider)");
+      lines.push("⬇️  Authoritative usage (from the provider)");
       lines.push(`   input:        ${fmtN(t.usageInput)} tok`);
       lines.push(`   output:       ${fmtN(t.usageOutput)} tok`);
       lines.push(`   cache read:   ${fmtN(t.usageCacheRead)} tok`);
       lines.push(`   cache write:  ${fmtN(t.usageCacheWrite)} tok`);
-      lines.push(`   costo tot:    $${t.costTotal.toFixed(4)}`);
+      lines.push(`   total cost:   $${t.costTotal.toFixed(4)}`);
       lines.push("");
       const topTools = Object.entries(t.tools)
         .sort((a, b) => b[1] - a[1])
         .slice(0, 10);
       if (topTools.length) {
-        lines.push("🧰 Tool dichiarati nel payload (count req)");
+        lines.push("🧰 Tools declared in payload (req count)");
         for (const [name, n] of topTools) lines.push(`   ${name.padEnd(24)} ${n}`);
         lines.push("");
       }
       const models = Object.entries(t.models);
       if (models.length) {
-        lines.push("🤖 Modelli usati (count assistant msg)");
+        lines.push("🤖 Models used (assistant-msg count)");
         for (const [m, n] of models) lines.push(`   ${m.padEnd(32)} ${n}`);
         lines.push("");
       }
@@ -685,29 +686,29 @@ export function registerContextInspector(pi: ExtensionAPI): void {
   });
 
   pi.registerCommand("ah:ctx-open", {
-    description: "Context Inspector: apre la cartella della sessione",
+    description: "Context Inspector: open the session folder",
     handler: async (_args, ctx) => {
       if (!current) {
-        ctx.ui.notify("Context Inspector non inizializzato", "warning");
+        ctx.ui.notify("Context Inspector not initialized", "warning");
         return;
       }
       const opener =
         process.platform === "darwin" ? "open" : process.platform === "win32" ? "explorer" : "xdg-open";
       spawn(opener, [current.dir], { stdio: "ignore", detached: true }).unref();
-      ctx.ui.notify(`Aperto: ${current.dir}`, "info");
+      ctx.ui.notify(`Opened: ${current.dir}`, "info");
     },
   });
 
   pi.registerCommand("ah:ctx-tail", {
-    description: "Context Inspector: ultime N richieste dal log (default 1)",
+    description: "Context Inspector: last N requests from the log (default 1)",
     handler: async (args, ctx) => {
       if (!current) {
-        ctx.ui.notify("Context Inspector non inizializzato", "warning");
+        ctx.ui.notify("Context Inspector not initialized", "warning");
         return;
       }
       const n = Math.max(1, parseInt((args ?? "1").trim(), 10) || 1);
       if (!existsSync(current.reqFile)) {
-        ctx.ui.notify("Nessuna richiesta ancora loggata", "info");
+        ctx.ui.notify("No requests logged yet", "info");
         return;
       }
       const all = readFileSync(current.reqFile, "utf8").trim().split("\n");

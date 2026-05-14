@@ -1,121 +1,120 @@
 # Task Layout & Inner Cycle
 
-> **Stato:** proposta approvata, implementazione in corso.
-> **Audience:** dev del progetto e agenti (pi / PI extensions / prompt templates).
-> **Scope:** definisce la struttura su disco di un task e il ciclo interno
-> `discuss → plan → execute → verify`. Non riguarda milestone, release,
-> roadmap di versione: quelli sono fuori scope.
+> **Status:** proposal approved, implementation in progress.
+> **Audience:** project devs and agents (pi / PI extensions / prompt templates).
+> **Scope:** defines the on-disk structure of a task and the inner cycle
+> `discuss → plan → execute → verify`. Does not cover milestones, releases,
+> or version roadmaps: those are out of scope.
 
-Questo documento è il **contratto di riferimento** per tutti i prompt
-template e le extension di pi che operano sui task. Se cambi qualcosa qui,
-i prompt in `.pi/prompts/` e le convenzioni in `AGENTS.md` vanno aggiornati
-di conseguenza.
+This document is the **authoritative contract** for all prompt templates and
+pi extensions that operate on tasks. If you change anything here, the
+prompts in `.pi/prompts/` and the conventions in `AGENTS.md` must be updated
+accordingly.
 
 ---
 
-## 1. Layout directory del task
+## 1. Task directory layout
 
-Un task = una **cartella** `T-NNN-slug/` che contiene più file.
-La cartella si sposta tra gli stati esattamente come faceva il file.
+A task = a **folder** `T-NNN-slug/` containing multiple files.
+The folder moves between states exactly as the single file used to.
 
 ```
 .pi/tasks/
 ├── backlog/
 │   └── T-NNN-slug/
-│       └── TASK.md                 ← creato da /task-new
+│       └── TASK.md                 ← created by /task-new
 ├── in-progress/
 │   └── T-NNN-slug/
 │       ├── TASK.md
-│       ├── DISCUSS.md              ← creato/esteso da /task-discuss
-│       ├── PLAN.md                 ← creato da /task-plan (indice step)
+│       ├── DISCUSS.md              ← created/extended by /task-discuss
+│       ├── PLAN.md                 ← created by /task-plan (step index)
 │       ├── steps/
 │       │   ├── 01-*.md
 │       │   ├── 02-*.md
-│       │   └── ...                 ← file step, uno per step
-│       └── VERIFY.md               ← DoD globale + Verify Log, gestito da /task-verify
+│       │   └── ...                 ← step files, one per step
+│       └── VERIFY.md               ← global DoD + Verify Log, managed by /task-verify
 ├── review/
-│   └── T-NNN-slug/   (stessa struttura)
+│   └── T-NNN-slug/   (same structure)
 └── done/
-    └── T-NNN-slug/   (stessa struttura, archivio)
+    └── T-NNN-slug/   (same structure, archive)
 ```
 
-**Criterio di identificazione:** un task è una *directory* il cui nome
-matcha `T-NNN-<slug>/` e che contiene almeno `TASK.md`. Tutti i tool che
-scansionano i task devono cercare directory, non file.
+**Identification criterion:** a task is a *directory* whose name matches
+`T-NNN-<slug>/` and which contains at least `TASK.md`. Every tool that
+scans tasks must look for directories, not files.
 
 ---
 
-## 2. Mappa della codebase (`.pi/codebase/`) — prerequisito di progetto
+## 2. Codebase map (`.pi/codebase/`) — project-level prerequisite
 
-La mappa della codebase è una risorsa **di progetto** (non del singolo
-task), prodotta da `/ah:map-codebase`. Contiene 7 documenti strutturati
-che descrivono aspetti trasversali dell'intero progetto:
+The codebase map is a **project-level** resource (not per-task), produced
+by `/ah:map-codebase`. It contains 7 structured documents describing
+cross-cutting aspects of the whole project:
 
-| Documento | Contenuto |
+| Document | Content |
 |---|---|
-| `STACK.md` | Linguaggi, runtime, framework, dipendenze, configurazione |
-| `INTEGRAZIONI.md` | API esterne, database, provider auth, webhook |
-| `ARCHITETTURA.md` | Pattern, layer, flusso dati, astrazioni, entry point |
-| `STRUTTURA.md` | Layout directory, posizioni chiave, dove aggiungere codice |
-| `CONVENZIONI.md` | Stile codice, naming, pattern, gestione errori |
-| `TESTING.md` | Framework test, struttura, mocking, coverage |
-| `CRITICITA.md` | Debito tecnico, bug noti, sicurezza, performance |
+| `STACK.md` | Languages, runtime, frameworks, dependencies, configuration |
+| `INTEGRATIONS.md` | External APIs, databases, auth providers, webhooks |
+| `ARCHITECTURE.md` | Patterns, layers, data flow, abstractions, entry points |
+| `STRUCTURE.md` | Directory layout, key locations, where to add code |
+| `CONVENTIONS.md` | Code style, naming, patterns, error handling |
+| `TESTING.md` | Test framework, structure, mocking, coverage |
+| `TECHNICAL_DEBT.md` | Technical debt, known bugs, security, performance |
 
-### Prerequisito bloccante
+### Blocking prerequisite
 
-La mappa è **obbligatoria** per le fasi `discuss`, `plan` e `execute`.
-Se `.pi/codebase/` non esiste o è incompleta quando una fase la richiede,
-l'agente **propone di generarla inline** eseguendo la logica di
-`/ah:map-codebase`. Se il dev rifiuta, la fase si ferma.
+The map is **mandatory** for the `discuss`, `plan`, and `execute` phases.
+If `.pi/codebase/` does not exist or is incomplete when a phase requires it,
+the agent **proposes generating it inline** by running the `/ah:map-codebase`
+logic. If the dev refuses, the phase halts.
 
-### Caricamento selettivo
+### Selective loading
 
-Le fasi non caricano tutti i 7 documenti: la selezione è **per-task**
-ed è dichiarata nel frontmatter YAML `context-needed:` in cima a
-`PLAN.md` (vedi §3.3). `PLAN.md` è l'autorità: discuss/execute/verify
-caricano via `load_codebase_doc` esattamente i doc elencati lì —
-niente di più, niente di meno. La lista può essere vuota
-(`context-needed: []`) per task che non hanno bisogno di contesto
-codebase.
+Phases do not load all 7 documents: the selection is **per-task** and is
+declared in the YAML frontmatter key `context-needed:` at the top of
+`PLAN.md` (see §3.3). `PLAN.md` is the authority: discuss/execute/verify
+load — via `load_codebase_doc` — exactly the docs listed there, nothing
+more, nothing less. The list may be empty (`context-needed: []`) for
+tasks that don't need any codebase context.
 
-Quando `PLAN.md` non esiste ancora (tipicamente durante `/task-discuss`,
-o per il primo `/task-plan`), la fase ricade sull'**INDEX**
-(`.pi/codebase/INDEX.md`) — un elenco compatto `<path>: <summary>` —
-e usa il proprio giudizio per chiamare `load_codebase_doc` solo sui
-documenti pertinenti. Non esiste più una tabella statica tipo-task →
-documento: la scelta è esplicita per ogni task.
+When `PLAN.md` does not yet exist (typically during `/task-discuss`, or
+for the first `/task-plan`), the phase falls back on the **INDEX**
+(`.pi/codebase/INDEX.md`) — a compact `<path>: <summary>` list — and
+uses its own judgment to call `load_codebase_doc` only on the relevant
+documents. There is no longer a static task-type → document table: the
+choice is explicit for every task.
 
-### Aggiornamento
+### Updating
 
-La mappa viene aggiornata:
-- **Manualmente** dal dev con `/ah:map-codebase` (tipicamente dopo
-  cambiamenti significativi alla codebase).
-- **Automaticamente** da `/ah:task-done` alla chiusura di un task
-  (rigenera la mappa per riflettere le modifiche introdotte).
+The map is updated:
+- **Manually** by the dev with `/ah:map-codebase` (typically after
+  significant changes to the codebase).
+- **Automatically** by `/ah:task-done` at task closure (regenerates the
+  map to reflect the changes introduced).
 
-### CODEMAP.md — deprecata
+### CODEMAP.md — deprecated
 
-> ⚠️ **`CODEMAP.md` (per-task) è deprecata.** I task esistenti che la
-> contengono possono mantenerla come riferimento storico, ma le fasi
-> del ciclo interno non la generano più, non la aggiornano e non la
-> richiedono come prerequisito. Il contesto codice è fornito
-> interamente dalla mappa codebase di progetto (`.pi/codebase/`).
+> ⚠️ **`CODEMAP.md` (per-task) is deprecated.** Existing tasks that
+> contain it can keep it as historical reference, but the inner-cycle
+> phases no longer generate it, update it, or require it as a
+> prerequisite. Code context is provided entirely by the project-level
+> codebase map (`.pi/codebase/`).
 
 ---
 
-## 3. File del task
+## 3. Task files
 
-### 3.1 `TASK.md` — la scheda (sempre presente)
+### 3.1 `TASK.md` — the card (always present)
 
-Contiene il frontmatter (identità del task) e le sezioni narrative di alto
-livello. È il file che vedi per "sapere di che si tratta".
+Contains the frontmatter (task identity) and the high-level narrative
+sections. It's the file you look at to "know what this is about".
 
 **Frontmatter**:
 
 ```yaml
 ---
 id: T-NNN
-title: <titolo umano>
+title: <human title>
 status: backlog | in-progress | review | done
 estimate: <N>h | null
 assignee: <username> | null
@@ -125,95 +124,95 @@ updated: YYYY-MM-DD
 ---
 ```
 
-**Sezioni del corpo** (versione snella, post-semplificazione di
+**Body sections** (slim version, after the simplification of
 `/ah:task-new`):
 
-- `## Contesto` — prosa breve: perché il task esiste.
-- `## Obiettivo` — prosa breve: cosa va fatto, scope.
-- `## Definition of Done` — voci standard (lint/typecheck/build/test/PR)
-  copiate dal template. La DoD "umana" specifica del task, se serve, va
-  aggiunta dal dev a mano oppure emergerà in `/ah:task-discuss` /
-  `/ah:task-plan`. La fase di verify la legge e la materializza in
+- `## Context` — short prose: why the task exists.
+- `## Objective` — short prose: what must be done, scope.
+- `## Definition of Done` — standard entries (lint/typecheck/build/test/PR)
+  copied from the template. Task-specific "human" DoD, if needed, is
+  either added by the dev by hand or emerges in `/ah:task-discuss` /
+  `/ah:task-plan`. The verify phase reads it and materializes it in
   `VERIFY.md`.
-- `## Log` (note macro del dev, non collegate ai singoli step).
+- `## Log` (macro notes by the dev, not tied to individual steps).
 
-Le sezioni `## Componenti coinvolti` e `## Note tecniche` **non sono più
-parte del template**: `/ah:task-new` non le chiede. Se per un task
-specifico il dev vuole tracciarle, può aggiungerle a mano — nessun altro
-comando AH le legge come obbligatorie.
+The sections `## Components involved` and `## Technical notes` are **no
+longer part of the template**: `/ah:task-new` does not ask for them. If
+a specific task needs them, the dev can add them by hand — no other AH
+command reads them as mandatory.
 
-### 3.2 `DISCUSS.md` — output della fase discuss (opzionale)
+### 3.2 `DISCUSS.md` — output of the discuss phase (optional)
 
-Creato/esteso da `/task-discuss`. Formalizza le domande e risposte
-emerse *oltre* l'intervista di `/task-new`, tipicamente:
+Created/extended by `/task-discuss`. Formalizes the questions and answers
+that emerged *beyond* the interview from `/task-new`, typically:
 
-- Gray area: scelte di UX / comportamento in caso di errore / formati dati.
-- Decisioni architetturali discusse e motivate.
-- Impatti su data model, API surface, WebSocket events.
-- Alternative valutate e scartate.
+- Gray areas: UX choices / error-case behavior / data formats.
+- Architectural decisions discussed and motivated.
+- Impacts on data model, API surface, WebSocket events.
+- Alternatives considered and discarded.
 
-Struttura:
+Structure:
 
 ```markdown
 # Discuss — T-NNN
 
-> Ultimo aggiornamento: YYYY-MM-DD
+> Last update: YYYY-MM-DD
 
-## <Titolo gray area 1>
+## <Gray area 1 title>
 
-**Decisione:** ...
-**Motivazione:** ...
-**Alternative scartate:** ...
-**Note / rischi:** ...
+**Decision:** ...
+**Rationale:** ...
+**Alternatives discarded:** ...
+**Notes / risks:** ...
 ```
 
-### 3.3 `PLAN.md` — indice del piano (creato da `/task-plan`)
+### 3.3 `PLAN.md` — plan index (created by `/task-plan`)
 
-`PLAN.md` **non contiene il dettaglio degli step**: è un indice ordinato,
-più gli aspetti trasversali al piano. In cima a `PLAN.md` vive un blocco
-YAML frontmatter con la chiave `context-needed:` che dichiara quali
-documenti di `.pi/codebase/` le fasi successive devono caricare via
+`PLAN.md` **does not contain step detail**: it's an ordered index, plus
+the cross-cutting aspects of the plan. At the top of `PLAN.md` lives a
+YAML frontmatter block with the `context-needed:` key declaring which
+documents from `.pi/codebase/` subsequent phases must load via
 `load_codebase_doc`.
 
-**Regole della chiave `context-needed:`**
+**Rules for the `context-needed:` key**
 
-- Valore: lista YAML di **stem** dei file sotto `.pi/codebase/`, cioè
-  il nome senza estensione `.md`.
-- Ogni stem deve matchare la regex `^[a-zA-Z0-9_-]+$` (la stessa
-  applicata da `load_codebase_doc`).
-- La lista vuota (`context-needed: []`) è **legale e significativa**:
-  indica un task che non necessita di contesto codebase (es. modifiche
-  a documenti di processo, pulizia di file di prompt).
-- Tutti i comandi che emettono `PLAN.md` (a partire da `/task-plan`)
-  **devono** scrivere la chiave, anche se vuota. Parser e fasi
-  downstream tollerano l'assenza della chiave per retro-compatibilità,
-  ma il template ufficiale la richiede sempre.
+- Value: YAML list of **stems** of files under `.pi/codebase/`, i.e.
+  the name without the `.md` extension.
+- Each stem must match the regex `^[a-zA-Z0-9_-]+$` (the same applied by
+  `load_codebase_doc`).
+- The empty list (`context-needed: []`) is **legal and meaningful**: it
+  indicates a task that needs no codebase context (e.g. changes to
+  process documents, prompt-file cleanup).
+- All commands that emit `PLAN.md` (starting with `/task-plan`) **must**
+  write the key, even when empty. Downstream parsers and phases tolerate
+  the key's absence for backward compatibility, but the official
+  template always requires it.
 
 ```markdown
 ---
-context-needed: [CONVENZIONI, STRUTTURA]
+context-needed: [CONVENTIONS, STRUCTURE]
 ---
 
 # Plan — T-NNN
 
-## Strategia
+## Strategy
 
-Una o due righe sul "come" complessivo, derivate da TASK.md + DISCUSS.md.
+A line or two on the overall "how", derived from TASK.md + DISCUSS.md.
 
-## Step (serie stretta, ordine = esecuzione)
+## Steps (tight series, order = execution)
 
 1. [01-db-schema-camera-kind](steps/01-db-schema-camera-kind.md) — DB schema: add camera.kind + stream_url · `todo` · 2h
-2. [02-server-api-web-camera](steps/02-server-api-web-camera.md) — Server API per web-camera · `todo` · 3h
+2. [02-server-api-web-camera](steps/02-server-api-web-camera.md) — Server API for web-camera · `todo` · 3h
 3. ...
 
-## Rischi noti
+## Known risks
 ...
 
-## Aggiornamenti del piano
+## Plan updates
 - YYYY-MM-DD: ...
 ```
 
-**Esempio: lista vuota.**
+**Example: empty list.**
 
 ```yaml
 ---
@@ -221,95 +220,95 @@ context-needed: []
 ---
 ```
 
-Significa: "Le fasi successive non devono caricare alcun doc da
-`.pi/codebase/`." È il valore corretto per task che toccano solo
-file di processo (es. template, prompt, doc di design).
+Means: "Subsequent phases must not load any doc from `.pi/codebase/`."
+This is the correct value for tasks that only touch process files (e.g.
+templates, prompts, design docs).
 
-**Contro-esempio: estensioni e percorsi sono vietati.**
+**Counter-example: extensions and paths are forbidden.**
 
 ```yaml
-# SBAGLIATO — include l'estensione .md
-context-needed: [CONVENZIONI.md, STRUTTURA.md]
+# WRONG — includes the .md extension
+context-needed: [CONVENTIONS.md, STRUCTURE.md]
 
-# SBAGLIATO — include un percorso
-context-needed: [.pi/codebase/CONVENZIONI]
+# WRONG — includes a path
+context-needed: [.pi/codebase/CONVENTIONS]
 
-# GIUSTO — solo lo stem
-context-needed: [CONVENZIONI, STRUTTURA]
+# RIGHT — stem only
+context-needed: [CONVENTIONS, STRUCTURE]
 ```
 
-Lo stem corrisponde alla parte di `relPath` in `INDEX.md` privata
-dell'estensione `.md`: una riga `- CONVENZIONI.md: …` nell'INDEX
-diventa lo stem `CONVENZIONI` in `context-needed:`.
+The stem matches the `relPath` portion in `INDEX.md` stripped of the
+`.md` extension: a line `- CONVENTIONS.md: …` in the INDEX becomes the
+stem `CONVENTIONS` in `context-needed:`.
 
-### 3.4 `steps/NN-<slug>.md` — un file per step
+### 3.4 `steps/NN-<slug>.md` — one file per step
 
-Ogni step è un **commit atomico** (vedi §5). Il filename ha prefisso
-numerico che determina l'ordine (serie stretta).
+Each step is an **atomic commit** (see §5). The filename carries a
+numeric prefix that determines order (tight series).
 
 ```markdown
 ---
 id: T-NNN/NN
-title: <titolo step>
+title: <step title>
 status: todo | doing | done | blocked | failed
 estimate: <N>h | null
 ---
 
 ## Execute
 
-Cosa va fatto, concretamente. File che verranno creati/modificati. Decisioni
-tecniche di dettaglio che riguardano *solo questo step*.
+What must be done, concretely. Files that will be created/modified.
+Technical decisions of detail concerning *only this step*.
 
-**File coinvolti** (dalla mappa codebase):
-- Da modificare: `path/a.ts`, `path/b.ts`
-- Da creare: `path/nuovo.ts`
+**Files involved** (from the codebase map):
+- To modify: `path/a.ts`, `path/b.ts`
+- To create: `path/new.ts`
 
 ## Verify
 
-Criteri di done **locali** allo step, idealmente eseguibili:
+Done criteria **local** to the step, ideally executable:
 
-- [ ] `npm run lint` nei componenti toccati
-- [ ] <check specifico>
-- [ ] <comando verificabile>
+- [ ] `npm run lint` on touched components
+- [ ] <specific check>
+- [ ] <verifiable command>
 
 ## Log
 
-(compilato da /task-execute durante il lavoro: comandi eseguiti, errori,
-note di recupero)
+(populated by /task-execute during the work: commands run, errors,
+recovery notes)
 ```
 
-**Stati dello step:**
+**Step states:**
 
-| Stato | Significato |
+| State | Meaning |
 |---|---|
-| `todo` | non ancora iniziato |
-| `doing` | `/task-execute` sta lavorando su questo step |
-| `done` | execute + verify locali OK, commit atomico eseguito |
-| `blocked` | bloccato da vincolo esterno, il dev deve intervenire |
-| `failed` | verify fallito, richiede revisione del piano o dello step |
+| `todo` | not yet started |
+| `doing` | `/task-execute` is working on this step |
+| `done` | execute + local verify OK, atomic commit done |
+| `blocked` | blocked by an external constraint; the dev must intervene |
+| `failed` | verify failed, requires plan or step revision |
 
-### 3.5 `VERIFY.md` — DoD globale del task e log della verifica
+### 3.5 `VERIFY.md` — global task DoD and verify log
 
-Creato alla prima esecuzione di `/task-verify`. Contiene **la DoD
-globale** del task e il log dei comandi di verifica eseguiti.
+Created at the first run of `/task-verify`. Contains **the global DoD**
+of the task and the log of verification commands run.
 
 ```markdown
 # Verify — T-NNN
 
-## Definition of Done (globale)
+## Definition of Done (global)
 
 ### Standard
-- [ ] `npm run lint` passa nei componenti toccati
-- [ ] `npm run typecheck` passa (se applicabile)
-- [ ] `npm run build` passa nei componenti toccati
-- [ ] Test aggiornati/aggiunti se applicabile
-- [ ] Se schema DB: migrazione Liquibase creata e testata
-- [ ] Documentazione aggiornata (AGENTS.md, docs/, README dei componenti)
-- [ ] Backward compatibility verificata
-- [ ] PR aperta e approvata
+- [ ] `npm run lint` passes on touched components
+- [ ] `npm run typecheck` passes (if applicable)
+- [ ] `npm run build` passes on touched components
+- [ ] Tests updated/added if applicable
+- [ ] If DB schema: Liquibase migration created and tested
+- [ ] Documentation updated (AGENTS.md, docs/, component README)
+- [ ] Backward compatibility verified
+- [ ] PR opened and approved
 
-### Specifica del task
-(Copiata/adattata dalla sezione DoD di TASK.md)
+### Task-specific
+(Copied/adapted from the DoD section of TASK.md)
 - [ ] ...
 
 ## Verify Log
@@ -321,85 +320,85 @@ globale** del task e il log dei comandi di verifica eseguiti.
 
 ---
 
-## 4. Ciclo interno `discuss → plan → execute → verify`
+## 4. Inner cycle `discuss → plan → execute → verify`
 
-Tutte le fasi richiedono `.pi/codebase/` come prerequisito bloccante
-(vedi §2). Se la mappa manca, le fasi propongono di generarla inline.
+All phases require `.pi/codebase/` as a blocking prerequisite (see §2).
+If the map is missing, the phases propose to generate it inline.
 
-Tutti e quattro i comandi **auto-detectano il task corrente** dal branch
-git (`git branch --show-current` che matchi `feature/T-NNN-*`).
+All four commands **auto-detect the current task** from the git branch
+(`git branch --show-current` matching `feature/T-NNN-*`).
 
 ### 4.1 `/task-discuss`
 
-- Input: `TASK.md`, mappa codebase (`.pi/codebase/`), eventuale
-  `DISCUSS.md` preesistente.
-- Output: `DISCUSS.md` creato o esteso con nuove sezioni.
-- Comportamento: carica la mappa codebase pertinente al tipo di task,
-  poi conduce un'intervista strutturata sulle gray area. Le domande
-  sono ancorate al codice reale grazie ai documenti della mappa.
+- Input: `TASK.md`, codebase map (`.pi/codebase/`), any existing
+  `DISCUSS.md`.
+- Output: `DISCUSS.md` created or extended with new sections.
+- Behavior: loads the codebase map relevant to the task type, then
+  conducts a structured interview on the gray areas. The questions are
+  anchored to real code thanks to the map documents.
 
 ### 4.2 `/task-plan`
 
-- Input: `TASK.md` + mappa codebase + `DISCUSS.md`.
+- Input: `TASK.md` + codebase map + `DISCUSS.md`.
 - Output:
-  - `PLAN.md` creato con indice degli step, strategia, rischi.
-  - `steps/NN-<slug>.md` per ciascuno step identificato.
-- Comportamento: carica la mappa codebase, propone una scomposizione
-  in step atomici ancorati ai file reali, chiede conferma, genera i
-  file.
+  - `PLAN.md` created with step index, strategy, risks.
+  - `steps/NN-<slug>.md` for each identified step.
+- Behavior: loads the codebase map, proposes a decomposition into
+  atomic steps anchored to real files, asks for confirmation, generates
+  the files.
 
 ### 4.3 `/task-execute`
 
-- Input: `PLAN.md` + `steps/` + mappa codebase.
-- Output: codice reale nel repo + aggiornamenti del file step corrente.
-- Comportamento:
-  1. Trova il primo step `todo` (o `doing` se interrotto).
-  2. Carica mappa codebase pertinente allo step.
-  3. Mini-plan → approvazione dev → implementazione → verify locale.
-  4. Se OK, commit atomico.
-  5. **Fermata obbligatoria.** Un solo step per invocazione.
+- Input: `PLAN.md` + `steps/` + codebase map.
+- Output: real code in the repo + updates to the current step file.
+- Behavior:
+  1. Find the first `todo` step (or `doing` if interrupted).
+  2. Load codebase map relevant to the step.
+  3. Mini-plan → dev approval → implementation → local verify.
+  4. If OK, atomic commit.
+  5. **Mandatory stop.** Only one step per invocation.
 
 ### 4.4 `/task-verify`
 
-- Input: `TASK.md` + tutti gli step + `VERIFY.md` (se esiste).
-- Output: `VERIFY.md` aggiornato.
-- Comportamento: esegue le voci della DoD globale, logga l'output.
-  **Advisory:** non blocca la chiusura del task.
+- Input: `TASK.md` + all steps + `VERIFY.md` (if present).
+- Output: updated `VERIFY.md`.
+- Behavior: runs the global DoD entries, logs the output.
+  **Advisory:** does not block task closure.
 
 ---
 
-## 5. Convenzioni commit
+## 5. Commit conventions
 
-| Tipo | Formato | Uso |
+| Type | Format | Use |
 |---|---|---|
-| Step | `feat(T-NNN/NN): <titolo step>` | Generato da `/task-execute` |
-| Discuss | `chore(T-NNN): update DISCUSS` | Al termine di `/task-discuss` |
-| Plan | `chore(T-NNN): plan` · `chore(T-NNN): replan` | Al termine di `/task-plan` |
-| Verify | `chore(T-NNN): verify` | Al termine di `/task-verify` |
-| Stato task | `chore(T-NNN): start task` · `chore(T-NNN): to review` · `chore(T-NNN): done` | Transizioni di stato |
+| Step | `feat(T-NNN/NN): <step title>` | Generated by `/task-execute` |
+| Discuss | `chore(T-NNN): update DISCUSS` | At the end of `/task-discuss` |
+| Plan | `chore(T-NNN): plan` · `chore(T-NNN): replan` | At the end of `/task-plan` |
+| Verify | `chore(T-NNN): verify` | At the end of `/task-verify` |
+| Task state | `chore(T-NNN): start task` · `chore(T-NNN): to review` · `chore(T-NNN): done` | State transitions |
 | Backlog | `chore(T-NNN): add task to backlog` | `/task-new` |
-| Mappa codebase | `docs: mappa della codebase` | `/map-codebase` e `/task-done` |
+| Codebase map | `docs: codebase map` | `/map-codebase` and `/task-done` |
 
 ---
 
-## 6. Regole operative chiave
+## 6. Key operational rules
 
-- **Serie stretta degli step.** Nessun grafo, nessuna parallelizzazione.
-- **Uno step = un commit.** Se lo step è troppo grande, spezzalo.
-- **Fermata obbligatoria di `/task-execute`.** L'agente non concatena step.
-- **DoD advisory.** `/task-verify` non è un gate.
-- **Nessun file del task viene mai cancellato.** Replan: step obsoleti
-  vanno in `steps/archive/`.
-- **Mappa codebase obbligatoria.** Le fasi discuss/plan/execute la
-  richiedono e la generano inline se manca.
-- **Mappa aggiornata alla chiusura.** `/task-done` rigenera la mappa
-  per riflettere le modifiche del task.
+- **Tight series of steps.** No graph, no parallelization.
+- **One step = one commit.** If a step is too big, split it.
+- **Mandatory stop in `/task-execute`.** The agent does not chain steps.
+- **Advisory DoD.** `/task-verify` is not a gate.
+- **No task file is ever deleted.** Replan: obsolete steps go to
+  `steps/archive/`.
+- **Codebase map mandatory.** The discuss/plan/execute phases require
+  it and generate it inline if it's missing.
+- **Map updated at closure.** `/task-done` regenerates the map to
+  reflect the task's changes.
 
 ---
 
-## 7. Cosa resta fuori scope (volutamente)
+## 7. What's out of scope (intentionally)
 
-- Milestone, roadmap, versioning (fuori scope esplicito del dev).
-- Sub-agent orchestration / wave execution (non disponibile in pi).
-- Esecuzione automatica di più step in sequenza senza fermate.
-- DoD come gate bloccante.
+- Milestones, roadmaps, versioning (explicitly out of dev scope).
+- Sub-agent orchestration / wave execution (not available in pi).
+- Automatic execution of multiple steps in sequence without stops.
+- DoD as a blocking gate.

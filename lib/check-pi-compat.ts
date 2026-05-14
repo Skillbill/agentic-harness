@@ -142,15 +142,15 @@ export async function checkPiCompat(
 
   // ok === false: real mismatch.
   const summary =
-    `agentic-harness: la versione di PI in esecuzione (${piVersion}) NON soddisfa il range ` +
-    `dichiarato in peerDependencies ("${range}"). AH continua a caricare ma alcuni comandi ` +
-    `potrebbero usare API non disponibili. Aggiorna PI (\`pi update @earendil-works/pi-coding-agent\`) ` +
-    `o installa una versione di AH compatibile con la PI corrente.`;
+    `agentic-harness: the running PI version (${piVersion}) does NOT satisfy the range ` +
+    `declared in peerDependencies ("${range}"). AH will keep loading but some commands may ` +
+    `call APIs that don't exist yet. Either update PI (\`pi update @earendil-works/pi-coding-agent\`) ` +
+    `or install a version of AH compatible with the current PI runtime.`;
 
-  // 1. Console — sempre.
+  // 1. Console — always.
   console.warn(`[agentic-harness] PI version mismatch: ${summary}`);
 
-  // 2. TUI toast — solo se l'UI esiste (in print/RPC mode `hasUI` è false).
+  // 2. TUI toast — only when a UI exists (in print/RPC mode `hasUI` is false).
   try {
     if (ctx.hasUI) {
       ctx.ui.notify(summary, "warning");
@@ -161,9 +161,9 @@ export async function checkPiCompat(
     );
   }
 
-  // 3. Persistent in-session message — visibile nello scrollback finché
-  //    la sessione resta aperta. `display: true` lo rende user-visible;
-  //    triggerTurn omesso (default false) per non sprecare un turno LLM.
+  // 3. Persistent in-session message — visible in the scrollback for the
+  //    lifetime of the session. `display: true` makes it user-visible;
+  //    triggerTurn is omitted (default false) so it doesn't burn an LLM turn.
   try {
     pi.sendMessage({
       customType: "ah-pi-compat-warning",

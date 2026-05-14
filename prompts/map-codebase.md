@@ -1,114 +1,116 @@
 ---
-description: Analizza la codebase e produce 8 documenti strutturati in .pi/codebase/ (7 tematici + INDEX.md)
-argument-hint: "[opzionale: area specifica da mappare, es. 'server' o 'configurator']"
+description: Analyzes the codebase and produces 8 structured documents in .pi/codebase/ (7 thematic + INDEX.md)
+argument-hint: "[optional: specific area to map, e.g. 'server' or 'configurator']"
 ---
 
-Sei l'Assistente del workflow SCRUM-lite del progetto. Il dev vuole
-**mappare la codebase** per produrre documenti di riferimento strutturati
-che le fasi successive (plan, execute, verify) useranno come contesto.
+You are the SCRUM-lite workflow assistant for this project. The dev wants to
+**map the codebase** to produce structured reference documents that
+later phases (plan, execute, verify) will use as context.
 
-Output: cartella `.pi/codebase/` con 8 documenti Markdown (7 tematici + un `INDEX.md` machine-parsabile).
+**Output language**: every `.pi/codebase/*.md` file you create or rewrite MUST be written in **$CONTENT_LANG**. Filenames stay as defined by AH (English). Only the natural-language content honors this preference.
 
-## Scopo
+Output: a `.pi/codebase/` folder with 8 Markdown documents (7 thematic + a machine-parsable `INDEX.md`).
 
-Analizzare la codebase esistente e produrre una mappa strutturata in 7
-documenti tematici più un `INDEX.md` di indice, ciascuno focalizzato su
-un aspetto diverso del sistema. Questi documenti sono **consumati** dai
-comandi successivi:
+## Purpose
 
-| Tipo di fase/task                      | Documenti caricati                          |
+Analyze the existing codebase and produce a structured map in 7
+thematic documents plus an `INDEX.md`, each focused on
+a different aspect of the system. These documents are **consumed** by
+later commands:
+
+| Phase/task type                        | Documents loaded                            |
 |----------------------------------------|---------------------------------------------|
-| UI, frontend, componenti               | CONVENZIONI.md, STRUTTURA.md                |
-| API, backend, endpoint                 | ARCHITETTURA.md, CONVENZIONI.md             |
-| Database, schema, modelli              | ARCHITETTURA.md, STACK.md                   |
-| Testing                                | TESTING.md, CONVENZIONI.md                  |
-| Integrazione, API esterne              | INTEGRAZIONI.md, STACK.md                   |
-| Refactoring, cleanup                   | CRITICITA.md, ARCHITETTURA.md               |
-| Setup, configurazione                  | STACK.md, STRUTTURA.md                      |
+| UI, frontend, components               | CONVENTIONS.md, STRUCTURE.md                |
+| API, backend, endpoints                | ARCHITECTURE.md, CONVENTIONS.md             |
+| Database, schema, models               | ARCHITECTURE.md, STACK.md                   |
+| Testing                                | TESTING.md, CONVENTIONS.md                  |
+| Integration, external APIs             | INTEGRATIONS.md, STACK.md                   |
+| Refactoring, cleanup                   | TECHNICAL_DEBT.md, ARCHITECTURE.md          |
+| Setup, configuration                   | STACK.md, STRUCTURE.md                      |
 
-## ⛔ Regola: niente codice di progetto
+## ⛔ Rule: no project code
 
-Questo comando **non genera né modifica codice sorgente del progetto**.
-Tocca esclusivamente file sotto `.pi/codebase/`.
+This command **does not generate or modify project source code**.
+It touches files only under `.pi/codebase/`.
 
-## 🔒 Git Safety Rule (nessuna eccezione)
+## 🔒 Git Safety Rule (no exception)
 
-Regola globale (AGENTS.md): l'agente non muta lo stato di git. Questo
-comando **non dichiara eccezioni**. Al termine proponi al dev i comandi
-git da eseguire a mano.
+Global rule (AGENTS.md): the agent does not mutate git state. This
+command **declares no exceptions**. At the end, propose to the dev the
+git commands to run by hand.
 
-## Quando usarlo
+## When to use it
 
-**Usa map-codebase per:**
-- Progetti brownfield prima di inizializzare i task (capire il codice esistente)
-- Aggiornare la mappa dopo cambiamenti significativi
-- Onboarding su una codebase sconosciuta
-- Prima di un refactoring importante (capire lo stato corrente)
+**Use map-codebase for:**
+- Brownfield projects before initializing tasks (understand existing code)
+- Updating the map after significant changes
+- Onboarding on an unknown codebase
+- Before a major refactoring (understand current state)
 
-**Salta map-codebase per:**
-- Progetti greenfield senza codice (niente da mappare)
-- Codebase banali (< 5 file)
+**Skip map-codebase for:**
+- Greenfield projects with no code (nothing to map)
+- Trivial codebases (< 5 files)
 
-## File vietati
+## Forbidden files
 
-**Non leggere MAI il contenuto di questi file (anche se esistono):**
+**NEVER read the contents of these files (even if they exist):**
 
-- `.env`, `.env.*`, `*.env` — variabili d'ambiente con segreti
+- `.env`, `.env.*`, `*.env` — environment variables with secrets
 - `credentials.*`, `secrets.*`, `*secret*`, `*credential*`
 - `*.pem`, `*.key`, `*.p12`, `*.pfx`, `*.jks`
 - `id_rsa*`, `id_ed25519*`, `id_dsa*`
 - `.npmrc`, `.pypirc`, `.netrc`
 - `serviceAccountKey.json`, `*-credentials.json`
 
-Se li incontri, nota solo la loro **esistenza** (es. «file `.env`
-presente — contiene configurazione dell'ambiente»). Mai citarne il
-contenuto, neanche parzialmente.
+If you encounter them, note only their **existence** (e.g. "`.env`
+file present — contains environment configuration"). Never quote their
+content, not even partially.
 
-## Passi
+## Steps
 
-### 1. Determina cosa è stale (cache di provenienza)
+### 1. Determine what is stale (provenance cache)
 
-Questo passo decide **quali doc tematici riscrivere**. Mai cancellare
-file — gli aggiornamenti avvengono sempre via `write` (sovrascrittura),
-i doc fuori dal set stale restano intatti. La cache di provenienza vive
-in `.pi/codebase/.cache.json` (gitignored) e registra, per ciascun doc,
-il commit HEAD a cui corrisponde l'ultima rigenerazione.
+This step decides **which thematic docs to rewrite**. Never delete
+files — updates always happen via `write` (overwrite),
+docs outside the stale set stay intact. The provenance cache lives
+in `.pi/codebase/.cache.json` (gitignored) and records, for each doc,
+the HEAD commit corresponding to the last regeneration.
 
-#### 1a. Stato del filesystem
+#### 1a. Filesystem state
 
-Controlla:
-- `.pi/codebase/` esiste?
-- `.pi/codebase/.cache.json` esiste?
+Check:
+- Does `.pi/codebase/` exist?
+- Does `.pi/codebase/.cache.json` exist?
 
-**Tre scenari:**
+**Three scenarios:**
 
-1. **Mappa assente** (`.pi/codebase/` non esiste): scenario greenfield.
-   Definisci `stale_docs = {STACK.md, INTEGRAZIONI.md, ARCHITETTURA.md,
-   STRUTTURA.md, CONVENZIONI.md, TESTING.md, CRITICITA.md}` (tutti e 7).
-   Vai al passo 2.
+1. **Map absent** (`.pi/codebase/` does not exist): greenfield scenario.
+   Define `stale_docs = {STACK.md, INTEGRATIONS.md, ARCHITECTURE.md,
+   STRUCTURE.md, CONVENTIONS.md, TESTING.md, TECHNICAL_DEBT.md}` (all 7).
+   Go to step 2.
 
-2. **Mappa presente ma cache assente**: la mappa è stata creata prima
-   dell'introduzione della cache, o `.cache.json` è stato cancellato.
-   Chiedi al dev:
+2. **Map present but cache absent**: the map was created before
+   the cache was introduced, or `.cache.json` was deleted.
+   Ask the dev:
 
-   > `.pi/codebase/` esiste ma `.cache.json` è assente. Cosa preferisci?
-   > 1. **Calibra** — assumi HEAD attuale come baseline, scrivi la cache
-   >    SENZA toccare i doc (rischio: i doc potrebbero essere stale ma
-   >    saranno considerati fresh fino al prossimo cambio)
-   > 2. **Full rewrite** — riscrivi tutti e 7 i doc e inizializza la cache
-   > 3. **Salta** — esci senza modifiche
+   > `.pi/codebase/` exists but `.cache.json` is absent. What do you prefer?
+   > 1. **Calibrate** — assume current HEAD as baseline, write the cache
+   >    WITHOUT touching the docs (risk: docs may be stale but
+   >    will be considered fresh until the next change)
+   > 2. **Full rewrite** — rewrite all 7 docs and initialize the cache
+   > 3. **Skip** — exit without changes
 
-   - "Calibra": `stale_docs = {}`, salta direttamente al passo 6 dopo
-     aver scritto la cache con HEAD per tutti e 7 i doc.
-   - "Full rewrite": `stale_docs = {tutti i 7}`, vai al passo 2.
-   - "Salta": esci.
+   - "Calibrate": `stale_docs = {}`, skip straight to step 6 after
+     writing the cache with HEAD for all 7 docs.
+   - "Full rewrite": `stale_docs = {all 7}`, go to step 2.
+   - "Skip": exit.
 
-3. **Mappa + cache entrambe presenti**: usa l'helper per calcolare il
-   set stale (passo 1b).
+3. **Map + cache both present**: use the helper to compute the
+   stale set (step 1b).
 
-#### 1b. Invocazione dell'helper
+#### 1b. Helper invocation
 
-Esegui questo blocco da bash per ottenere il set stale:
+Run this bash block to get the stale set:
 
 ```bash
 node --experimental-strip-types -e '
@@ -135,193 +137,193 @@ import("./codebase-cache.ts").then(({ readCache, diffSinceCachedCommit, decideSt
 '
 ```
 
-**Fallback se l'invocazione fallisce** (exit non-zero, `HELPER_ERROR`,
-`CACHE_INVALID`, oppure `node --experimental-strip-types` non
-disponibile):
-- Mostra l'errore completo al dev.
-- **Non procedere automaticamente** a rigenerazione full.
-- Chiedi: «Helper non disponibile. Procedo con full rewrite (riscrivo
-  tutti e 7 i doc + reinizializzo cache)? Sì/No».
-- Se "Sì": `stale_docs = {tutti i 7}`, vai al passo 2.
-- Se "No": esci.
+**Fallback if the invocation fails** (non-zero exit, `HELPER_ERROR`,
+`CACHE_INVALID`, or `node --experimental-strip-types` not
+available):
+- Show the full error to the dev.
+- **Don't automatically proceed** with a full regeneration.
+- Ask: "Helper unavailable. Proceed with full rewrite (rewrite
+  all 7 docs + reinitialize cache)? Yes/No".
+- If "Yes": `stale_docs = {all 7}`, go to step 2.
+- If "No": exit.
 
-#### 1c. Presenta il set stale e attendi conferma
+#### 1c. Present the stale set and wait for confirmation
 
-Con l'output del helper, mostra al dev:
+With the helper output, show the dev:
 
 ```
 🗺️  Cache check — .pi/codebase/
 
-  Baseline:  <commit baseline>
+  Baseline:  <baseline commit>
   HEAD:      <head>
-  Changed files (filtrati): <changedCount>
+  Changed files (filtered): <changedCount>
   Topology changed: <true/false>
 
-  Doc stale (da riscrivere):
+  Stale docs (to rewrite):
     - STACK.md
     - TESTING.md
-  Doc fresh (non toccati):
-    - INTEGRAZIONI.md, ARCHITETTURA.md, STRUTTURA.md, CONVENZIONI.md, CRITICITA.md
+  Fresh docs (not touched):
+    - INTEGRATIONS.md, ARCHITECTURE.md, STRUCTURE.md, CONVENTIONS.md, TECHNICAL_DEBT.md
 ```
 
-**Tre esiti possibili:**
+**Three possible outcomes:**
 
-- **`stale` vuoto** (no-op): mostra «✅ Cache coerente con HEAD: niente
-  da aggiornare». Aggiorna comunque il campo `updatedAt` di ciascun doc
-  in cache (passo 4b) e vai al passo 6 (verifica output). Salta il
-  passo 2 (la struttura esiste già) e il passo 3 (nessuna passata).
+- **`stale` empty** (no-op): show "✅ Cache consistent with HEAD: nothing
+  to update". Update the `updatedAt` field of each doc
+  in cache anyway (step 4b) and go to step 6 (output verification). Skip
+  step 2 (the structure already exists) and step 3 (no passes).
 
-- **`stale` non vuoto**: chiedi al dev
+- **`stale` non-empty**: ask the dev
 
-  > Riscrivo solo i doc stale (Sì), salto del tutto (No), oppure forzo
-  > full rewrite di tutti e 7 (Forza)?
+  > Rewrite only stale docs (Yes), skip entirely (No), or force
+  > full rewrite of all 7 (Force)?
 
-  - "Sì": `stale_docs = <set restituito dal helper>`, vai al passo 2.
-  - "No": esci senza modifiche.
-  - "Forza": `stale_docs = {tutti i 7}`, vai al passo 2.
+  - "Yes": `stale_docs = <set returned by helper>`, go to step 2.
+  - "No": exit without changes.
+  - "Force": `stale_docs = {all 7}`, go to step 2.
 
-Da qui in poi, `stale_docs` è autoritativo: **non scrivere mai un doc
-fuori da questo set**.
+From here on, `stale_docs` is authoritative: **never write a doc
+outside this set**.
 
-### 2. Crea la struttura
+### 2. Create the structure
 
 ```bash
 mkdir -p .pi/codebase
 ```
 
-(idempotente: se la cartella esiste già, `mkdir -p` non fa nulla — i
-file esistenti restano intatti).
+(idempotent: if the folder already exists, `mkdir -p` does nothing —
+existing files stay intact).
 
-Gli 8 documenti attesi:
-- `STACK.md` (stack tecnologico)
-- `INTEGRAZIONI.md` (servizi esterni e API)
-- `ARCHITETTURA.md` (pattern, layer, flusso dati)
-- `STRUTTURA.md` (layout directory, dove mettere il codice nuovo)
-- `CONVENZIONI.md` (stile codice, naming, pattern)
-- `TESTING.md` (framework, pattern, coverage)
-- `CRITICITA.md` (debito tecnico, bug noti, aree fragili)
+The 8 expected documents:
+- `STACK.md` (technology stack)
+- `INTEGRATIONS.md` (external services and APIs)
+- `ARCHITECTURE.md` (patterns, layers, data flow)
+- `STRUCTURE.md` (directory layout, where to put new code)
+- `CONVENTIONS.md` (code style, naming, patterns)
+- `TESTING.md` (frameworks, patterns, coverage)
+- `TECHNICAL_DEBT.md` (technical debt, known bugs, fragile areas)
 - `INDEX.md` (path + 1-line summary per doc, machine-parsed by the extension)
 
-### 3. Mapping sequenziale — 4 passate (solo per i doc stale)
+### 3. Sequential mapping — 4 passes (only for stale docs)
 
-Esegui le 4 passate in sequenza, ciascuna con esplorazione mirata.
-**Per ciascun doc da scrivere, controlla prima `stale_docs`: se il doc
-NON è in `stale_docs`, salta del tutto la sua scrittura e la
-ri-esplorazione associata.** Una passata può quindi non produrre alcun
-file (es. se in `stale_docs` non c'è né `CONVENZIONI.md` né `TESTING.md`,
-la Passata 3 è interamente skip).
+Run the 4 passes in sequence, each with focused exploration.
+**For each doc to write, check `stale_docs` first: if the doc
+is NOT in `stale_docs`, skip its writing entirely and the
+associated re-exploration.** A pass may therefore produce no
+file (e.g. if `stale_docs` contains neither `CONVENTIONS.md` nor `TESTING.md`,
+Pass 3 is skipped entirely).
 
-Se `$@` contiene un'area specifica (es. "server"), limita l'esplorazione
-a quella sottocartella ma produci comunque tutti i documenti in
-`stale_docs` (sezioni non pertinenti → «Non applicabile a quest'area»).
+If `$@` contains a specific area (e.g. "server"), limit exploration
+to that subfolder but still produce all documents in
+`stale_docs` (non-relevant sections → "Not applicable to this area").
 
-**Linee guida generali per l'esplorazione:**
+**General guidelines for exploration:**
 
-- Usa `bash` con `find`, `rg`, `ls`, `head` per orientarti.
-- Leggi i file chiave con `read` (max 300 righe per file, usa offset/limit).
-- **Includi sempre i path** con backtick: `` `server/lib/db/camera.ts` ``.
-- **Sii prescrittivo**: «Usa camelCase per le funzioni» è utile.
-  «Alcune funzioni usano camelCase» non lo è.
-- **Scrivi lo stato attuale**, mai ciò che era o ciò che vorresti.
-- Data corrente: `date +%Y-%m-%d`.
+- Use `bash` with `find`, `rg`, `ls`, `head` to orient yourself.
+- Read key files with `read` (max 300 lines per file, use offset/limit).
+- **Always include paths** with backticks: `` `server/lib/db/camera.ts` ``.
+- **Be prescriptive**: "Use camelCase for functions" is useful.
+  "Some functions use camelCase" is not.
+- **Write the current state**, never what was or what you'd like.
+- Current date: `date +%Y-%m-%d`.
 
-#### Passata 1: Stack tecnologico
+#### Pass 1: Technology stack
 
-Esplora:
-- `package.json` / `requirements.txt` / `pyproject.toml` in ogni componente
-- File di configurazione (`tsconfig.json`, `.eslintrc*`, `vite.config.*`, ecc.)
+Explore:
+- `package.json` / `requirements.txt` / `pyproject.toml` in each component
+- Configuration files (`tsconfig.json`, `.eslintrc*`, `vite.config.*`, etc.)
 - `.nvmrc`, `.python-version`, `Dockerfile`
 
-Scrivi (solo se nel set `stale_docs`):
-- `.pi/codebase/STACK.md` — Linguaggi, runtime, framework, dipendenze, configurazione
-- `.pi/codebase/INTEGRAZIONI.md` — API esterne, database, provider auth, webhook
+Write (only if in `stale_docs` set):
+- `.pi/codebase/STACK.md` — Languages, runtime, frameworks, dependencies, configuration
+- `.pi/codebase/INTEGRATIONS.md` — External APIs, databases, auth providers, webhooks
 
-Usa i template in fondo a questo documento.
+Use the templates at the bottom of this document.
 
-#### Passata 2: Architettura
+#### Pass 2: Architecture
 
-Esplora:
-- Struttura directory (`find . -type d -maxdepth 3`)
-- Entry point (`*/index.ts`, `*/app.ts`, `*/main.tsx`, ecc.)
-- Pattern di import per capire i layer
+Explore:
+- Directory structure (`find . -type d -maxdepth 3`)
+- Entry points (`*/index.ts`, `*/app.ts`, `*/main.tsx`, etc.)
+- Import patterns to understand the layers
 
-Scrivi (solo se nel set `stale_docs`):
-- `.pi/codebase/ARCHITETTURA.md` — Pattern, layer, flusso dati, astrazioni, entry point
-- `.pi/codebase/STRUTTURA.md` — Layout directory, posizioni chiave, dove aggiungere codice nuovo
+Write (only if in `stale_docs` set):
+- `.pi/codebase/ARCHITECTURE.md` — Patterns, layers, data flow, abstractions, entry points
+- `.pi/codebase/STRUCTURE.md` — Directory layout, key locations, where to add new code
 
-#### Passata 3: Qualità
+#### Pass 3: Quality
 
-Esplora:
-- Configurazione linting/formatting (`.eslintrc*`, `.prettierrc*`, `eslint.config.*`)
-- File di test (`*.test.*`, `*.spec.*`)
-- Configurazione CI se presente
+Explore:
+- Linting/formatting configuration (`.eslintrc*`, `.prettierrc*`, `eslint.config.*`)
+- Test files (`*.test.*`, `*.spec.*`)
+- CI configuration if present
 
-Scrivi (solo se nel set `stale_docs`):
-- `.pi/codebase/CONVENZIONI.md` — Stile codice, naming, pattern, gestione errori
-- `.pi/codebase/TESTING.md` — Framework, struttura test, mocking, coverage
+Write (only if in `stale_docs` set):
+- `.pi/codebase/CONVENTIONS.md` — Code style, naming, patterns, error handling
+- `.pi/codebase/TESTING.md` — Frameworks, test structure, mocking, coverage
 
-#### Passata 4: Criticità
+#### Pass 4: Technical debt
 
-Esplora:
-- Commenti `TODO` / `FIXME` / `HACK` / `XXX`
-- File grandi (potenziale complessità)
-- Stubs / return vuoti
-- Dipendenze obsolete
+Explore:
+- `TODO` / `FIXME` / `HACK` / `XXX` comments
+- Large files (potential complexity)
+- Stubs / empty returns
+- Obsolete dependencies
 
-Scrivi (solo se nel set `stale_docs`):
-- `.pi/codebase/CRITICITA.md` — Debito tecnico, bug noti, sicurezza, performance, aree fragili
+Write (only if in `stale_docs` set):
+- `.pi/codebase/TECHNICAL_DEBT.md` — Technical debt, known bugs, security, performance, fragile areas
 
-### 4. Genera INDEX.md
+### 4. Generate INDEX.md
 
-Se `stale_docs` è vuoto (no-op puro) puoi saltare questo passo —
-`INDEX.md` esistente è coerente. Altrimenti rigenera
-`.pi/codebase/INDEX.md` enumerando **tutti** i `.md` presenti in
-`.pi/codebase/` (sia quelli appena riscritti, sia quelli rimasti
-intatti).
+If `stale_docs` is empty (pure no-op) you can skip this step —
+the existing `INDEX.md` is consistent. Otherwise regenerate
+`.pi/codebase/INDEX.md` enumerating **all** `.md` files present in
+`.pi/codebase/` (both the newly rewritten ones and those left
+intact).
 
-**Formato di ogni riga:**
+**Format of each line:**
 
 ```
-<relPath>: <one-line summary ≤ 120 char>
+<relPath>: <one-line summary ≤ 120 chars>
 ```
 
-dove:
-- `<relPath>` è il path del file relativo a `.pi/codebase/` (es. `STACK.md`).
-- `<one-line summary>` è la prima intestazione `# ` del documento, oppure,
-  se assente, la prima riga di corpo non vuota; tagliata a 120 caratteri.
+where:
+- `<relPath>` is the file path relative to `.pi/codebase/` (e.g. `STACK.md`).
+- `<one-line summary>` is the first `# ` heading of the document, or,
+  if absent, the first non-empty body line; truncated at 120 characters.
 
-Ogni riga **deve** matchare la regex:
+Each line **must** match the regex:
 
 ```
 ^[A-Za-z0-9_\-\./]+\.md: .{1,120}$
 ```
 
-Esempio (illustrativo):
+Example (illustrative):
 
 ```
-STACK.md: Stack Tecnologico
-INTEGRAZIONI.md: Integrazioni Esterne
-ARCHITETTURA.md: Architettura
-STRUTTURA.md: Struttura della Codebase
-CONVENZIONI.md: Convenzioni di Codice
-TESTING.md: Pattern di Testing
-CRITICITA.md: Criticità della Codebase
+STACK.md: Technology Stack
+INTEGRATIONS.md: External Integrations
+ARCHITECTURE.md: Architecture
+STRUCTURE.md: Codebase Structure
+CONVENTIONS.md: Code Conventions
+TESTING.md: Testing Patterns
+TECHNICAL_DEBT.md: Codebase Technical Debt
 ```
 
-L'estensione che consuma questi documenti **preferisce un `INDEX.md`
-presente su disco** rispetto al proprio fallback in-memory lazy:
-rigenerare `INDEX.md` dopo modifiche ai documenti tematici è quindi
-**raccomandato ma non obbligatorio** — in assenza, l'estensione ricostruisce
-l'indice al volo.
+The extension that consumes these documents **prefers an `INDEX.md`
+present on disk** over its own in-memory lazy fallback:
+regenerating `INDEX.md` after changes to the thematic documents is therefore
+**recommended but not mandatory** — if absent, the extension rebuilds
+the index on the fly.
 
-### 4b. Aggiorna `.pi/codebase/.cache.json`
+### 4b. Update `.pi/codebase/.cache.json`
 
-Per ogni doc **toccato in questa esecuzione** (cioè ogni elemento di
-`stale_docs` che è stato effettivamente scritto), aggiorna la voce
-corrispondente nella cache. I doc non toccati conservano le loro
-voci precedenti — non sovrascriverle.
+For each doc **touched in this execution** (i.e. each element of
+`stale_docs` that was actually written), update the
+corresponding entry in the cache. Untouched docs keep their
+previous entries — do not overwrite them.
 
-Esegui:
+Run:
 
 ```bash
 node --experimental-strip-types -e '
@@ -330,7 +332,7 @@ import("./codebase-cache.ts").then(({ readCache, writeCache }) => {
   const cachePath = ".pi/codebase/.cache.json";
   const head = execSync("git rev-parse HEAD", { encoding: "utf-8" }).trim();
   const now = new Date().toISOString();
-  const touched = process.argv.slice(1); // lista doc toccati passata via argv
+  const touched = process.argv.slice(1); // list of touched docs passed via argv
   const state = readCache(cachePath) ?? { docs: {} };
   for (const doc of touched) {
     state.docs[doc] = { commit: head, updatedAt: now };
@@ -338,16 +340,16 @@ import("./codebase-cache.ts").then(({ readCache, writeCache }) => {
   writeCache(cachePath, state);
   console.log("cache updated:", JSON.stringify(state.docs, null, 2));
 });
-' -- STACK.md TESTING.md   # ← sostituisci con la lista dei doc effettivamente toccati
+' -- STACK.md TESTING.md   # ← replace with the list of docs actually touched
 ```
 
-**Caso speciale "Calibra"** (scenario 2 del passo 1a): passa tutti e 7
-i doc come argv, anche se non li hai riscritti — stai inizializzando la
+**Special case "Calibrate"** (scenario 2 of step 1a): pass all 7
+docs as argv, even if you didn't rewrite them — you are initializing the
 cache.
 
-**Caso speciale "no-op"** (`stale_docs` vuoto al passo 1c): non
-modificare i campi `commit`, ma aggiorna solo `updatedAt` per riflettere
-l'ultimo check. In pratica:
+**Special case "no-op"** (`stale_docs` empty at step 1c): do not
+modify the `commit` fields, but update only `updatedAt` to reflect
+the latest check. In practice:
 
 ```bash
 node --experimental-strip-types -e '
@@ -362,652 +364,652 @@ import("./codebase-cache.ts").then(({ readCache, writeCache }) => {
 '
 ```
 
-### 5. Scan di sicurezza pre-commit
+### 5. Pre-commit security scan
 
 ```bash
-grep -rE '(sk-[a-zA-Z0-9]{20,}|ghp_[a-zA-Z0-9]{36}|AKIA[A-Z0-9]{16}|xox[baprs]-|-----BEGIN.*PRIVATE KEY|eyJ[a-zA-Z0-9_-]+\.eyJ)' .pi/codebase/*.md 2>/dev/null && echo "⚠️ SEGRETI TROVATI" || echo "✅ Nessun segreto rilevato"
+grep -rE '(sk-[a-zA-Z0-9]{20,}|ghp_[a-zA-Z0-9]{36}|AKIA[A-Z0-9]{16}|xox[baprs]-|-----BEGIN.*PRIVATE KEY|eyJ[a-zA-Z0-9_-]+\.eyJ)' .pi/codebase/*.md 2>/dev/null && echo "⚠️ SECRETS FOUND" || echo "✅ No secrets detected"
 ```
 
-Se trovati segreti → STOP, mostra i match, chiedi conferma al dev prima
-di proseguire.
+If secrets are found → STOP, show the matches, ask the dev for confirmation before
+proceeding.
 
-### 6. Verifica output
+### 6. Verify output
 
 ```bash
 ls -la .pi/codebase/
 wc -l .pi/codebase/*.md
 ```
 
-Verifica:
-- Tutti gli 8 documenti esistono (7 tematici + `INDEX.md`)
-- Nessun documento tematico vuoto (ciascuno dovrebbe avere > 20 righe)
-- `INDEX.md` ha esattamente una riga per ciascun altro `.md` e ogni riga
-  matcha `^[A-Za-z0-9_\-\./]+\.md: .{1,120}$`
+Check:
+- All 8 documents exist (7 thematic + `INDEX.md`)
+- No thematic document is empty (each should have > 20 lines)
+- `INDEX.md` has exactly one line per other `.md` and each line
+  matches `^[A-Za-z0-9_\-\./]+\.md: .{1,120}$`
 
-**Verifica cache:**
+**Verify cache:**
 
 ```bash
 test -f .pi/codebase/.cache.json && node -e '
 const s = JSON.parse(require("node:fs").readFileSync(".pi/codebase/.cache.json","utf-8"));
 const docs = Object.keys(s.docs);
 console.log("cache docs:", docs.join(", "));
-const missing = ["STACK.md","INTEGRAZIONI.md","ARCHITETTURA.md","STRUTTURA.md","CONVENZIONI.md","TESTING.md","CRITICITA.md"].filter(d => !s.docs[d]);
-if (missing.length) { console.error("⚠️ Cache incompleta — manca:", missing.join(", ")); process.exit(1); }
-console.log("✅ Cache contiene tutti e 7 i doc");
-' || echo "⚠️ .cache.json non scritto (atteso solo in scenario 'Salta')"
+const missing = ["STACK.md","INTEGRATIONS.md","ARCHITECTURE.md","STRUCTURE.md","CONVENTIONS.md","TESTING.md","TECHNICAL_DEBT.md"].filter(d => !s.docs[d]);
+if (missing.length) { console.error("⚠️ Incomplete cache — missing:", missing.join(", ")); process.exit(1); }
+console.log("✅ Cache contains all 7 docs");
+' || echo "⚠️ .cache.json not written (expected only in 'Skip' scenario)"
 ```
 
-Una cache parziale (es. 5/7 doc) è accettabile solo dopo update
-incrementali su una mappa pre-esistente; uno scenario greenfield o
-"Full rewrite" deve produrre cache completa (7/7).
+A partial cache (e.g. 5/7 docs) is acceptable only after incremental
+updates on a pre-existing map; a greenfield or
+"Full rewrite" scenario must produce a complete cache (7/7).
 
-### 7. Output finale
+### 7. Final output
 
 ```
-🗺️  Mappa della codebase completata.
+🗺️  Codebase map complete.
 
-Creati in .pi/codebase/:
-- STACK.md ([N] righe) — Stack tecnologico e dipendenze
-- ARCHITETTURA.md ([N] righe) — Design del sistema e pattern
-- STRUTTURA.md ([N] righe) — Layout directory e organizzazione
-- CONVENZIONI.md ([N] righe) — Stile codice e pattern
-- TESTING.md ([N] righe) — Struttura test e pratiche
-- INTEGRAZIONI.md ([N] righe) — Servizi esterni e API
-- CRITICITA.md ([N] righe) — Debito tecnico e problemi noti
-- INDEX.md ([N] righe) — Indice machine-parsabile (path + summary per doc)
+Created under .pi/codebase/:
+- STACK.md ([N] lines) — Technology stack and dependencies
+- ARCHITECTURE.md ([N] lines) — System design and patterns
+- STRUCTURE.md ([N] lines) — Directory layout and organization
+- CONVENTIONS.md ([N] lines) — Code style and patterns
+- TESTING.md ([N] lines) — Test structure and practices
+- INTEGRATIONS.md ([N] lines) — External services and APIs
+- TECHNICAL_DEBT.md ([N] lines) — Technical debt and known issues
+- INDEX.md ([N] lines) — Machine-parsable index (path + summary per doc)
 
-Comandi git suggeriti:
+Suggested git commands:
   git add .pi/codebase/
-  git commit -m "docs: mappa della codebase"
+  git commit -m "docs: codebase map"
   git push
 ```
 
 ---
 
-## Template dei documenti
+## Document templates
 
 ### STACK.md
 
 ```markdown
-# Stack Tecnologico
+# Technology Stack
 
-**Data analisi:** [YYYY-MM-DD]
+**Analysis date:** [YYYY-MM-DD]
 
-## Linguaggi
+## Languages
 
-**Principali:**
-- [Linguaggio] [Versione] — [Dove usato]
+**Primary:**
+- [Language] [Version] — [Where used]
 
-**Secondari:**
-- [Linguaggio] [Versione] — [Dove usato]
+**Secondary:**
+- [Language] [Version] — [Where used]
 
 ## Runtime
 
-**Ambiente:**
-- [Runtime] [Versione]
+**Environment:**
+- [Runtime] [Version]
 
 **Package manager:**
-- [Manager] [Versione]
-- Lockfile: [presente/assente]
+- [Manager] [Version]
+- Lockfile: [present/absent]
 
-## Framework
+## Frameworks
 
 **Core:**
-- [Framework] [Versione] — [Scopo]
+- [Framework] [Version] — [Purpose]
 
 **Testing:**
-- [Framework] [Versione] — [Scopo]
+- [Framework] [Version] — [Purpose]
 
 **Build/Dev:**
-- [Tool] [Versione] — [Scopo]
+- [Tool] [Version] — [Purpose]
 
-## Dipendenze chiave
+## Key dependencies
 
-**Critiche:**
-- [Pacchetto] [Versione] — [Perché è importante]
+**Critical:**
+- [Package] [Version] — [Why it matters]
 
-**Infrastruttura:**
-- [Pacchetto] [Versione] — [Scopo]
+**Infrastructure:**
+- [Package] [Version] — [Purpose]
 
-## Configurazione
+## Configuration
 
-**Ambiente:**
-- [Come viene configurato]
-- [Config chiave richieste]
+**Environment:**
+- [How it's configured]
+- [Required key configs]
 
 **Build:**
-- [File di configurazione build]
+- [Build configuration files]
 
-## Requisiti piattaforma
+## Platform requirements
 
-**Sviluppo:**
-- [Requisiti]
+**Development:**
+- [Requirements]
 
-**Produzione:**
-- [Target di deploy]
+**Production:**
+- [Deploy targets]
 
 ---
 
-*Analisi stack: [data]*
+*Stack analysis: [date]*
 ```
 
-### INTEGRAZIONI.md
+### INTEGRATIONS.md
 
 ```markdown
-# Integrazioni Esterne
+# External Integrations
 
-**Data analisi:** [YYYY-MM-DD]
+**Analysis date:** [YYYY-MM-DD]
 
-## API e Servizi Esterni
+## APIs and External Services
 
-**[Categoria]:**
-- [Servizio] — [A cosa serve]
-  - SDK/Client: [pacchetto]
-  - Auth: [nome variabile env]
+**[Category]:**
+- [Service] — [What it's used for]
+  - SDK/Client: [package]
+  - Auth: [env variable name]
 
-## Storage Dati
+## Data Storage
 
 **Database:**
-- [Tipo/Provider]
-  - Connessione: [variabile env]
+- [Type/Provider]
+  - Connection: [env variable]
   - Client: [ORM/client]
 
 **File storage:**
-- [Servizio o "Solo filesystem locale"]
+- [Service or "Local filesystem only"]
 
 **Cache:**
-- [Servizio o "Nessuna"]
+- [Service or "None"]
 
-## Autenticazione e Identità
+## Authentication and Identity
 
-**Provider auth:**
-- [Servizio o "Custom"]
-  - Implementazione: [approccio]
+**Auth provider:**
+- [Service or "Custom"]
+  - Implementation: [approach]
 
-## Monitoraggio e Osservabilità
+## Monitoring and Observability
 
 **Error tracking:**
-- [Servizio o "Nessuno"]
+- [Service or "None"]
 
-**Log:**
-- [Approccio]
+**Logs:**
+- [Approach]
 
-## CI/CD e Deploy
+## CI/CD and Deploy
 
 **Hosting:**
-- [Piattaforma]
+- [Platform]
 
-**Pipeline CI:**
-- [Servizio o "Nessuna"]
+**CI pipeline:**
+- [Service or "None"]
 
-## Configurazione Ambiente
+## Environment Configuration
 
-**Variabili env richieste:**
-- [Elenco variabili critiche]
+**Required env variables:**
+- [List of critical variables]
 
-**Posizione segreti:**
-- [Dove sono conservati i segreti]
+**Secrets location:**
+- [Where secrets are stored]
 
-## Webhook e Callback
+## Webhooks and Callbacks
 
-**In entrata:**
-- [Endpoint o "Nessuno"]
+**Inbound:**
+- [Endpoint or "None"]
 
-**In uscita:**
-- [Endpoint o "Nessuno"]
+**Outbound:**
+- [Endpoint or "None"]
 
 ---
 
-*Audit integrazioni: [data]*
+*Integrations audit: [date]*
 ```
 
-### ARCHITETTURA.md
+### ARCHITECTURE.md
 
 ```markdown
-<!-- aggiornato: [YYYY-MM-DD] -->
-# Architettura
+<!-- updated: [YYYY-MM-DD] -->
+# Architecture
 
-**Data analisi:** [YYYY-MM-DD]
+**Analysis date:** [YYYY-MM-DD]
 
-## Panoramica del sistema
+## System overview
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
-│                      [Nome Layer Superiore]                  │
+│                      [Upper Layer Name]                      │
 ├──────────────────┬──────────────────┬───────────────────────┤
-│   [Componente A] │   [Componente B] │    [Componente C]     │
+│   [Component A]  │   [Component B]  │    [Component C]      │
 │  `[path/a]`      │  `[path/b]`      │   `[path/c]`          │
 └────────┬─────────┴────────┬─────────┴──────────┬────────────┘
          │                  │                     │
          ▼                  ▼                     ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                    [Nome Layer Intermedio]                   │
+│                    [Middle Layer Name]                       │
 │         `[path/layer]`                                       │
 └─────────────────────────────────────────────────────────────┘
          │
          ▼
 ┌─────────────────────────────────────────────────────────────┐
-│  [Store / Output / Esterno]                                  │
+│  [Store / Output / External]                                 │
 │  `[path/store]`                                              │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## Responsabilità dei Componenti
+## Component Responsibilities
 
-| Componente | Responsabilità | File |
-|------------|---------------|------|
-| [Nome] | [Cosa possiede] | `[path]` |
+| Component | Responsibility | Files |
+|-----------|----------------|-------|
+| [Name] | [What it owns] | `[path]` |
 
-## Panoramica dei Pattern
+## Pattern Overview
 
-**Globale:** [Nome pattern]
+**Global:** [Pattern name]
 
-**Caratteristiche chiave:**
-- [Caratteristica 1]
-- [Caratteristica 2]
+**Key characteristics:**
+- [Characteristic 1]
+- [Characteristic 2]
 
-## Layer
+## Layers
 
-**[Nome layer]:**
-- Scopo: [Cosa fa questo layer]
-- Posizione: `[path]`
-- Contiene: [Tipi di codice]
-- Dipende da: [Cosa usa]
-- Usato da: [Cosa lo usa]
+**[Layer name]:**
+- Purpose: [What this layer does]
+- Location: `[path]`
+- Contains: [Types of code]
+- Depends on: [What it uses]
+- Used by: [What uses it]
 
-## Flusso Dati
+## Data Flow
 
-### Percorso richiesta principale
+### Main request path
 
-1. [Step 1 — entry point] (`[file:riga]`)
-2. [Step 2 — elaborazione] (`[file:riga]`)
-3. [Step 3 — output/risposta] (`[file:riga]`)
+1. [Step 1 — entry point] (`[file:line]`)
+2. [Step 2 — processing] (`[file:line]`)
+3. [Step 3 — output/response] (`[file:line]`)
 
-**Gestione stato:**
-- [Come viene gestito lo stato]
+**State management:**
+- [How state is managed]
 
-## Astrazioni Chiave
+## Key Abstractions
 
-**[Nome astrazione]:**
-- Scopo: [Cosa rappresenta]
-- Esempi: `[path dei file]`
-- Pattern: [Pattern usato]
+**[Abstraction name]:**
+- Purpose: [What it represents]
+- Examples: `[file paths]`
+- Pattern: [Pattern used]
 
-## Entry Point
+## Entry Points
 
 **[Entry point]:**
-- Posizione: `[path]`
-- Trigger: [Cosa lo invoca]
-- Responsabilità: [Cosa fa]
+- Location: `[path]`
+- Trigger: [What invokes it]
+- Responsibility: [What it does]
 
-## Vincoli Architetturali
+## Architectural Constraints
 
-- **Threading:** [Modello di threading]
-- **Stato globale:** [Singleton o stato condiviso mutabile]
-- **Import circolari:** [Catene di dipendenze circolari note]
+- **Threading:** [Threading model]
+- **Global state:** [Singletons or mutable shared state]
+- **Circular imports:** [Known circular dependency chains]
 
-## Anti-Pattern
+## Anti-Patterns
 
-### [Nome anti-pattern]
+### [Anti-pattern name]
 
-**Cosa succede:** [Il pattern scorretto osservato]
-**Perché è sbagliato:** [Il problema che causa]
-**Fai così invece:** [Il pattern corretto con riferimento file]
+**What happens:** [The incorrect pattern observed]
+**Why it's wrong:** [The problem it causes]
+**Do this instead:** [The correct pattern with file reference]
 
-## Gestione Errori
+## Error Handling
 
-**Strategia:** [Approccio]
+**Strategy:** [Approach]
 
-**Pattern:**
+**Patterns:**
 - [Pattern 1]
 - [Pattern 2]
 
-## Aspetti Trasversali
+## Cross-Cutting Concerns
 
-**Logging:** [Approccio]
-**Validazione:** [Approccio]
-**Autenticazione:** [Approccio]
+**Logging:** [Approach]
+**Validation:** [Approach]
+**Authentication:** [Approach]
 
 ---
 
-*Analisi architettura: [data]*
+*Architecture analysis: [date]*
 ```
 
-### STRUTTURA.md
+### STRUCTURE.md
 
 ```markdown
-# Struttura della Codebase
+# Codebase Structure
 
-**Data analisi:** [YYYY-MM-DD]
+**Analysis date:** [YYYY-MM-DD]
 
-## Layout Directory
+## Directory Layout
 
 ```
-[root-progetto]/
-├── [dir]/          # [Scopo]
-├── [dir]/          # [Scopo]
-└── [file]          # [Scopo]
+[project-root]/
+├── [dir]/          # [Purpose]
+├── [dir]/          # [Purpose]
+└── [file]          # [Purpose]
 ```
 
-## Scopo delle Directory
+## Directory Purposes
 
-**[Nome directory]:**
-- Scopo: [Cosa contiene]
-- Contiene: [Tipi di file]
-- File chiave: `[file importanti]`
+**[Directory name]:**
+- Purpose: [What it contains]
+- Contains: [Types of files]
+- Key files: `[important files]`
 
-## Posizioni Chiave dei File
+## Key File Locations
 
-**Entry point:**
-- `[path]`: [Scopo]
+**Entry points:**
+- `[path]`: [Purpose]
 
-**Configurazione:**
-- `[path]`: [Scopo]
+**Configuration:**
+- `[path]`: [Purpose]
 
-**Logica core:**
-- `[path]`: [Scopo]
+**Core logic:**
+- `[path]`: [Purpose]
 
-**Test:**
-- `[path]`: [Scopo]
+**Tests:**
+- `[path]`: [Purpose]
 
-## Convenzioni di Naming
+## Naming Conventions
 
-**File:**
-- [Pattern]: [Esempio]
+**Files:**
+- [Pattern]: [Example]
 
-**Directory:**
-- [Pattern]: [Esempio]
+**Directories:**
+- [Pattern]: [Example]
 
-## Dove Aggiungere Codice Nuovo
+## Where to Add New Code
 
-**Nuova feature:**
-- Codice principale: `[path]`
-- Test: `[path]`
+**New feature:**
+- Main code: `[path]`
+- Tests: `[path]`
 
-**Nuovo componente/modulo:**
-- Implementazione: `[path]`
+**New component/module:**
+- Implementation: `[path]`
 
-**Utility:**
-- Helper condivisi: `[path]`
+**Utilities:**
+- Shared helpers: `[path]`
 
-## Directory Speciali
+## Special Directories
 
 **[Directory]:**
-- Scopo: [Cosa contiene]
-- Generata: [Sì/No]
-- Committata: [Sì/No]
+- Purpose: [What it contains]
+- Generated: [Yes/No]
+- Committed: [Yes/No]
 
 ---
 
-*Analisi struttura: [data]*
+*Structure analysis: [date]*
 ```
 
-### CONVENZIONI.md
+### CONVENTIONS.md
 
 ```markdown
-# Convenzioni di Codice
+# Code Conventions
 
-**Data analisi:** [YYYY-MM-DD]
+**Analysis date:** [YYYY-MM-DD]
 
-## Pattern di Naming
+## Naming Patterns
 
-**File:**
-- [Pattern osservato]
+**Files:**
+- [Observed pattern]
 
-**Funzioni:**
-- [Pattern osservato]
+**Functions:**
+- [Observed pattern]
 
-**Variabili:**
-- [Pattern osservato]
+**Variables:**
+- [Observed pattern]
 
-**Tipi:**
-- [Pattern osservato]
+**Types:**
+- [Observed pattern]
 
-## Stile Codice
+## Code Style
 
-**Formattazione:**
-- [Tool usato]
-- [Impostazioni chiave]
+**Formatting:**
+- [Tool used]
+- [Key settings]
 
 **Linting:**
-- [Tool usato]
-- [Regole chiave]
+- [Tool used]
+- [Key rules]
 
-## Organizzazione Import
+## Import Organization
 
-**Ordine:**
-1. [Primo gruppo]
-2. [Secondo gruppo]
-3. [Terzo gruppo]
+**Order:**
+1. [First group]
+2. [Second group]
+3. [Third group]
 
-**Alias di path:**
-- [Alias usati]
+**Path aliases:**
+- [Aliases used]
 
-## Gestione Errori
+## Error Handling
 
-**Pattern:**
-- [Come vengono gestiti gli errori]
+**Patterns:**
+- [How errors are handled]
 
 ## Logging
 
-**Framework:** [Tool o "console"]
+**Framework:** [Tool or "console"]
 
-**Pattern:**
-- [Quando e come loggare]
+**Patterns:**
+- [When and how to log]
 
-## Commenti
+## Comments
 
-**Quando commentare:**
-- [Linee guida osservate]
+**When to comment:**
+- [Observed guidelines]
 
 **JSDoc/TSDoc:**
-- [Pattern di utilizzo]
+- [Usage patterns]
 
-## Design delle Funzioni
+## Function Design
 
-**Dimensione:** [Linee guida]
+**Size:** [Guidelines]
 
-**Parametri:** [Pattern]
+**Parameters:** [Patterns]
 
-**Valori di ritorno:** [Pattern]
+**Return values:** [Patterns]
 
-## Design dei Moduli
+## Module Design
 
-**Export:** [Pattern]
+**Exports:** [Patterns]
 
-**Barrel file:** [Utilizzo]
+**Barrel files:** [Usage]
 
 ---
 
-*Analisi convenzioni: [data]*
+*Conventions analysis: [date]*
 ```
 
 ### TESTING.md
 
 ```markdown
-# Pattern di Testing
+# Testing Patterns
 
-**Data analisi:** [YYYY-MM-DD]
+**Analysis date:** [YYYY-MM-DD]
 
-## Framework di Test
+## Test Frameworks
 
 **Runner:**
-- [Framework] [Versione]
-- Config: `[file di config]`
+- [Framework] [Version]
+- Config: `[config file]`
 
-**Libreria di asserzione:**
-- [Libreria]
+**Assertion library:**
+- [Library]
 
-**Comandi di esecuzione:**
+**Run commands:**
 ```bash
-[comando]              # Esegui tutti i test
-[comando]              # Watch mode
-[comando]              # Coverage
+[command]              # Run all tests
+[command]              # Watch mode
+[command]              # Coverage
 ```
 
-## Organizzazione File di Test
+## Test File Organization
 
-**Posizione:**
-- [Pattern: co-locati o separati]
+**Location:**
+- [Pattern: co-located or separate]
 
 **Naming:**
 - [Pattern]
 
-**Struttura:**
+**Structure:**
 ```
-[Pattern directory]
+[Directory pattern]
 ```
 
-## Struttura dei Test
+## Test Structure
 
-**Organizzazione suite:**
+**Suite organization:**
 ```typescript
-[Pattern reale dalla codebase]
+[Actual pattern from the codebase]
 ```
 
-**Pattern:**
-- [Pattern di setup]
-- [Pattern di teardown]
-- [Pattern di asserzione]
+**Patterns:**
+- [Setup pattern]
+- [Teardown pattern]
+- [Assertion pattern]
 
 ## Mocking
 
 **Framework:** [Tool]
 
-**Pattern:**
+**Patterns:**
 ```typescript
-[Pattern di mocking reale dalla codebase]
+[Actual mocking pattern from the codebase]
 ```
 
-**Cosa mockare:**
-- [Linee guida]
+**What to mock:**
+- [Guidelines]
 
-**Cosa NON mockare:**
-- [Linee guida]
+**What NOT to mock:**
+- [Guidelines]
 
-## Fixture e Factory
+## Fixtures and Factories
 
-**Dati di test:**
+**Test data:**
 ```typescript
-[Pattern dalla codebase]
+[Pattern from the codebase]
 ```
 
-**Posizione:**
-- [Dove vivono le fixture]
+**Location:**
+- [Where fixtures live]
 
 ## Coverage
 
-**Requisiti:** [Target o "Non imposto"]
+**Requirements:** [Target or "Not enforced"]
 
-**Vedere la coverage:**
+**Viewing coverage:**
 ```bash
-[comando]
+[command]
 ```
 
-## Tipi di Test
+## Test Types
 
-**Test unitari:**
-- [Scope e approccio]
+**Unit tests:**
+- [Scope and approach]
 
-**Test di integrazione:**
-- [Scope e approccio]
+**Integration tests:**
+- [Scope and approach]
 
-**Test E2E:**
-- [Framework o "Non usati"]
+**E2E tests:**
+- [Framework or "Not used"]
 
-## Pattern Comuni
+## Common Patterns
 
-**Test asincroni:**
+**Async tests:**
 ```typescript
 [Pattern]
 ```
 
-**Test di errore:**
+**Error tests:**
 ```typescript
 [Pattern]
 ```
 
 ---
 
-*Analisi testing: [data]*
+*Testing analysis: [date]*
 ```
 
-### CRITICITA.md
+### TECHNICAL_DEBT.md
 
 ```markdown
-# Criticità della Codebase
+# Codebase Technical Debt
 
-**Data analisi:** [YYYY-MM-DD]
+**Analysis date:** [YYYY-MM-DD]
 
-## Debito Tecnico
+## Technical Debt
 
-**[Area/Componente]:**
-- Problema: [Qual è la scorciatoia/workaround]
-- File: `[path dei file]`
-- Impatto: [Cosa si rompe o degrada]
-- Approccio di fix: [Come risolvere]
+**[Area/Component]:**
+- Issue: [What the shortcut/workaround is]
+- Files: `[file paths]`
+- Impact: [What breaks or degrades]
+- Fix approach: [How to resolve]
 
-## Bug Noti
+## Known Bugs
 
-**[Descrizione bug]:**
-- Sintomi: [Cosa succede]
-- File: `[path dei file]`
-- Trigger: [Come riprodurre]
-- Workaround: [Se presente]
+**[Bug description]:**
+- Symptoms: [What happens]
+- Files: `[file paths]`
+- Trigger: [How to reproduce]
+- Workaround: [If present]
 
-## Considerazioni di Sicurezza
+## Security Considerations
 
 **[Area]:**
-- Rischio: [Cosa potrebbe andare storto]
-- File: `[path dei file]`
-- Mitigazione attuale: [Cosa c'è in piedi]
-- Raccomandazioni: [Cosa andrebbe aggiunto]
+- Risk: [What could go wrong]
+- Files: `[file paths]`
+- Current mitigation: [What's in place]
+- Recommendations: [What should be added]
 
-## Colli di Bottiglia sulle Performance
+## Performance Bottlenecks
 
-**[Operazione lenta]:**
-- Problema: [Cosa è lento]
-- File: `[path dei file]`
-- Causa: [Perché è lento]
-- Percorso di miglioramento: [Come velocizzare]
+**[Slow operation]:**
+- Issue: [What's slow]
+- Files: `[file paths]`
+- Cause: [Why it's slow]
+- Improvement path: [How to speed it up]
 
-## Aree Fragili
+## Fragile Areas
 
-**[Componente/Modulo]:**
-- File: `[path dei file]`
-- Perché fragile: [Cosa lo rende facile da rompere]
-- Modifica sicura: [Come cambiare in sicurezza]
-- Copertura test: [Lacune]
+**[Component/Module]:**
+- Files: `[file paths]`
+- Why fragile: [What makes it easy to break]
+- Safe modification: [How to change it safely]
+- Test coverage: [Gaps]
 
-## Limiti di Scalabilità
+## Scalability Limits
 
-**[Risorsa/Sistema]:**
-- Capacità attuale: [Numeri]
-- Limite: [Dove si rompe]
-- Percorso di scaling: [Come aumentare]
+**[Resource/System]:**
+- Current capacity: [Numbers]
+- Limit: [Where it breaks]
+- Scaling path: [How to scale up]
 
-## Dipendenze a Rischio
+## At-Risk Dependencies
 
-**[Pacchetto]:**
-- Rischio: [Cosa c'è che non va]
-- Impatto: [Cosa si rompe]
-- Piano di migrazione: [Alternativa]
+**[Package]:**
+- Risk: [What's wrong]
+- Impact: [What breaks]
+- Migration plan: [Alternative]
 
-## Feature Critiche Mancanti
+## Missing Critical Features
 
-**[Gap funzionale]:**
-- Problema: [Cosa manca]
-- Blocca: [Cosa non si può fare]
+**[Functional gap]:**
+- Issue: [What's missing]
+- Blocks: [What can't be done]
 
-## Lacune nella Copertura Test
+## Test Coverage Gaps
 
-**[Area non testata]:**
-- Cosa non è testato: [Funzionalità specifica]
-- File: `[path dei file]`
-- Rischio: [Cosa potrebbe rompersi di nascosto]
-- Priorità: [Alta/Media/Bassa]
+**[Untested area]:**
+- What's not tested: [Specific functionality]
+- Files: `[file paths]`
+- Risk: [What could break silently]
+- Priority: [High/Medium/Low]
 
 ---
 
-*Audit criticità: [data]*
+*Technical debt audit: [date]*
 ```

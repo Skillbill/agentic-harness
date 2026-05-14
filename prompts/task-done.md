@@ -1,125 +1,127 @@
 ---
-description: Chiude un task (PR mergiata) spostandolo in done/ e committando su main
+description: Closes a task (PR merged) by moving it to done/ and committing to main
 argument-hint: "<task-id>"
 ---
 
-Sei l'agente del workflow SCRUM-lite del progetto. Il dev ha visto la PR
-mergiata su `main` e vuole chiudere il task: lo sposti da `review/` (o
-direttamente da `in-progress/` se non è passato per la review) a `done/`,
-aggiorni il front-matter e committi su `main`.
+You are the SCRUM-lite workflow assistant for this project. The dev has seen
+the PR merged on `main` and wants to close the task: move it from `review/` (or
+directly from `in-progress/` if it didn't go through review) to `done/`,
+update the frontmatter, and commit on `main`.
 
-**Task da chiudere:** $@
+**Task to close:** $@
 
-## 🔒 Eccezione esplicita alla Git Safety Rule
+**Output language**: any natural-language output you produce for the dev (summaries, descriptions, PR bodies, commit-message *prose*) MUST be in **$CONTENT_LANG**. Identifiers, file paths, branch names, commit prefixes (e.g. `feat(T-001/01):`) stay as the convention dictates.
 
-Questo comando **è autorizzato** a eseguire operazioni git mutanti, solo:
+## 🔒 Explicit exception to the Git Safety Rule
 
-- `git mv` del file del task da `review/` (o `in-progress/`) a `done/`
-- `git add` del file del task
-- `git add .pi/codebase/` (se la mappa è stata aggiornata)
+This command **is authorized** to run mutating git operations, only:
+
+- `git mv` of the task file from `review/` (or `in-progress/`) to `done/`
+- `git add` of the task file
+- `git add .pi/codebase/` (if the map was updated)
 - `git commit -m "chore(<ID>): mark task as done"`
 - `git push`
 
-Niente branch, niente altri file, niente `--force`. Vedi `AGENTS.md` →
+No branches, no other files, no `--force`. See `AGENTS.md` →
 *Git Safety Rule*.
 
-## Passi
+## Steps
 
-1. **Normalizza l'ID e trova il task**:
-   - Normalizza `$1` a `T-NNN` (es. `T001`, `t1`, `1` → `T-001`).
-   - Se manca → errore: «Uso: `/task-done <task-id>`».
-   - Cerca il file in quest'ordine di priorità:
-     1. `.pi/tasks/review/<ID>-*.md` → percorso "normale" (post-PR).
-     2. `.pi/tasks/in-progress/<ID>-*.md` → accettato con warning
-        ("task chiuso senza passare dallo stato review").
-     3. `.pi/tasks/done/<ID>-*.md` → STOP: già chiuso, niente da fare.
-     4. `.pi/tasks/backlog/<ID>-*.md` → errore (workflow violato:
-        «non puoi chiudere un task che non è mai stato avviato»).
-     5. Non trovato da nessuna parte → errore con elenco degli ID esistenti.
+1. **Normalize the ID and find the task**:
+   - Normalize `$1` to `T-NNN` (e.g. `T001`, `t1`, `1` → `T-001`).
+   - If missing → error: "Usage: `/task-done <task-id>`".
+   - Look for the file in this priority order:
+     1. `.pi/tasks/review/<ID>-*.md` → "normal" path (post-PR).
+     2. `.pi/tasks/in-progress/<ID>-*.md` → accepted with warning
+        ("task closed without going through review state").
+     3. `.pi/tasks/done/<ID>-*.md` → STOP: already closed, nothing to do.
+     4. `.pi/tasks/backlog/<ID>-*.md` → error (workflow violation:
+        "you can't close a task that was never started").
+     5. Not found anywhere → error with list of existing IDs.
 
-2. **Verifica preconditions** (bloccanti):
-   - `git branch --show-current` deve essere `main`. Se no → STOP:
-     «Per chiudere il task serve essere su `main`. Fai
-     `git switch main && git pull`, poi rilancia `/task-done <ID>`.»
-   - `git status --porcelain` deve essere pulito **per il file del task**.
-     Altri file modificati/untracked non bloccano (ma il comando farà
-     `git add` SOLO sul file del task).
+2. **Verify preconditions** (blocking):
+   - `git branch --show-current` must be `main`. Otherwise → STOP:
+     "To close the task you need to be on `main`. Run
+     `git switch main && git pull`, then rerun `/task-done <ID>`."
+   - `git status --porcelain` must be clean **for the task file**.
+     Other modified/untracked files don't block (but the command will
+     `git add` ONLY the task file).
 
-3. **Verifica che la PR sia davvero mergiata** (best-effort, non bloccante):
-   - Leggi il campo `branch:` dal front-matter del task.
-   - Se `gh` CLI è disponibile (`command -v gh`), prova:
+3. **Verify the PR is actually merged** (best-effort, non-blocking):
+   - Read the `branch:` field from the task frontmatter.
+   - If the `gh` CLI is available (`command -v gh`), try:
      `gh pr list --state merged --head <branch> --json number,mergedAt --limit 1`
-     e mostra il risultato al dev.
-   - Se la PR non risulta mergiata (o `gh` non c'è), **non bloccare**: chiedi
-     conferma esplicita al dev con: «Non riesco a verificare che la PR sia
-     mergiata. Confermi di aver mergiato e di voler chiudere il task?
-     [sì/no]». Se `no` → esci senza toccare nulla.
+     and show the result to the dev.
+   - If the PR isn't shown as merged (or `gh` is unavailable), **don't block**: ask
+     the dev for explicit confirmation: "I can't verify that the PR is
+     merged. Do you confirm you've merged it and want to close the task?
+     [yes/no]". If `no` → exit without touching anything.
 
-4. **Calcola completion rate della DoD** (informativo):
-   - Leggi la sezione `## Definition of Done` del task.
-   - Conta checkbox `- [x]` vs totale.
-   - Serve solo per l'output finale; non blocca se non è 100%.
+4. **Compute DoD completion rate** (informational):
+   - Read the `## Definition of Done` section of the task.
+   - Count `- [x]` checkboxes vs total.
+   - For final output only; does not block even if not 100%.
 
-5. **Aggiorna la mappa della codebase** (se presente):
-   - Se `.pi/codebase/` esiste, la mappa va aggiornata per riflettere
-     le modifiche introdotte dal task appena chiuso.
-   - Esegui la logica di `/ah:map-codebase` inline: leggi il file
-     `$EXT_DIR/prompts/map-codebase.md` ed esegui le istruzioni dei
-     passi 2–5 (le 4 passate di mapping). Quando la mappa esiste
-     già, usa la modalità "Rigenera" (cancella e rimappa).
-   - Al termine, i file aggiornati in `.pi/codebase/` vanno inclusi
-     nel commit del passo 8.
-   - Se `.pi/codebase/` **non esiste** → salta questo passo (la mappa
-     non era stata creata, non c'è nulla da aggiornare).
+5. **Update the codebase map** (if present):
+   - If `.pi/codebase/` exists, the map must be updated to reflect
+     the changes introduced by the just-closed task.
+   - Execute the `/ah:map-codebase` logic inline: read the file
+     `$EXT_DIR/prompts/map-codebase.md` and run the instructions of
+     steps 2–5 (the 4 mapping passes). When the map already
+     exists, use "Regenerate" mode (delete and remap).
+   - When done, the updated files in `.pi/codebase/` go into
+     the commit of step 8.
+   - If `.pi/codebase/` **does not exist** → skip this step (the map
+     was never created, nothing to update).
 
-6. **Aggiorna il front-matter del task** (via `edit`) mentre il file è
-   ancora in `review/` (o `in-progress/`):
+6. **Update the task frontmatter** (via `edit`) while the file is
+   still in `review/` (or `in-progress/`):
    - `status: done`
-   - `progress: 100` (se la chiave esiste, o aggiungila sotto `estimate:`)
-   - `updated: <YYYY-MM-DD>` (oggi, via `date +%Y-%m-%d`)
+   - `progress: 100` (if the key exists, or add it under `estimate:`)
+   - `updated: <YYYY-MM-DD>` (today, via `date +%Y-%m-%d`)
 
-7. **Sposta il file** con `git mv` da `review/` (o `in-progress/`) a `done/`,
-   preservando il filename.
+7. **Move the file** with `git mv` from `review/` (or `in-progress/`) to `done/`,
+   preserving the filename.
 
-8. **Commit e push su `main`** (file del task + mappa codebase aggiornata):
+8. **Commit and push on `main`** (task file + updated codebase map):
 
    ```
-   git add <vecchio-path> <nuovo-path>   # copre il rename
-   git add .pi/codebase/                  # mappa aggiornata (se presente)
+   git add <old-path> <new-path>          # covers the rename
+   git add .pi/codebase/                  # updated map (if present)
    git commit -m "chore(<ID>): mark task as done"
    git push
    ```
 
-   Se il push fallisce per `non-fast-forward`:
-   - NON fare `git pull --rebase` in automatico.
-   - Avvisa il dev: «`main` è avanzato sul remote. Esegui `git pull --rebase`
-     a mano, poi rilancia `/task-done`.»
+   If the push fails with `non-fast-forward`:
+   - Do NOT run `git pull --rebase` automatically.
+   - Warn the dev: "`main` has moved on the remote. Run `git pull --rebase`
+     by hand, then rerun `/task-done`."
 
-9. **Output finale — conciso** (4 righe):
+9. **Final output — concise** (4 lines):
 
    ```
-   ✅ <ID> chiuso — <title>
-      DoD: <N_checked>/<N_total> spuntate
+   ✅ <ID> closed — <title>
+      DoD: <N_checked>/<N_total> checked
       file: .pi/tasks/done/<ID>-<slug>.md
-      commit: <short-sha> su main (pushed)
+      commit: <short-sha> on main (pushed)
    ```
 
-   Se DoD < 100% aggiungi UNA riga di warning opzionale:
+   If DoD < 100% add ONE optional warning line:
    ```
-      ⚠ Alcune voci DoD non sono spuntate — review il file se intenzionale.
+      ⚠ Some DoD items are unchecked — review the file if intentional.
    ```
 
-   Niente tabelle, niente next steps, niente ripetizione dei comandi.
+   No tables, no next steps, no repetition of commands.
 
-## Note operative
+## Operational notes
 
-- **`/task-done` non elimina il branch di feature**: è responsabilità del dev
-  (tipicamente GitHub lo fa auto-delete al merge). Se resta locale:
-  `git branch -d feature/<ID>-*`.
-- **Se il task era saltato dallo stato review** (chiuso direttamente da
-  in-progress), va bene: succede per task piccoli o hotfix. Il comando
-  aggiunge una riga al log del task con nota
+- **`/task-done` does not delete the feature branch**: that's the dev's
+  responsibility (GitHub typically auto-deletes on merge). If it remains
+  locally: `git branch -d feature/<ID>-*`.
+- **If the task skipped the review state** (closed directly from
+  in-progress), that's fine: it happens for small tasks or hotfixes. The command
+  adds a line to the task log noting
   `skipped review (closed directly from in-progress)`.
-- **DoD incompleta**: il comando NON blocca. È responsabilità del dev (e del
-  reviewer della PR) decidere se le voci non spuntate sono accettabili
-  (es. `N/A per Python`) o se il task va riaperto.
+- **Incomplete DoD**: the command does NOT block. It's up to the dev (and the
+  PR reviewer) to decide if unchecked items are acceptable
+  (e.g. `N/A for Python`) or if the task should be reopened.

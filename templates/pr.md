@@ -2,26 +2,26 @@
 
 Closes {{ID}}
 
-## Cosa cambia
+## What changes
 
-<!-- Riassunto di 2-4 righe. Che problema risolve, che feature introduce. -->
+<!-- 2-4 line summary. What problem it solves, what feature it introduces. -->
 
-## Componenti toccati
+## Components touched
 
-<!-- Es. server, configurator, schema DB (Liquibase), ecc. -->
+<!-- E.g. server, configurator, DB schema (Liquibase), etc. -->
 
-## Tipo di cambiamento
+## Type of change
 
-- [ ] Bug fix (non breaking)
-- [ ] Nuova feature (non breaking)
+- [ ] Bug fix (non-breaking)
+- [ ] New feature (non-breaking)
 - [ ] Breaking change
 - [ ] Refactor / cleanup
-- [ ] Documentazione / config
-- [ ] Schema DB / migrazione Liquibase
+- [ ] Documentation / config
+- [ ] DB schema / Liquibase migration
 
-## Come testare
+## How to test
 
-<!-- Passi manuali riproducibili. Scenari coperti da test automatici. -->
+<!-- Reproducible manual steps. Scenarios covered by automated tests. -->
 
 1.
 2.
@@ -29,21 +29,21 @@ Closes {{ID}}
 
 ## Definition of Done
 
-<!-- Copiare lo stato della DoD dal task, spuntando ciò che è fatto. -->
+<!-- Copy the DoD state from the task, checking what is done. -->
 
-- [ ] Implementazione completa
-- [ ] Lint passa
-- [ ] Typecheck passa
-- [ ] Build passa
-- [ ] Test aggiornati/aggiunti
-- [ ] Migrazione DB (se presente) testata su snapshot pulito
-- [ ] Documentazione aggiornata
-- [ ] Backward compatibility verificata
+- [ ] Implementation complete
+- [ ] Lint passes
+- [ ] Typecheck passes
+- [ ] Build passes
+- [ ] Tests updated/added
+- [ ] DB migration (if present) tested on a clean snapshot
+- [ ] Documentation updated
+- [ ] Backward compatibility verified
 
-## Screenshot / evidenze
+## Screenshots / evidence
 
-<!-- Se UI: prima/dopo. Se API: esempio request/response. -->
+<!-- If UI: before/after. If API: example request/response. -->
 
-## Note per il reviewer
+## Notes for the reviewer
 
-<!-- Aree critiche, scelte controverse, domande aperte. -->
+<!-- Critical areas, controversial choices, open questions. -->
