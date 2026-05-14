@@ -2,6 +2,10 @@
  * OTA update per agentic-harness.
  *
  * Flow (chiamato da `session_start` con reason === "startup"):
+ *   0. Se l'installazione corrente è **pinned** (source spec con `@<ref>`),
+ *      esce subito senza prompt: `pi update` skippa i pinned per docs PI,
+ *      quindi proporre l'update sarebbe un falso start. Per upgradare a
+ *      una nuova release l'utente deve fare `pi install` con il nuovo ref.
  *   1. Legge versione corrente da package.json (lib/version.ts).
  *   2. Cache TTL su ~/.pi/agent/.cache/agentic-harness-ota.json (default 6h).
  *      Se la cache è fresca, riusa l'ultima latestSeen senza chiamare GitHub.
@@ -10,7 +14,9 @@
  *   4. Confronto semver naive (split su "."): se latest > current,
  *      propone ctx.ui.confirm(...).
  *   5. Se l'utente accetta: execFile("pi", ["update", "--extension", spec])
- *      con timeout 60s. Su successo: ctx.ui.notify(success) + ctx.reload().
+ *      con `-l` aggiunto se l'installazione è **project-local** (scope
+ *      rilevato da install-info.ts). Timeout 60s. Su successo:
+ *      ctx.ui.notify(success) + ctx.reload().
  *   6. Su qualsiasi errore (rete, 404, timeout, exec): notify error o
  *      silenzio totale (vedi nota in catch). Mai bloccare lo startup.
  *
@@ -23,6 +29,8 @@ import { promisify } from "node:util";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
+
+import type { InstallInfo } from "./install-info.js";
 
 const execFileP = promisify(execFile);
 
@@ -127,9 +135,19 @@ interface PiUpdateResult {
   stderr: string;
 }
 
-async function runPiUpdate(): Promise<PiUpdateResult> {
+async function runPiUpdate(info: InstallInfo): Promise<PiUpdateResult> {
+  // Se sappiamo già la source spec esatta dalle settings (es. install
+  // locale via path o spec git non-canonica), usiamola — evita di creare
+  // una seconda entry quando `pi update` non riconosce il match.
+  // Fallback: PI_PACKAGE_SPEC canonico per repo+default branch.
+  const spec = info.source ?? PI_PACKAGE_SPEC;
+  // `-l` per project-local install: aggiorna l'entry in <cwd>/.pi/settings.json
+  // anziché quella globale (per parità con `pi install -l`).
+  const args = info.scope === "local"
+    ? ["update", "--extension", spec, "-l"]
+    : ["update", "--extension", spec];
   try {
-    const { stdout, stderr } = await execFileP("pi", ["update", "--extension", PI_PACKAGE_SPEC], {
+    const { stdout, stderr } = await execFileP("pi", args, {
       timeout: PI_UPDATE_TIMEOUT_MS,
       maxBuffer: 4 * 1024 * 1024,
     });
@@ -159,8 +177,20 @@ export interface OtaCtx {
 
 /**
  * Punto d'ingresso. Mai lanciare: chi chiama usa `void ...catch(noop)`.
+ *
+ * @param info  Risultato di detectInstallInfo(): scope (global/local) +
+ *              pinning. Se pinned, esce immediatamente senza prompt.
  */
-export async function maybeProposeUpdate(ctx: OtaCtx, currentVersion: string): Promise<void> {
+export async function maybeProposeUpdate(
+  ctx: OtaCtx,
+  currentVersion: string,
+  info: InstallInfo,
+): Promise<void> {
+  // Pinned install: `pi update` salterebbe questo pacchetto per docs PI.
+  // Proporre il prompt sarebbe un falso start — l'unico modo di upgradare
+  // è `pi install` con un nuovo ref. Restiamo silenziosi.
+  if (info.pinned) return;
+
   const now = Date.now();
   let latest: string | null = null;
 
@@ -175,14 +205,17 @@ export async function maybeProposeUpdate(ctx: OtaCtx, currentVersion: string): P
   if (!latest) return;
   if (!isNewer(latest, currentVersion)) return;
 
+  // Etichetta di scope nel dialog: utile per il dev sa cosa sta per cambiare.
+  const scopeLabel = info.scope === "local" ? "project-local" : "global";
   const ok = await ctx.ui.confirm(
     `AH ${currentVersion} → ${latest}`,
-    `Nuova versione di agentic-harness disponibile. Aggiornare ora? (richiede reload dell'ambiente)`,
+    `Nuova versione di agentic-harness disponibile (install ${scopeLabel}). ` +
+      `Aggiornare ora? (richiede reload dell'ambiente)`,
   );
   if (!ok) return;
 
   ctx.ui.notify("Aggiornamento agentic-harness in corso…", "info");
-  const result = await runPiUpdate();
+  const result = await runPiUpdate(info);
   if (!result.ok) {
     const detail = (result.stderr || result.stdout || "").slice(0, 200).trim();
     ctx.ui.notify(`Aggiornamento fallito: ${detail}`, "error");

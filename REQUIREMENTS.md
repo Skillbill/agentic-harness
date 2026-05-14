@@ -43,7 +43,8 @@ Quando un ambiente PI con AH installata parte, viene fatto un check OTA di aggio
 - **Comportamento offline / errori di rete**: silenzio totale. Mai bloccare lo startup, mai mostrare errori all'utente — il check è best-effort.
 - **Granularità del reload**: PI espone `ctx.reload()` su `ExtensionContext`. Equivalente a `/reload`. Trattato come *terminal* nell'handler (chiamato e `return` subito).
 - **Breaking changes**: in v1 non viene mostrato il changelog. Iterazione successiva: mostrare `body` della GitHub Release nel `ctx.ui.confirm`.
-- **Pinned installs**: se l'utente è su `@vX.Y.Z` pinnato, `pi update` salta (per docs PI). AH propone comunque l'update; se l'utente accetta, l'errore di `pi update` viene mostrato come notify. Documentato.
+- **Install scope (global vs project-local)**: rilevato a runtime da `lib/install-info.ts` ispezionando `.pi/settings.json` del cwd (project) e `~/.pi/agent/settings.json` (global). Su install project-local, `pi update` viene chiamato con `-l` per aggiornare l'entry di progetto. La source spec esatta letta dalle settings viene riusata per `pi update`, evitando di creare entry duplicate.
+- **Pinned installs**: se la source spec dichiara `@<ref>`, `pi update` salterebbe il pacchetto (docs PI). AH rileva il pinning dalle settings e **non mostra alcun prompt** — niente falsi start. Per upgradare un'install pinnata, l'utente deve fare `pi install` con il nuovo ref.
 
 ## Fuori scope (per ora)
 
@@ -52,7 +53,6 @@ Quando un ambiente PI con AH installata parte, viene fatto un check OTA di aggio
 - Distribuzione di estensioni di terze parti diverse da AH.
 - Pinning di versione configurabile lato AH (`pi install` già lo supporta nativamente con `@<ref>`).
 - Publish su npm registry (cambia il canale ma non i requisiti R-0001/R-0002 — può essere una iterazione successiva).
-- Lettura di `~/.pi/agent/settings.json` per nascondere il prompt agli utenti con install pinnato.
 
 ## Vincoli di progetto
 
