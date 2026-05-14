@@ -8,6 +8,8 @@ In aggiunta alle sezioni standard di Keep a Changelog (`Added`, `Changed`, `Depr
 
 ## [Unreleased]
 
+## [0.7.0] — 2026-05-14
+
 ### Added
 - `CHANGELOG.md` in formato Keep a Changelog 1.1.0, popolato retroattivamente da v0.1.0 a v0.6.0.
 - Framework di consumer migration: `lib/migrate-consumer.ts` (runner) + `lib/migrations/{index,types}.ts` (registry). Marker `<consumerRoot>/.pi/ah-version` per tracciare l'ultima versione di AH applicata al progetto. Lista migration inizialmente vuota — v0.6.0 è baseline.
@@ -76,7 +78,8 @@ In aggiunta alle sezioni standard di Keep a Changelog (`Added`, `Changed`, `Depr
 ### Migration
 - Nessuna azione richiesta — prima release pubblica.
 
-[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/Skillbill/agentic-harness/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/Skillbill/agentic-harness/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/Skillbill/agentic-harness/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/Skillbill/agentic-harness/compare/v0.3.0...v0.4.0
