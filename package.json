@@ -1,0 +1,43 @@
+{
+  "name": "@skillbill/agentic-harness",
+  "version": "0.1.0",
+  "description": "SCRUM-lite task workflow extension for pi-coding-agent (PI). Adds task commands, a codebase-doc tool, and context-injection hooks.",
+  "type": "module",
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "agentic-harness",
+    "scrum",
+    "task-workflow"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Skillbill/agentic-harness.git"
+  },
+  "license": "MIT",
+  "author": "Toto Antonio Castaldi",
+  "pi": {
+    "extensions": ["extensions/index.ts"],
+    "skills": ["skills"],
+    "prompts": ["prompts"]
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "^0.74.0",
+    "typebox": "^1.1.24"
+  },
+  "files": [
+    "extensions",
+    "lib",
+    "prompts",
+    "skills",
+    "templates",
+    "procedures",
+    "CLAUDE.md",
+    "WORKFLOW.md",
+    "task-layout.md",
+    "REQUIREMENTS.md"
+  ],
+  "engines": {
+    "node": ">=20.6.0"
+  }
+}

@@ -1,15 +1,21 @@
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { readdirSync, readFileSync, existsSync } from "node:fs";
 import { join, basename, dirname, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { execSync } from "node:child_process";
-import { registerPrompt } from "./register-prompt.js";
-import { registerContextInspector } from "./context-inspector.js";
-import { buildCodebaseIndex } from './codebase-index.js';
-import { registerLoadCodebaseDoc } from './load-codebase-doc.js';
+import { registerPrompt } from "../lib/register-prompt.js";
+import { registerContextInspector } from "../lib/context-inspector.js";
+import { buildCodebaseIndex } from "../lib/codebase-index.js";
+import { registerLoadCodebaseDoc } from "../lib/load-codebase-doc.js";
+import { readAhVersion } from "../lib/version.js";
+import { maybeProposeUpdate, type OtaCtx } from "../lib/ota-update.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const commandsDir = join(__dirname, "commands");
+// repoRoot = parent di extensions/ — è la dir radice dell'estensione,
+// quella dove vivono prompts/, skills/, templates/, package.json.
+// $EXT_DIR nei prompt template viene risolto a questo valore.
+const repoRoot = dirname(__dirname);
+const promptsDir = join(repoRoot, "prompts");
 
 /**
  * Recursively collect all .md files under a directory.
@@ -71,11 +77,23 @@ export default function (pi: ExtensionAPI) {
   // Tool: load_codebase_doc — on-demand path-safe loader for .pi/codebase/*.md
   registerLoadCodebaseDoc(pi);
 
-  for (const file of readdirSync(commandsDir)) {
+  for (const file of readdirSync(promptsDir)) {
     if (!file.endsWith(".md")) continue;
     const name = `ah:${basename(file, ".md")}`;
-    registerPrompt(pi, name, join(commandsDir, file), __dirname);
+    registerPrompt(pi, name, join(promptsDir, file), repoRoot);
   }
+
+  // OTA: check di aggiornamento solo al primo avvio della sessione PI
+  // (reason === "startup"). Fire-and-forget: niente await, niente errori
+  // che si propagano fuori — non deve mai bloccare lo startup.
+  // Vedi lib/ota-update.ts e REQUIREMENTS.md R-0002.
+  const ahVersion = readAhVersion(repoRoot);
+  pi.on("session_start", async (event, ctx) => {
+    if ((event as { reason?: string }).reason !== "startup") return;
+    void maybeProposeUpdate(ctx as unknown as OtaCtx, ahVersion).catch(() => {
+      // silenzio: il check OTA è best-effort
+    });
+  });
 
   pi.on("session_start", async (_event, _ctx) => {
     // Detect current task
