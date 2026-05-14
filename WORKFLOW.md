@@ -158,3 +158,12 @@ git switch main && git pull
 
 **Devo aggiungere `.pi/git/` al `.gitignore` del progetto?**
 No. PI v0.74.0 clona lì i Pi Package installati via `pi install git:...` e piazza da solo un `.gitignore` self-managed (`*\n!.gitignore`) dentro `.pi/git/` che ignora tutto il contenuto cloned. Tracci solo quel file (`git add .pi/git/.gitignore` una tantum) e `git status` resta pulito. Niente da aggiungere al `.gitignore` root.
+
+**Vedo il banner `Package Updates Available` anche se non c'è una nuova release di AH — perché?**
+Sugli install **unpinned** (es. `pi install git:github.com/Skillbill/agentic-harness` senza `@vX.Y.Z`), PI confronta il **commit git** del clone locale in `.pi/git/...` con HEAD del default branch su origin, *non* `package.json#version`. Quindi **ogni commit su `main` di AH** triggera il banner, anche se è solo un fix di doc che non bumpa la versione semver. Tre strade:
+
+1. **`pi update`** allinea il clone locale a HEAD di `main` — banner via fino al prossimo commit upstream.
+2. **Pinna a un tag** re-installando con `pi install -l git:github.com/Skillbill/agentic-harness@vX.Y.Z`: su install pinnati PI mostra il banner solo per nuovi tag, non per nuovi commit.
+3. **Ignora**: il banner è informativo, non blocca nulla.
+
+Implicazione collegata sul consumer migration framework (R-0003): le migration scattano sulla `package.json#version` di AH, quindi commit di sola documentazione che non bumpano la versione **non** triggerano alcuna migration anche dopo `pi update`. È coerente — la versione semver è il contratto.

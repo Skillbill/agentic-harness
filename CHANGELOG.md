@@ -10,6 +10,7 @@ In aggiunta alle sezioni standard di Keep a Changelog (`Added`, `Changed`, `Depr
 
 ### Added
 - `WORKFLOW.md`: FAQ su `.pi/git/` — chiarisce che PI v0.74.0 piazza già un `.gitignore` self-managed nella directory e il consumer deve solo trackarlo (no entry nel `.gitignore` root).
+- `WORKFLOW.md`: FAQ su quando triggera il banner `Package Updates Available` — PI traccia il commit ref upstream, non `package.json#version`, quindi su install unpinned ogni commit di `main` di AH causa il banner. Documentate le tre vie (`pi update`, pinning a tag, ignore) e l'implicazione sul framework di consumer migration (le migration scattano sulla versione semver, non sul ref).
 
 ## [0.7.0] — 2026-05-14
 
