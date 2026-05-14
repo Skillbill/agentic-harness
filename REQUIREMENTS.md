@@ -28,40 +28,46 @@ AH è un'estensione di PI e può essere installata con il comando `pi install`.
 - **Manifest PI**: il campo `pi` di `package.json` punta esplicitamente a `extensions/index.ts`, `skills`, `prompts` (cintura di sicurezza: l'auto-discovery non promuove i file `.ts` in `lib/` a estensioni separate).
 - **Peer dependencies**: `@earendil-works/pi-coding-agent` e `typebox` (entrambe fornite da PI, non bundlate da AH — vedi `docs/packages.md` di PI).
 
-### R-0002 — Check OTA all'avvio e aggiornamento on-demand
+### R-0002 — ~~Check OTA all'avvio e aggiornamento on-demand~~ → DECLINATO in v0.5.0
 
-Quando un ambiente PI con AH installata parte, viene fatto un check OTA di aggiornamento di AH.
+> **Stato**: declinato. Implementato in v0.1.0 (PR #1) + v0.2.0 (PR #2) + v0.3.0 (PR #3 fix), poi rimosso in v0.5.0.
+>
+> **Rationale**: PI v0.74.0 mostra **nativamente** un banner `Package Updates Available` allo startup quando un pacchetto installato ha un nuovo ref upstream — vedi screenshot in PR del cleanup. L'OTA custom di AH duplicava questa notifica con UX leggermente più ricca (modal interattivo, `ctx.reload()` automatico) ma:
+>
+> - aggiungeva ~280 righe tra modulo OTA, install-info, version-reader, cache I/O e dialog;
+> - introduceva edge case di manutenzione (cache stale, network errors, `pi update` flag invalidi, install-path detection, pinning detection);
+> - mostrava il prompt **in concorrenza** col banner PI nativo, creando rumore visivo;
+> - dipendeva da `ctx.reload()` con behaviour subtle (terminal, perde state in-memory) e dal subprocess `pi update`.
+>
+> **Decisione**: rimosso tutto il codice OTA. AH delega completamente al meccanismo nativo di PI. L'utente lancia `pi update` (o `pi update --extension git:...`) quando vuole, da terminale, fuori dalla sessione pi.
+>
+> **Conseguenze per l'utente**:
+> - Su unpinned install: PI mostra il banner; un comando manuale aggiorna il pacchetto. Niente reload automatico — l'utente riavvia `pi` per ricaricare il nuovo codice.
+> - Su pinned install (`@vX.Y.Z`): PI segue la sua semantica standard (`pi update` salta i pinned). Per upgradare: `pi install` con il nuovo ref.
+>
+> Vedi `CLAUDE.md` § *How to release a new version* e § *Install scopes* per il flow operativo aggiornato.
 
-- Se è presente una nuova versione, AH **propone** l'aggiornamento al dev (dialog `ctx.ui.confirm`).
-- In caso di risposta positiva, AH effettua l'aggiornamento (`pi update --extension git:github.com/Skillbill/agentic-harness`) e invoca il **reload** dell'estensione (`ctx.reload()`).
-- In caso di risposta negativa, lo startup prosegue normalmente con la versione installata.
+## Fuori scope
 
-**Decisioni**:
-- **Hook**: `pi.on("session_start", …)` con guard `event.reason === "startup"` (non `"reload"` né `"new"`/`"resume"`/`"fork"`).
-- **Sorgente versione disponibile**: GitHub Releases API (`GET https://api.github.com/repos/Skillbill/agentic-harness/releases/latest`). Anonimo (no token), `User-Agent: agentic-harness-ota/<current>`.
-- **Frequenza del check**: cache con TTL 6h in `~/.pi/agent/.cache/agentic-harness-ota.json`. Bilancia rate-limit GitHub (60 req/h unauth) e tempestività.
-- **Comportamento offline / errori di rete**: silenzio totale. Mai bloccare lo startup, mai mostrare errori all'utente — il check è best-effort.
-- **Granularità del reload**: PI espone `ctx.reload()` su `ExtensionContext`. Equivalente a `/reload`. Trattato come *terminal* nell'handler (chiamato e `return` subito).
-- **Breaking changes**: in v1 non viene mostrato il changelog. Iterazione successiva: mostrare `body` della GitHub Release nel `ctx.ui.confirm`.
-- **Install scope (global vs project-local)**: rilevato a runtime da `lib/install-info.ts` ispezionando `.pi/settings.json` del cwd (project) e `~/.pi/agent/settings.json` (global). Su install project-local, `pi update` viene chiamato con `-l` per aggiornare l'entry di progetto. La source spec esatta letta dalle settings viene riusata per `pi update`, evitando di creare entry duplicate.
-- **Pinned installs**: se la source spec dichiara `@<ref>`, `pi update` salterebbe il pacchetto (docs PI). AH rileva il pinning dalle settings e **non mostra alcun prompt** — niente falsi start. Per upgradare un'install pinnata, l'utente deve fare `pi install` con il nuovo ref.
-
-## Fuori scope (per ora)
-
-- Auto-update silenzioso senza conferma del dev.
-- Rollback automatico a versione precedente.
 - Distribuzione di estensioni di terze parti diverse da AH.
-- Pinning di versione configurabile lato AH (`pi install` già lo supporta nativamente con `@<ref>`).
-- Publish su npm registry (cambia il canale ma non i requisiti R-0001/R-0002 — può essere una iterazione successiva).
+- Publish su npm registry (cambia il canale ma non il requisito R-0001 — può essere una iterazione successiva).
 
 ## Vincoli di progetto
 
-- Rispetto della **Git Safety Rule** (`CLAUDE.md`): l'aggiornamento OTA non implica operazioni git nel repo del dev; agisce esclusivamente sulla directory di installazione del pacchetto PI.
-- Compatibilità con i contratti autoritativi esistenti (`WORKFLOW.md`, `task-layout.md`): l'aggiornamento non deve invalidare task in corso (cartelle `tasks/T-NNN-*` del consumer).
+- Rispetto della **Git Safety Rule** (`CLAUDE.md`): l'estensione non muta git state nel repo del dev.
+- Compatibilità con i contratti autoritativi esistenti (`WORKFLOW.md`, `task-layout.md`).
 - L'estensione resta caricata da PI tramite il `default export` di `extensions/index.ts`.
 
-## Decisioni risolte (storicizzate dalle open questions originali)
+## Decisioni storicizzate
 
-1. *PI offre già primitive per `pi install` e per il reload di un'estensione?* → **Sì**. `pi install`/`pi update` documentati in `docs/packages.md` di PI v0.74.0 (npm, git, https, local paths). Reload via `ctx.reload()` documentato in `docs/extensions.md` § `ctx.reload()`. Nessuna modifica upstream necessaria.
-2. *Il check OTA gira dentro `index.ts` o come hook dedicato?* → **Hook `session_start`** con guard `event.reason === "startup"`. Fire-and-forget per non bloccare il factory async.
-3. *La proposta di aggiornamento passa per `pi.sendUserMessage` o per un canale UI dedicato?* → **Canale UI**: `ctx.ui.confirm(title, message)` (modale TUI). `pi.sendUserMessage` è asincrono e finirebbe come input dell'agent — sbagliato per una conferma sincrona.
+1. *PI offre già primitive per `pi install` e per il reload di un'estensione?* → **Sì**. `pi install`/`pi update` documentati in `docs/packages.md` di PI v0.74.0 (npm, git, https, local paths). Reload via `ctx.reload()` o riavvio sessione.
+2. *Il check OTA gira dentro `index.ts` o come hook dedicato?* → **N/A**: R-0002 declinato in v0.5.0. PI ha un banner nativo `Package Updates Available` che copre il caso d'uso senza codice custom.
+3. *La proposta di aggiornamento passa per `pi.sendUserMessage` o per un canale UI dedicato?* → **N/A**: R-0002 declinato. Nessun prompt custom: l'utente vede il banner PI e lancia `pi update` manualmente.
+
+## Storia dei rilasci
+
+- **v0.1.0** (PR #1): Pi Package distribuibile (R-0001) + OTA custom completo (R-0002).
+- **v0.2.0** (PR #2): scope detection (project-local vs global) + pinning detection per OTA.
+- **v0.3.0** (PR #3): fix `pi update -l` (l'opzione non esiste lato PI).
+- **v0.4.0**: test release per validare il flow OTA end-to-end (nessun cambiamento di codice).
+- **v0.5.0**: cleanup — OTA custom rimosso dopo aver osservato il banner nativo di PI. R-0001 invariato.
