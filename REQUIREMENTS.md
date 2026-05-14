@@ -47,6 +47,28 @@ AH è un'estensione di PI e può essere installata con il comando `pi install`.
 >
 > Vedi `CLAUDE.md` § *How to release a new version* e § *Install scopes* per il flow operativo aggiornato.
 
+### R-0003 — Versioning, Changelog & Consumer Migration
+
+A partire da v0.7.0 AH adotta un workflow di release formalizzato e un meccanismo di **consumer migration** applicato automaticamente al `session_start` di PI. Obiettivo: quando un progetto consumer aggiorna AH (es. v0.6.0 → v0.7.0 via `pi update`), AH deve essere in grado di portare lo stato del progetto in coerenza con la nuova versione senza interventi manuali del dev.
+
+**Decisioni**:
+
+- **CHANGELOG.md** in root, formato [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/), SemVer. Sezioni standard + sezione `Migration` per versione (italiano, prosa o pseudocodice). Popolato retroattivamente da v0.1.0. Shipped col Pi Package (incluso in `package.json#files`).
+- **GitHub Action** `.github/workflows/release.yml`: trigger su tag `v*.*.*`, estrae la sezione corrispondente da `CHANGELOG.md` con `awk` POSIX zero-deps e crea la release via `gh release create` (preinstallato sui runner GitHub-hosted). Niente `npm install`, niente actions di terze parti — minimizziamo la supply chain.
+- **Marker consumer**: `<consumerRoot>/.pi/ah-version`. Lettura tollerante: accetta plain text (`0.7.0\n`) o JSON `{ "version": "x.y.z" }`. Scritto da AH dopo ogni step di migration riuscito (checkpoint).
+- **Migration framework**: `lib/migrate-consumer.ts` (runner) + `lib/migrations/index.ts` (registry) + `lib/migrations/types.ts` (contratto `ConsumerMigration`) + `lib/migrations/v<M>_<m>_<p>.ts` (entries). Signature unica: `apply(consumerRoot, pi) => Promise<void>`. Ordine di applicazione: semver ascendente, con filtro `marker < target ≤ installed`.
+- **Idempotenza**: invariante obbligatoria — ogni `apply` deve essere safe da rieseguire (`mkdirSync(..., { recursive: true })`, `if (!existsSync) ...`, rename solo se source esiste e target no).
+- **Git Safety Rule** invariata: le migration **non eseguono** comandi git mutanti. Possono mutare file sotto `.pi/` e nel working tree, ma staging/commit/push restano del dev.
+- **Failure non-blocking**: errore su una migration → marker fermo all'ultimo step riuscito, errore stampato, AH continua a caricarsi. L'utente sistema e rilancia la sessione.
+- **Hook**: registrato dentro l'handler `session_start` esistente di `extensions/index.ts`, non in `before_agent_start`. Razionale: la migration è un'azione one-shot per sessione; `before_agent_start` gira per ogni turno LLM (come confermano gli handler `codebase-index` e `current-task-context` già presenti che fanno re-detection ad ogni turno) e non è il livello giusto.
+- **Lista iniziale**: vuota. v0.6.0 è baseline; il framework esiste e scrive il marker, ma non applica nulla. La prima migration arriva con v0.7.0.
+
+**Conseguenze per il dev di AH** (vedi `CLAUDE.md` § *How to release a new version* e § *Consumer migration*):
+
+- Ogni release richiede un aggiornamento di `CHANGELOG.md` **prima** del tag.
+- Step di compatibilità che toccano il filesystem del consumer vivono come **codice di migration**, non come istruzioni testuali nel changelog (anche se vanno comunque documentati nella sezione `Migration` corrispondente).
+- Il tag pushato attiva la GitHub Release automaticamente: non serve creare la release a mano sulla UI di GitHub.
+
 ## Fuori scope
 
 - Distribuzione di estensioni di terze parti diverse da AH.
@@ -71,3 +93,5 @@ AH è un'estensione di PI e può essere installata con il comando `pi install`.
 - **v0.3.0** (PR #3): fix `pi update -l` (l'opzione non esiste lato PI).
 - **v0.4.0**: test release per validare il flow OTA end-to-end (nessun cambiamento di codice).
 - **v0.5.0**: cleanup — OTA custom rimosso dopo aver osservato il banner nativo di PI. R-0001 invariato.
+- **v0.6.0**: test release per validare il banner nativo di PI in una catena di rilasci consecutivi (nessun cambiamento di codice).
+- **v0.7.0** (pianificata): introduce R-0003 — `CHANGELOG.md` (Keep a Changelog), GitHub Action `release.yml`, framework di consumer migration (`lib/migrate-consumer.ts` + `lib/migrations/`). Lista di migration inizialmente vuota: la baseline è v0.6.0.
