@@ -153,3 +153,8 @@ git switch main && git pull
 # l'agente propone il git mv in done/ e il commit, il dev li esegue
 # (o il dev lancia /ah:do-git-stuff per farli eseguire all'agente)
 ```
+
+## FAQ
+
+**Devo aggiungere `.pi/git/` al `.gitignore` del progetto?**
+No. PI v0.74.0 clona lì i Pi Package installati via `pi install git:...` e piazza da solo un `.gitignore` self-managed (`*\n!.gitignore`) dentro `.pi/git/` che ignora tutto il contenuto cloned. Tracci solo quel file (`git add .pi/git/.gitignore` una tantum) e `git status` resta pulito. Niente da aggiungere al `.gitignore` root.

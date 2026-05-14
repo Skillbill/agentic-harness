@@ -8,6 +8,9 @@ In aggiunta alle sezioni standard di Keep a Changelog (`Added`, `Changed`, `Depr
 
 ## [Unreleased]
 
+### Added
+- `WORKFLOW.md`: FAQ su `.pi/git/` — chiarisce che PI v0.74.0 piazza già un `.gitignore` self-managed nella directory e il consumer deve solo trackarlo (no entry nel `.gitignore` root).
+
 ## [0.7.0] — 2026-05-14
 
 ### Added
