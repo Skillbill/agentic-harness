@@ -133,7 +133,7 @@ and every state is recoverable from the filesystem alone:
                   ────────────────────────────────────────▶
 
       ┌─────────┐     ┌──────┐     ┌─────────┐     ┌────────┐
-      │ discuss │──▶│ plan │──▶│ execute │──▶│ verify │──▶ /ah:pr-open
+      │ discuss │────▶│ plan │────▶│ execute │────▶│ verify │──▶ /ah:pr-open
       └─────────┘     └──────┘     └─────────┘     └────────┘
            │             │             │              │
            ▼             ▼             ▼              ▼
