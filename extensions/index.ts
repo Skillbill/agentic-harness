@@ -15,6 +15,8 @@ import {
   type TaskBucket,
 } from "../lib/show-task.js";
 import { TaskPopup } from "../lib/task-popup.js";
+import { InfoPopup } from "../lib/info-popup.js";
+import { readInstalledVersion } from "../lib/migrate-consumer.js";
 import {
   type AhConfig,
   AH_CONFIG_DEFAULTS,
@@ -151,6 +153,73 @@ export default function (pi: ExtensionAPI) {
       `[agentic-harness] registerShortcut failed (PI too old?): ${err instanceof Error ? err.message : String(err)}`,
     );
   }
+
+  // R-0009: /ah:help — single-page popup with version + slash-command list +
+  // keyboard shortcut list. Registered via pi.registerCommand (not as a
+  // prompt) so the handler runs locally and never burns an LLM turn.
+  // Slash commands are discovered dynamically via pi.getCommands() filtered
+  // by `ah:` prefix, so the popup stays in sync when prompts are added or
+  // removed. Keyboard shortcuts are hard-coded — they're declared right
+  // above this block and there's no API to enumerate them at runtime.
+  pi.registerCommand("ah:help", {
+    description: "Show agentic-harness help in an overlay (version, commands, shortcuts)",
+    handler: async (_args, ctx) => {
+      if (!ctx.hasUI) {
+        ctx.ui?.notify?.("/ah:help requires an interactive UI", "warning");
+        return;
+      }
+
+      let version = "unknown";
+      try {
+        version = readInstalledVersion();
+      } catch {
+        // ignore — popup still works without the version banner
+      }
+
+      const ahCommands = pi
+        .getCommands()
+        .filter((c) => c.name.startsWith("ah:"))
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+      const cmdRows = ahCommands.map(
+        (c) => `  /${c.name}${"".padEnd(Math.max(1, 22 - c.name.length), " ")} ${c.description ?? ""}`.trimEnd(),
+      );
+
+      const shortcutRows = [
+        "  alt+p   📋 In progress popup (cycle ↑/↓, esc closes)",
+        "  alt+k   📥 Backlog popup     (cycle ↑/↓, esc closes)",
+        "  alt+c   ✅ Recently closed   (cycle ↑/↓, esc closes)",
+      ];
+
+      const lines: string[] = [];
+      lines.push("Slash commands");
+      lines.push(...(cmdRows.length > 0 ? cmdRows : ["  (none registered)"]));
+      lines.push("");
+      lines.push("Keyboard shortcuts");
+      lines.push(...shortcutRows);
+      lines.push("");
+      lines.push("Docs:  https://github.com/Skillbill/agentic-harness");
+
+      await ctx.ui.custom<true>(
+        (_tui, _theme, _kb, done) =>
+          new InfoPopup({
+            title: "🆘 agentic-harness — help",
+            subtitle: `v${version}`,
+            lines,
+            footer: "esc close",
+            done: () => done(true),
+          }),
+        {
+          overlay: true,
+          overlayOptions: {
+            width: "75%",
+            maxHeight: "85%",
+            anchor: "center",
+          },
+        },
+      );
+    },
+  });
 
   pi.on("session_start", async (_event, ctx) => {
     // R-0004: verify that the currently loaded PI runtime satisfies AH's

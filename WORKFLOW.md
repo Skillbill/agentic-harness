@@ -69,6 +69,7 @@ All AH commands are prefixed with `ah:`.
 | `/ah:pr-open`        | Verify DoD and prepare PR description                     |
 | `/ah:map-codebase`   | Analyze the codebase and produce 7 structured docs in `.pi/codebase/` |
 | `/ah:do-git-stuff`   | Run mutating git commands delegated by the dev            |
+| `/ah:help`           | Overlay with version, slash command list, and keyboard shortcuts |
 
 ### Keyboard shortcuts
 

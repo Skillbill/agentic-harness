@@ -177,6 +177,23 @@ Starting from v0.12.0, AH registers three keyboard shortcuts via PI's `pi.regist
 - When adding a fourth shortcut (or moving keys), pick from the alt+letter combinations not reserved by PI's editor / app keymaps (`alt+b`, `alt+d`, `alt+f`, `alt+y`, `alt+v`, `alt+up`, `alt+enter`, `alt+left`, `alt+right`, `alt+delete`, `alt+backspace` are all taken — see `core/keybindings.d.ts` in PI).
 - The popup is a single-page renderer (no intra-task scroll). If the body cap becomes too restrictive in practice, the right move is a paged Component with `pageUp` / `pageDown` — not raising the cap, which would dwarf the chat area.
 
+### R-0009 — `/ah:help` overlay
+
+Starting from v0.13.0, AH ships a `/ah:help` slash command that opens a single-page TUI overlay with the installed AH version, the list of AH slash commands, and the keyboard shortcuts from R-0008. ESC closes.
+
+**Decisions**:
+
+- **Registered via `pi.registerCommand`, not via a prompt file**. The default registration path for `/ah:*` commands is the `prompts/*.md` loop in `extensions/index.ts`, which routes the body through `pi.sendUserMessage` so the LLM produces the response. `/ah:help` deliberately bypasses that — the popup is purely local (overlay + raw filesystem read of `package.json`) and never burns an LLM turn.
+- **Command list is discovered, not hard-coded**. The handler calls `pi.getCommands().filter(c => c.name.startsWith("ah:"))` so the popup automatically reflects whatever set of prompts is currently registered (after `/ah:standup` was dropped in v0.11.0, after `/ah:help` itself was added in v0.13.0, etc.). The shortcut list, by contrast, is hard-coded — there is no public PI API to enumerate registered shortcuts.
+- **Layout**: title (`🆘 agentic-harness — help`), subtitle (`vX.Y.Z`), separator, "Slash commands" section, blank line, "Keyboard shortcuts" section, blank line, docs link, separator, footer (`esc close`).
+- **Reuse, not generalization**: a new `lib/info-popup.ts` Component sits next to `lib/task-popup.ts`. Both duck-type pi-tui's `Component` and recognize ESC from a raw ANSI byte. They share the `clipToWidth` helper conceptually but each owns its own copy — a real generalization (a `BasePopup` class) isn't justified by two call sites.
+- **Fallback on missing UI**: if `ctx.hasUI` is false (RPC / print mode), the handler returns early after a `ctx.ui.notify` (when notify is available) instead of crashing.
+
+**Consequences for the AH dev**:
+- When you add or remove a `prompts/*.md` file, `/ah:help` updates on its own — no doc churn here.
+- When you add a new keyboard shortcut in `extensions/index.ts`, also append a row to the hard-coded `shortcutRows` array in the `/ah:help` handler. Same applies if you change the key for an existing shortcut.
+- Do not add LLM-bound content to the popup body (no `$@`, `$EXT_DIR`, or `pi.sendUserMessage` from inside the handler). The popup is meant to be cheap — a single overlay open / close cycle should not cost a token.
+
 ## Out of scope
 
 - Distribution of third-party extensions other than AH.
@@ -212,3 +229,4 @@ Starting from v0.12.0, AH registers three keyboard shortcuts via PI's `pi.regist
 - **v0.10.1**: visibility fix for the priority badge — uses a fixed 4-char `[XY]` token (`!!`/`^ `/` ·`/`v `) instead of a single-character column where NORMAL rendered as blank space. Limited to the `In progress` and `Backlog` sections of `/ah:project-status`.
 - **v0.11.0**: drops the unused `/ah:standup` slash command. `/ah:project-status` covers the same use case.
 - **v0.12.0**: introduces R-0008 — three keyboard shortcuts (`alt+p`, `alt+k`, `alt+c`) that open a TUI overlay listing the tasks of a single bucket. New `lib/show-task.ts` listing/sort helpers and `lib/task-popup.ts` overlay component. No consumer migration.
+- **v0.13.0**: introduces R-0009 — `/ah:help` slash command that opens a single-page overlay (`lib/info-popup.ts`) showing the AH version, the AH command list (discovered dynamically), and the shortcut list from R-0008. Registered via `pi.registerCommand` so it never burns an LLM turn.

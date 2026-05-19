@@ -8,6 +8,19 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 
 ## [Unreleased]
 
+## [0.13.0] — 2026-05-19
+
+### Added
+- **(R-0009)** `/ah:help` slash command. Opens a single-page TUI overlay with the installed AH version, the list of AH slash commands (discovered dynamically via `pi.getCommands()` and filtered by the `ah:` prefix so it stays in sync as prompts are added or removed), and the three keyboard shortcuts registered in v0.12.0. `ESC` closes. Unlike every other `/ah:*` command, `/ah:help` does **not** flow through `pi.sendUserMessage` — the handler is registered with `pi.registerCommand` and runs entirely locally, so opening help never burns an LLM turn.
+- New TUI module `lib/info-popup.ts` (static read-only overlay; sibling of `lib/task-popup.ts`, no navigation — just title + body + ESC).
+- Requirement **R-0009** in `REQUIREMENTS.md`.
+
+### Changed
+- `WORKFLOW.md` command table gains the `/ah:help` row.
+
+### Migration
+- No action required.
+
 ## [0.12.0] — 2026-05-19
 
 ### Added
@@ -206,7 +219,8 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 ### Migration
 - No action required — first public release.
 
-[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.12.0...HEAD
+[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.13.0...HEAD
+[0.13.0]: https://github.com/Skillbill/agentic-harness/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/Skillbill/agentic-harness/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/Skillbill/agentic-harness/compare/v0.10.1...v0.11.0
 [0.10.1]: https://github.com/Skillbill/agentic-harness/compare/v0.10.0...v0.10.1
