@@ -8,6 +8,14 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 
 ## [Unreleased]
 
+## [0.17.1] — 2026-05-19
+
+### Removed
+- `node_modules/typebox` (a symlink to the original dev's local PI install — `/home/toto/.nvm/.../@earendil-works/pi-coding-agent/node_modules/typebox`) was committed in `4eba528` despite `.gitignore` correctly listing `node_modules/`. It must have been added with `git add -f`. Untracked with `git rm --cached`: the symlink is a broken pointer on any other machine and `typebox` is already declared as a `peerDependency` in `package.json` (PI provides it at runtime). The local symlink is kept on the original dev's machine for editor TS resolution; it just isn't versioned anymore.
+
+### Migration
+- No action required.
+
 ## [0.17.0] — 2026-05-19
 
 ### Added
@@ -326,7 +334,8 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 ### Migration
 - No action required — first public release.
 
-[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.17.0...HEAD
+[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.17.1...HEAD
+[0.17.1]: https://github.com/Skillbill/agentic-harness/compare/v0.17.0...v0.17.1
 [0.17.0]: https://github.com/Skillbill/agentic-harness/compare/v0.16.2...v0.17.0
 [0.16.2]: https://github.com/Skillbill/agentic-harness/compare/v0.16.1...v0.16.2
 [0.16.1]: https://github.com/Skillbill/agentic-harness/compare/v0.16.0...v0.16.1
