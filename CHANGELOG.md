@@ -8,6 +8,14 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 
 ## [Unreleased]
 
+## [0.11.0] — 2026-05-19
+
+### Removed
+- `/ah:standup` slash command. The command was registered but unused in practice — `/ah:project-status` already covers the "what's the state of the project right now" need, and the standup-specific framing (async daily report) never picked up real usage. Deletes `prompts/standup.md` and the corresponding row in the `WORKFLOW.md` command table. Auto-discovery in `extensions/index.ts` reads the `prompts/` directory, so no code change is required to stop registering the command.
+
+### Migration
+- No action required. Devs who muscle-memorize `/ah:standup` will get a "command not found" from PI after `pi update`; use `/ah:project-status` instead.
+
 ## [0.10.1] — 2026-05-19
 
 ### Fixed
@@ -179,7 +187,8 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 ### Migration
 - No action required — first public release.
 
-[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.10.1...HEAD
+[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/Skillbill/agentic-harness/compare/v0.10.1...v0.11.0
 [0.10.1]: https://github.com/Skillbill/agentic-harness/compare/v0.10.0...v0.10.1
 [0.10.0]: https://github.com/Skillbill/agentic-harness/compare/v0.9.2...v0.10.0
 [0.9.2]: https://github.com/Skillbill/agentic-harness/compare/v0.9.1...v0.9.2

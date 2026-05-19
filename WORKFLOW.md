@@ -67,7 +67,6 @@ All AH commands are prefixed with `ah:`.
 | `/ah:task-done`      | Close a task after its PR is merged                       |
 | `/ah:project-status` | Project progress bar + status of in-progress tasks        |
 | `/ah:pr-open`        | Verify DoD and prepare PR description                     |
-| `/ah:standup`        | Project status summary for async daily                    |
 | `/ah:map-codebase`   | Analyze the codebase and produce 7 structured docs in `.pi/codebase/` |
 | `/ah:do-git-stuff`   | Run mutating git commands delegated by the dev            |
 
