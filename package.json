@@ -1,6 +1,6 @@
 {
   "name": "@skillbill/agentic-harness",
-  "version": "0.14.0",
+  "version": "0.14.1",
   "description": "SCRUM-lite task workflow extension for pi-coding-agent (PI). Adds task commands, a codebase-doc tool, and context-injection hooks.",
   "type": "module",
   "keywords": [

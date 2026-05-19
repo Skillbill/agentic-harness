@@ -8,6 +8,14 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 
 ## [Unreleased]
 
+## [0.14.1] — 2026-05-19
+
+### Fixed
+- Popup right border (`│`) was missing on lines that contained certain emoji (`✅`, `📋`, `📥`, `🆘`, etc.). Cause: `lib/popup-frame.ts` used `.length` (UTF-16 code units) for padding, but BMP emoji like `✅` (U+2705) are 1 code unit yet take 2 terminal columns. Padded lines therefore exceeded the overlay width by 1+ visible cols, and PI's overlay compositor (`pi-tui`'s `compositeLineAt`, which slices by `visibleWidth`) clipped the right border. Replaced with an emoji-aware `visibleWidth` implementation (`\p{Emoji_Presentation}` + non-BMP code points → 2 cols, everything else → 1 col). `clipToWidth` and `padRight` both honor visible width now, so emoji-heavy lines stay within the box and the `│`/`┘` are no longer cut.
+
+### Migration
+- No action required.
+
 ## [0.14.0] — 2026-05-19
 
 ### Added
@@ -232,7 +240,8 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 ### Migration
 - No action required — first public release.
 
-[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.14.0...HEAD
+[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.14.1...HEAD
+[0.14.1]: https://github.com/Skillbill/agentic-harness/compare/v0.14.0...v0.14.1
 [0.14.0]: https://github.com/Skillbill/agentic-harness/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/Skillbill/agentic-harness/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/Skillbill/agentic-harness/compare/v0.11.0...v0.12.0
