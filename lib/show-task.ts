@@ -50,6 +50,8 @@ export interface TaskInfo {
   priority: Priority;
   /** ISO date `YYYY-MM-DD` from frontmatter (`updated`, then `created`), or null. */
   updated: string | null;
+  /** `branch:` from frontmatter (e.g. `feature/T-019-foo`), or null when missing. */
+  branch: string | null;
   /** Raw contents of TASK.md (full file, including frontmatter). */
   content: string;
 }
@@ -65,6 +67,7 @@ function parseTaskFrontmatter(content: string): {
   priority?: string;
   updated?: string;
   created?: string;
+  branch?: string;
 } {
   const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
   if (!match) return {};
@@ -118,6 +121,10 @@ function readTaskInfo(
     title: fm.title ?? entry,
     priority: normalizePriority(fm.priority),
     updated: fm.updated ?? fm.created ?? null,
+    branch:
+      fm.branch && fm.branch.length > 0 && fm.branch !== "null"
+        ? fm.branch
+        : null,
     content,
   };
 }

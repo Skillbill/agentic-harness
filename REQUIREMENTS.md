@@ -194,6 +194,40 @@ Starting from v0.13.0, AH ships a `/ah:help` slash command that opens a single-p
 - When you add a new keyboard shortcut in `extensions/index.ts`, also append a row to the hard-coded `shortcutRows` array in the `/ah:help` handler. Same applies if you change the key for an existing shortcut.
 - Do not add LLM-bound content to the popup body (no `$@`, `$EXT_DIR`, or `pi.sendUserMessage` from inside the handler). The popup is meant to be cheap — a single overlay open / close cycle should not cost a token.
 
+### R-0010 — `alt+s` branch switcher with clean-tree gate
+
+Starting from v0.15.0, AH ships a keyboard shortcut `alt+s` that opens a selector popup listing the default branch (`main`) plus every in-progress task with a `branch:` field in its `TASK.md` frontmatter. The dev navigates with `↑` / `↓`, picks with `ENTER`, cancels with `ESC`. On selection AH runs `git checkout <branch>` — gated by a working-tree-clean check.
+
+**Decisions**:
+
+- **List composition**: the first row is always `main`, hard-coded for now (TBD: detect the consumer's actual default branch via `git symbolic-ref refs/remotes/origin/HEAD`). The rest are in-progress tasks (`.pi/tasks/in-progress/`) filtered by having a non-null `branch:` in frontmatter, sorted by id ascending — matches the order used by `/ah:project-status` and the `alt+p` popup.
+- **Current branch annotation**: the row matching `git branch --show-current` is suffixed with `(current)`. Selecting it is a no-op — AH shows a `Already on <branch>` toast and skips the checkout. Rationale: avoids running `git checkout` on the branch we're already on, which is a no-op for git but a confusing UX.
+- **Clean-tree gate**: before any `git checkout`, AH runs `git status --porcelain`. A non-empty stdout aborts the switch with a `⚠ Working tree not clean — commit or stash before switching` warning toast. The dev is expected to commit or stash and try again; AH does **not** offer to stash automatically (out of scope — git workflow is the dev's call).
+- **Git Safety Rule exception**: the shortcut is an explicit dev-triggered mutation, same posture as `/ah:task-new` and `/ah:do-git-stuff`. The popup separates view (selection) from action (checkout): the component itself never touches git; only the shortcut handler does.
+- **Error surfacing**: every git-side failure (status, checkout) is reported through `ctx.ui.notify(message, "error" | "warning")` — never thrown. AH stays alive and the popup is closed by the time we get there.
+- **`branch: null` semantics**: a task whose frontmatter says `branch: null` (the default before `/ah:task-start`) is filtered out of the list — there's no branch to switch to. Same for `branch:` missing entirely.
+
+**Consequences for the AH dev**:
+- The component (`lib/branch-switch-popup.ts`) must remain side-effect-free: it owns the keyboard handling and the visual marker, nothing else. Adding git logic inside the component is a regression — keep it in the handler.
+- When you add a new candidate source (e.g. `review/` task branches, recently-pushed remotes), update both the popup's list-building block in `extensions/index.ts` and the sort logic. Don't sneak `await` calls inside `render()` — the Component contract requires synchronous render.
+- If you ever change the clean-tree definition (e.g. tolerate untracked-but-ignored files), centralize it in a `lib/git-status.ts` helper; right now the check is a one-liner inline because it has a single call site.
+
+### R-0011 — Help popup is the single source of truth for shortcuts
+
+Every keyboard shortcut AH registers via `pi.registerShortcut(...)` MUST be listed in the `shortcutRows` array rendered by the `/ah:help` (and `alt+h`) overlay. The rows in the popup are in registration order — same order the dev encounters the shortcuts in `extensions/index.ts`.
+
+**Decisions**:
+
+- **Hard-coded, not enumerated**: PI exposes no runtime API to enumerate registered shortcuts (`pi.getCommands()` only covers slash commands). The list lives next to the `pi.registerShortcut(...)` calls; a comment on both sides cross-references R-0011 so future contributors know to keep them in sync.
+- **One-line format per row**: `  <key>   <emoji> <label>   (<hint>)`. The emoji mirrors the popup title's icon (📋, 📥, ✅, 🔀, 🆘) for visual continuity. Wide-char alignment is handled by `lib/popup-frame.ts` via the emoji-aware `visibleWidth` (R-0008 fix in v0.14.1).
+- **Coverage scope**: shortcuts only. Slash commands continue to be discovered dynamically via `pi.getCommands()` in the same popup — that part is auto-maintained.
+- **Enforcement**: convention + review. There's no test that diffs the registered set against `shortcutRows`. The cost of a missed entry is low (the dev's shortcut works but is invisible in `/ah:help`), so a runtime check isn't justified.
+
+**Consequences for the AH dev**:
+- When you add or rename a shortcut: edit the `pi.registerShortcut(...)` call AND the corresponding `shortcutRows` line in the same commit. The two changes belong together — a commit that splits them is a bug bait.
+- When you remove a shortcut: delete both lines. Leaving a stale row in `shortcutRows` lies to the user.
+- If a new PR adds a shortcut without touching `shortcutRows`, the right reviewer comment is "missing R-0011 entry in `/ah:help`" — pointing at this requirement makes the fix obvious.
+
 ## Out of scope
 
 - Distribution of third-party extensions other than AH.
@@ -230,3 +264,6 @@ Starting from v0.13.0, AH ships a `/ah:help` slash command that opens a single-p
 - **v0.11.0**: drops the unused `/ah:standup` slash command. `/ah:project-status` covers the same use case.
 - **v0.12.0**: introduces R-0008 — three keyboard shortcuts (`alt+p`, `alt+k`, `alt+c`) that open a TUI overlay listing the tasks of a single bucket. New `lib/show-task.ts` listing/sort helpers and `lib/task-popup.ts` overlay component. No consumer migration.
 - **v0.13.0**: introduces R-0009 — `/ah:help` slash command that opens a single-page overlay (`lib/info-popup.ts`) showing the AH version, the AH command list (discovered dynamically), and the shortcut list from R-0008. Registered via `pi.registerCommand` so it never burns an LLM turn.
+- **v0.14.0**: bordered popups (`lib/popup-frame.ts`), reordered `/ah:help` body, new `alt+h` shortcut. No new requirement — purely visual / additive.
+- **v0.14.1**: emoji-aware width fix in `lib/popup-frame.ts` (closes the right border of the box on lines containing wide BMP emoji like `✅`).
+- **v0.15.0**: introduces R-0010 (`alt+s` branch switcher + clean-tree gate) and R-0011 (help popup is the single source of truth for shortcuts). New `lib/branch-switch-popup.ts`; `TaskInfo` grows a `branch` field populated from frontmatter.

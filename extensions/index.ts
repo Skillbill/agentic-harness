@@ -16,6 +16,10 @@ import {
 } from "../lib/show-task.js";
 import { TaskPopup } from "../lib/task-popup.js";
 import { InfoPopup } from "../lib/info-popup.js";
+import {
+  BranchSwitchPopup,
+  type BranchItem,
+} from "../lib/branch-switch-popup.js";
 import { readInstalledVersion } from "../lib/migrate-consumer.js";
 import {
   type AhConfig,
@@ -166,10 +170,13 @@ export default function (pi: ExtensionAPI) {
 
     // Shortcut list is hard-coded — PI exposes no enumeration API. Keep
     // this block in sync with the `pi.registerShortcut(...)` calls below.
+    // R-0011 invariant: every keyboard shortcut AH registers MUST appear
+    // in this list, in registration order.
     const shortcutRows = [
       "  alt+p   📋 In progress popup (cycle ↑/↓, esc closes)",
       "  alt+k   📥 Backlog popup     (cycle ↑/↓, esc closes)",
       "  alt+c   ✅ Recently closed   (cycle ↑/↓, esc closes)",
+      "  alt+s   🔀 Switch branch     (↑/↓ select, enter checkout)",
       "  alt+h   🆘 This help popup",
     ];
 
@@ -208,6 +215,113 @@ export default function (pi: ExtensionAPI) {
     handler: async (_args, ctx) => openHelpPopup(ctx),
   });
 
+  // R-0010: alt+s — switch branch. Builds a list of candidates (the
+  // default branch `main` always first, then every in-progress task that
+  // exposes a `branch:` in its TASK.md frontmatter), opens a selector
+  // popup, and on ENTER checks the working tree is clean and runs
+  // `git checkout`. The clean-tree check is the only guard: AH's Git
+  // Safety Rule allows mutating git operations when the dev explicitly
+  // triggers them, and pressing alt+s + Enter is the explicit trigger.
+  const openSwitchPopup = async (
+    ctx: Parameters<Parameters<typeof pi.registerShortcut>[1]["handler"]>[0],
+  ) => {
+    if (!ctx.hasUI) return;
+
+    // Resolve the current branch up-front so we can mark it (and avoid
+    // running a checkout that is a no-op).
+    let currentBranch = "";
+    try {
+      const head = await ctx.exec("git", ["branch", "--show-current"], {
+        cwd: ctx.cwd,
+      });
+      currentBranch = head.stdout.trim();
+    } catch {
+      // Not a git repo / git not on PATH — keep going with "" so the
+      // current marker is never shown, but the popup still works.
+    }
+
+    const tasks = listBucketTasks(ctx.cwd, "in-progress");
+    const items: BranchItem[] = [
+      {
+        label: "main",
+        branch: "main",
+        isCurrent: currentBranch === "main",
+      },
+      ...tasks
+        .filter((t) => t.branch)
+        .sort((a, b) => a.id.localeCompare(b.id))
+        .map<BranchItem>((t) => ({
+          label: `${t.id}  ${t.title}`,
+          branch: t.branch!,
+          isCurrent: t.branch === currentBranch,
+        })),
+    ];
+
+    const selected = await ctx.ui.custom<BranchItem | null>(
+      (_tui, _theme, _kb, done) =>
+        new BranchSwitchPopup({
+          title: "🔀 Switch branch",
+          items,
+          done,
+        }),
+      {
+        overlay: true,
+        overlayOptions: {
+          width: "70%",
+          maxHeight: "70%",
+          anchor: "center",
+        },
+      },
+    );
+
+    if (!selected) return;
+    if (selected.isCurrent) {
+      ctx.ui.notify(`Already on ${selected.branch}`, "info");
+      return;
+    }
+
+    // Clean-tree gate: any untracked or modified file in `git status
+    // --porcelain` aborts the switch with a warning toast.
+    let dirtyOutput = "";
+    try {
+      const dirty = await ctx.exec("git", ["status", "--porcelain"], {
+        cwd: ctx.cwd,
+      });
+      dirtyOutput = dirty.stdout;
+    } catch (err) {
+      ctx.ui.notify(
+        `Could not check working tree: ${err instanceof Error ? err.message : String(err)}`,
+        "error",
+      );
+      return;
+    }
+    if (dirtyOutput.trim().length > 0) {
+      ctx.ui.notify(
+        "⚠ Working tree not clean — commit or stash before switching",
+        "warning",
+      );
+      return;
+    }
+
+    try {
+      const co = await ctx.exec("git", ["checkout", selected.branch], {
+        cwd: ctx.cwd,
+      });
+      if (co.code !== 0) {
+        const msg =
+          (co.stderr || co.stdout).trim() || `git checkout exited ${co.code}`;
+        ctx.ui.notify(`Checkout failed: ${msg}`, "error");
+        return;
+      }
+      ctx.ui.notify(`Switched to ${selected.branch}`, "info");
+    } catch (err) {
+      ctx.ui.notify(
+        `Checkout failed: ${err instanceof Error ? err.message : String(err)}`,
+        "error",
+      );
+    }
+  };
+
   try {
     pi.registerShortcut("alt+p", {
       description: "AH — show in-progress tasks (popup)",
@@ -220,6 +334,10 @@ export default function (pi: ExtensionAPI) {
     pi.registerShortcut("alt+c", {
       description: "AH — show recently closed tasks (popup)",
       handler: (ctx) => openBucketPopup(ctx, "done", "✅ Closed"),
+    });
+    pi.registerShortcut("alt+s", {
+      description: "AH — switch branch (popup)",
+      handler: (ctx) => openSwitchPopup(ctx),
     });
     pi.registerShortcut("alt+h", {
       description: "AH — show help (popup)",

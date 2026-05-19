@@ -8,6 +8,19 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 
 ## [Unreleased]
 
+## [0.15.0] — 2026-05-19
+
+### Added
+- **(R-0010)** `alt+s` keyboard shortcut: opens a selector popup with the default branch (`main`) plus every in-progress task whose `TASK.md` frontmatter exposes a `branch:`. `↑`/`↓` move the focus, `ENTER` runs the checkout, `ESC` cancels. The currently checked-out row is annotated `(current)` and selecting it is a no-op (toast only — no `git checkout`). On every other selection, AH first runs `git status --porcelain`: a non-empty output aborts the switch with a `⚠ Working tree not clean — commit or stash before switching` warning toast; an empty output proceeds with `git checkout <branch>` and a success toast on `code === 0`. Hot path is `lib/branch-switch-popup.ts` (selector component) + the `openSwitchPopup` handler in `extensions/index.ts` that wraps the git side-effects. This is a sanctioned exception to the Git Safety Rule: pressing `alt+s` + `ENTER` is the dev's explicit trigger, mirroring the convention used by `/ah:task-new` and `/ah:do-git-stuff`.
+- **(R-0011)** Help-popup completeness contract — every keyboard shortcut AH registers MUST appear in the `shortcutRows` array rendered by `/ah:help` (and `alt+h`), in registration order. The handler that builds the list is the single source of truth; a brief comment next to it cross-references R-0011 so future contributors don't drift. PI doesn't expose a runtime enumeration of registered shortcuts, so this invariant is maintained by convention (and reviewed at merge time), not enforced by code.
+- New `branch: string | null` field on `TaskInfo` returned by `lib/show-task.ts`, populated from the `branch:` frontmatter key (falls back to `null` for `"null"` / missing / empty values).
+
+### Changed
+- `/ah:help` and `alt+h` overlay now lists the new `alt+s` row in the Keyboard shortcuts section, with a comment in the source pointing back to R-0011.
+
+### Migration
+- No action required. Consumers gain the shortcut on next `pi update` + session restart.
+
 ## [0.14.1] — 2026-05-19
 
 ### Fixed
@@ -240,7 +253,8 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 ### Migration
 - No action required — first public release.
 
-[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.14.1...HEAD
+[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.15.0...HEAD
+[0.15.0]: https://github.com/Skillbill/agentic-harness/compare/v0.14.1...v0.15.0
 [0.14.1]: https://github.com/Skillbill/agentic-harness/compare/v0.14.0...v0.14.1
 [0.14.0]: https://github.com/Skillbill/agentic-harness/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/Skillbill/agentic-harness/compare/v0.12.0...v0.13.0
