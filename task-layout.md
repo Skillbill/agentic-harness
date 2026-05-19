@@ -99,14 +99,6 @@ The map is updated:
   `$EXT_DIR/procedures/map-codebase.md` and execute it. There is no
   slash command for this (R-0012).
 
-### CODEMAP.md — deprecated
-
-> ⚠️ **`CODEMAP.md` (per-task) is deprecated.** Existing tasks that
-> contain it can keep it as historical reference, but the inner-cycle
-> phases no longer generate it, update it, or require it as a
-> prerequisite. Code context is provided entirely by the project-level
-> codebase map (`.pi/codebase/`).
-
 ---
 
 ## 3. Task files

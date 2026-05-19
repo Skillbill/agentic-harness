@@ -8,6 +8,14 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 
 ## [Unreleased]
 
+## [0.16.1] — 2026-05-19
+
+### Removed
+- `task-layout.md` §2bis "CODEMAP.md — deprecated" block. Per-task `CODEMAP.md` was retired long ago in favor of the project-level codebase map in `.pi/codebase/`; the only mention left was this deprecation notice itself, with zero callers across prompts / skills / code. Git history keeps the archeology if it ever matters.
+
+### Migration
+- No action required.
+
 ## [0.16.0] — 2026-05-19
 
 ### Removed
@@ -293,7 +301,8 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 ### Migration
 - No action required — first public release.
 
-[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.16.0...HEAD
+[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.16.1...HEAD
+[0.16.1]: https://github.com/Skillbill/agentic-harness/compare/v0.16.0...v0.16.1
 [0.16.0]: https://github.com/Skillbill/agentic-harness/compare/v0.15.2...v0.16.0
 [0.15.2]: https://github.com/Skillbill/agentic-harness/compare/v0.15.1...v0.15.2
 [0.15.1]: https://github.com/Skillbill/agentic-harness/compare/v0.15.0...v0.15.1
