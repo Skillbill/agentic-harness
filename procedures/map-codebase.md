@@ -48,7 +48,13 @@ git commands to run by hand.
 - Before a major refactoring (understand current state)
 
 **Skip map-codebase for:**
-- Greenfield projects with no code (nothing to map)
+- Projects just bootstrapped with `/ah:project-bootstrap` and not yet
+  carrying any source code commits — re-running map-codebase before
+  that point generates empty `STRUCTURE.md` / `INTEGRATIONS.md` /
+  `TESTING.md` / `TECHNICAL_DEBT.md` and adds no value. The
+  intent-based `STACK.md` / `ARCHITECTURE.md` / `CONVENTIONS.md`
+  produced by bootstrap remain the source of truth until real code
+  arrives.
 - Trivial codebases (< 5 files)
 
 ## Forbidden files
@@ -84,10 +90,25 @@ Check:
 
 **Three scenarios:**
 
-1. **Map absent** (`.pi/codebase/` does not exist): greenfield scenario.
+1. **Map absent** (`.pi/codebase/` does not exist): full-blank scenario.
    Define `stale_docs = {STACK.md, INTEGRATIONS.md, ARCHITECTURE.md,
    STRUCTURE.md, CONVENTIONS.md, TESTING.md, TECHNICAL_DEBT.md}` (all 7).
    Go to step 2.
+
+   **Sub-case: bootstrap-state map**. If `.pi/codebase/` *does* exist
+   and contains docs whose frontmatter declares `source: intent`
+   (written by `/ah:project-bootstrap` from project intent rather
+   than from source code), do **not** mark those intent-based docs as
+   stale. Only `STRUCTURE.md`, `INTEGRATIONS.md`, `TESTING.md`,
+   `TECHNICAL_DEBT.md` enter `stale_docs` on this run — the others
+   are *augmented*, not replaced. When rewriting `STACK.md`,
+   `ARCHITECTURE.md`, or `CONVENTIONS.md` later (after their stems
+   appear in `stale_docs` due to real code changes), preserve every
+   block wrapped in `<!-- intent:keep --> … <!-- /intent:keep -->`
+   HTML comment markers verbatim and add observations from the code
+   under a new `## Observed state` section appended at the end of the
+   doc. The frontmatter `source:` field flips from `intent` to
+   `intent+observed` once observed content has been added.
 
 2. **Map present but cache absent**: the map was created before
    the cache was introduced, or `.cache.json` was deleted.

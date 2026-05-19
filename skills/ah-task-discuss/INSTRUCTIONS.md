@@ -64,11 +64,15 @@ If the task directory does not contain `TASK.md` → error (corrupted task).
 ### 2. Verify prerequisite: codebase map (blocking)
 
 The codebase map (`.pi/codebase/`) is the prerequisite for anchoring
-questions to the real code. It is **blocking**.
+questions to the real code. It is **blocking** in its minimum form:
+`ARCHITECTURE.md` + `CONVENTIONS.md`.
 
 - Check whether `.pi/codebase/` exists and contains at least the files
-  `ARCHITECTURE.md`, `STRUCTURE.md`, `CONVENTIONS.md`.
-- If **it does not exist or is incomplete**:
+  `ARCHITECTURE.md` and `CONVENTIONS.md`. `STRUCTURE.md` is
+  **recommended** but not blocking — if missing, log a single
+  informational line (`(no STRUCTURE.md yet — project may be pre-code;
+  OK to proceed)`) and continue.
+- If `ARCHITECTURE.md` or `CONVENTIONS.md` is missing:
   > The codebase map is missing or incomplete. It is a blocking
   > prerequisite for anchoring questions to real code.
   > Should I generate the map now?
@@ -78,7 +82,16 @@ questions to the real code. It is **blocking**.
   instructions of steps 2–5 (create `.pi/codebase/`, the 4 passes,
   security scan, output verification). At the end proceed with step 3.
 
-  If the dev refuses → STOP.
+  If the dev refuses → STOP. (On a brand-new project with no code yet,
+  the right command is `/ah:project-bootstrap`, not `/ah:task-discuss` —
+  surface that suggestion as part of the STOP message.)
+- **Intent-based docs**: if the existing codebase docs carry the
+  frontmatter `source: intent` (written by `/ah:project-bootstrap`
+  before any source code existed), they are valid prerequisites. Note
+  the fact in your context — anchor gray-area questions to the
+  *planned* architecture they describe, not to observed code, and
+  expect that some answers will be "this is to be decided when the
+  code lands".
 
 ### 3. Read the task context
 

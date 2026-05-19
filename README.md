@@ -56,16 +56,17 @@ a warning banner.
 
 ## Slash commands at a glance
 
-| Command              | Purpose                                                                |
-|----------------------|------------------------------------------------------------------------|
-| `/ah:task-new`       | Create a task in the backlog (interview → `TASK.md`).                   |
-| `/ah:task-start`     | Pick up a backlog task, create `feature/T-NNN-*`, move to `in-progress`. |
-| `/ah:task-next-step` | Advance the inner cycle by one phase (`discuss → plan → execute → verify`). |
-| `/ah:task-done`      | Close after PR merge — move to `done/`, regenerate codebase map.        |
-| `/ah:project-status` | Project progress bar + per-task status (sorted backlog, recent closures).|
-| `/ah:pr-open`        | Verify DoD and prepare PR description.                                  |
-| `/ah:do-git-stuff`   | Run mutating git commands the dev delegates explicitly.                 |
-| `/ah:help`           | Overlay with version, shortcuts, docs, full command list.               |
+| Command                   | Purpose                                                                |
+|---------------------------|------------------------------------------------------------------------|
+| `/ah:project-bootstrap`   | Greenfield on-ramp: turn a brand-new repo into a workable AH state (REQUIREMENTS + intent-based codebase docs + initial backlog) in one guided command. |
+| `/ah:task-new`            | Create a task in the backlog (interview → `TASK.md`).                   |
+| `/ah:task-start`          | Pick up a backlog task, create `feature/T-NNN-*`, move to `in-progress`. |
+| `/ah:task-next-step`      | Advance the inner cycle by one phase (`discuss → plan → execute → verify`). |
+| `/ah:task-done`           | Close after PR merge — move to `done/`, regenerate codebase map.        |
+| `/ah:project-status`      | Project progress bar + per-task status (sorted backlog, recent closures).|
+| `/ah:pr-open`             | Verify DoD and prepare PR description.                                  |
+| `/ah:do-git-stuff`        | Run mutating git commands the dev delegates explicitly.                 |
+| `/ah:help`                | Overlay with version, shortcuts, docs, full command list.               |
 
 The full list (auto-discovered, including `/ah:ctx-*` context-inspector helpers)
 shows up inside `/ah:help`.
@@ -155,6 +156,14 @@ When all four phases are recorded, `/ah:pr-open` packages the work into a PR des
 ---
 
 ## How it fits together
+
+**On a brand-new project with no source code yet** — start with
+`/ah:project-bootstrap` instead. It runs a single guided dialogue that
+populates `.pi/REQUIREMENTS.md` (Context + first R-NNNN entries),
+writes three intent-based docs in `.pi/codebase/` (`STACK.md`,
+`ARCHITECTURE.md`, `CONVENTIONS.md` — marked `source: intent`), and
+creates a first set of backlog tasks each wired to the requirements.
+After that, the regular flow below takes over from `/ah:task-start`.
 
 A typical task flow:
 

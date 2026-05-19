@@ -110,6 +110,38 @@ The authoritative rule — list of forbidden commands, the `/ah:task-new` except
 
 Implication for **consumer migrations** (`lib/migrations/v*.ts`): when they run inside the consumer they mutate `<consumerRoot>/.pi/...` or the consumer's working tree, but they **never** run `git add` / `commit` / `push` / `checkout`. See R-0003. The single narrow exception is the framework-level marker-bump auto-commit (R-0013) — that happens in `lib/migrate-consumer.ts` after the migration loop, only when the working tree is "marker-only dirty" and the consumer is on `main` / `master`.
 
+## Greenfield bootstrap (`/ah:project-bootstrap`)
+
+`prompts/project-bootstrap.md` is the single greenfield on-ramp (R-0016
+from v0.20.0). It is **not** part of the inner cycle — it precedes the
+first `/ah:task-new` on a project that has no source code yet. Five
+phases inside one command (pre-flight + raw-material read → vision
+loop → R-NNNN harvesting → 3-question technical intent → batch backlog
+proposal → write all files → commit). Output: a populated
+`.pi/REQUIREMENTS.md`, three intent-based codebase docs (`STACK.md`,
+`ARCHITECTURE.md`, `CONVENTIONS.md` with `source: intent` frontmatter
+and `<!-- intent:keep -->` markers around planned-architecture
+paragraphs), an `INDEX.md` coherent with those three, and N
+`.pi/tasks/backlog/T-NNN-*/TASK.md` files each carrying `implements:`
+to at least one R-NNNN. Committed in one `chore(bootstrap): …` commit
+via a declared Git Safety exception bounded to those exact paths.
+
+Pre-flight refuses to run on a project that shows any of:
+existing `.pi/codebase/` content, existing R-NNNN entries, or
+existing task directories. If you ever need to add a "rebootstrap"
+flow (reset + start over), make it a *separate* command with
+explicit destructive semantics — do **not** weaken the pre-flight
+guard here.
+
+The intent-keep marker is the contract with `procedures/map-codebase.md`:
+once real code arrives, the procedure preserves marked blocks
+verbatim and appends observations under a `## Observed state`
+section, flipping `source:` to `intent+observed`. The
+`skills/ah-task-discuss/INSTRUCTIONS.md` step 2 prereq is correspondingly
+softened — `STRUCTURE.md` is advisory (greenfield-after-bootstrap has
+no observed structure yet); only `ARCHITECTURE.md` + `CONVENTIONS.md`
+remain blocking.
+
 ## Inner-cycle skills
 
 `skills/ah-task-{discuss,plan,execute,verify,pr-open}` mirror the inner-cycle phases. They are invoked indirectly: the dev runs `/ah:task-next-step`, which auto-detects the task from the branch (`feature/T-NNN-*`) and advances one phase. Key invariants enforced by the prompts:

@@ -311,6 +311,110 @@ Starting from v0.19.0, `/ah:project-status` computes the per-task percentage and
 - Step files **must** carry a `status:` line per `task-layout.md` §3.4. AH's plan templates already enforce this; if you add new step authoring paths, mirror the contract.
 - The `[no plan]` indicator is informational — `/ah:project-status` doesn't gate or warn on it. If you want to enforce "tasks must follow the inner cycle", add a separate `/ah:audit` command; don't bolt enforcement onto the status renderer.
 
+### R-0016 — Greenfield bootstrap (`/ah:project-bootstrap`)
+
+Starting from v0.20.0, AH exposes `/ah:project-bootstrap`, a guided
+one-shot command that turns a brand-new project (no code yet, perhaps a
+README / vision doc) into a workable AH state in a single session.
+The command produces a populated `.pi/REQUIREMENTS.md` (`## Context`
++ a first set of `R-NNNN` entries with **Rationale**), three
+intent-based `.pi/codebase/*.md` docs (`STACK.md`, `ARCHITECTURE.md`,
+`CONVENTIONS.md` written from *planned* stack/architecture rather than
+from source), and a first set of 3–7 backlog tasks each wired to the
+new requirements via `implements:`. Everything is committed in a
+single `chore(bootstrap): …` commit on `main`/`master`.
+
+**Why this exists**: until v0.19.x AH implicitly assumed brownfield
+consumers. The inner cycle (`task-discuss` step 2) blocked when
+`.pi/codebase/` lacked `ARCHITECTURE.md` / `STRUCTURE.md` /
+`CONVENTIONS.md`, and the only proposed remediation —
+`map-codebase` — explicitly recommended skipping itself on greenfield
+projects. So a dev installing AH on a brand-new repo had no on-ramp:
+the v0.9.0 migration scaffolded `.pi/REQUIREMENTS.md` empty, but every
+subsequent step required artifacts that only existed on a populated
+codebase. R-0016 closes the loop by letting the bootstrap *itself*
+produce those artifacts from project intent.
+
+**Decisions**:
+
+- **Single command, not a phase**: `/ah:project-bootstrap` is **not**
+  part of the inner cycle (`discuss → plan → execute → verify`). It
+  precedes the first `/ah:task-new`/`/ah:task-start` and is meant to
+  run **once** at project genesis. Idempotency is not a goal — the
+  command refuses to run if any of the three pre-flight signals
+  (existing `.pi/codebase/` content, existing R-NNNN entries,
+  existing task directories) is positive.
+- **Five phases inside one command**: pre-flight + raw-material read
+  → vision/context (Phase A, free loop) → requirements harvesting
+  (Phase B, one R-NNNN at a time) → technical intent (Phase C,
+  3 mini-questions covering stack/architecture/conventions) → initial
+  backlog (Phase D, batch proposal with `all`/`pick`/`edit`/`drop`) →
+  write all files (Phase E) → commit (Phase F) → final output. The
+  separation keeps the dialogue focused while the dev can `stop` /
+  `enough` at any phase boundary.
+- **Intent-based codebase docs**: `STACK.md`, `ARCHITECTURE.md`,
+  `CONVENTIONS.md` are written with a `source: intent` frontmatter
+  flag plus a `<!-- intent:keep --> … <!-- /intent:keep -->`
+  HTML-comment marker around substantive planned-architecture
+  paragraphs. The marker is the contract with `map-codebase`: when
+  real code arrives and the procedure regenerates a stale doc, it
+  preserves the marked blocks verbatim and adds a new
+  `## Observed state` section at the end. The `source:` field flips
+  to `intent+observed`. No other doc is produced at bootstrap —
+  `STRUCTURE.md` / `INTEGRATIONS.md` / `TESTING.md` /
+  `TECHNICAL_DEBT.md` emerge from real code and are populated by the
+  first post-bootstrap `map-codebase` run.
+- **Initial backlog must be ≥ 1 task with `implements:` ≠ `[]`**: a
+  bootstrap that produces zero linked tasks adds no actionable next
+  step. The dev can still answer `cancel` in Phase D and accept
+  zero tasks — in that case the command still writes REQUIREMENTS +
+  codebase docs and commits, and the dev is expected to run
+  `/ah:task-new` immediately after.
+- **Declared Git Safety exception, scope-bounded**: same exception
+  pattern as `/ah:task-new` (R-0006 widening for REQUIREMENTS.md) —
+  the command MAY run `git add`/`commit`/`push` but only for the
+  exact paths it produced (the union of `.pi/REQUIREMENTS.md`, the
+  4 `.pi/codebase/*.md` files, and the N `.pi/tasks/backlog/T-NNN-*/
+  TASK.md` files). Any unrelated dirty path aborts the auto-commit.
+- **No new helper in `lib/`**: the prompt body is the spec, per the
+  CLAUDE.md architectural note ("the body **is** the spec for the
+  command"). The bootstrap reuses the textual patterns of
+  `prompts/task-new.md` (git safety exception, ID assignment,
+  template substitution, R-NNNN insertion) and of
+  `procedures/map-codebase.md` (forbidden files list). No TypeScript
+  changes.
+- **`task-discuss` softening (step 2)**: as a defensive side-effect,
+  `skills/ah-task-discuss/INSTRUCTIONS.md` step 2 is loosened to
+  require only `ARCHITECTURE.md` + `CONVENTIONS.md` (was: + also
+  `STRUCTURE.md`). On a freshly bootstrapped project `STRUCTURE.md`
+  legitimately does not exist yet; making it advisory rather than
+  blocking lets the inner cycle proceed on the very first task. Also
+  step 2 now recognizes the `source: intent` frontmatter so the
+  agent anchors questions to planned architecture rather than
+  observed code.
+- **No new consumer migration**: bootstrap is opt-in. v0.9.0 already
+  scaffolds an empty `.pi/REQUIREMENTS.md`; the command overwrites
+  the `<TBD>` placeholders when it runs. No automatic state to
+  evolve.
+
+**Consequences for the AH dev**:
+
+- When you add a new phase to the inner cycle (or rename one), update
+  `prompts/project-bootstrap.md`'s Phase E task-template substitution
+  in lockstep — the bootstrap reuses the same `templates/task.md`
+  and the same R-NNNN linking logic as `/ah:task-new`.
+- When you add a new file to `.pi/codebase/` (a hypothetical eighth
+  thematic doc), decide whether it belongs in the intent-based set
+  bootstrap writes from intent or in the observed-only set produced
+  by `map-codebase`. The four observed-only docs
+  (`STRUCTURE` / `INTEGRATIONS` / `TESTING` / `TECHNICAL_DEBT`) are
+  defined by the absence of meaningful intent before code exists.
+- If a dev runs `/ah:project-bootstrap` on a project that's not
+  greenfield, the pre-flight in step 1 stops the command. If a future
+  use case asks for "rebootstrap" (reset and start over), don't
+  weaken the pre-flight — add a separate `/ah:project-rebootstrap`
+  command with explicit destructive semantics.
+
 ## Out of scope
 
 - Distribution of third-party extensions other than AH.
@@ -359,3 +463,4 @@ Starting from v0.19.0, `/ah:project-status` computes the per-task percentage and
 - **v0.17.1**: untracks a stray `node_modules/typebox` symlink (committed in `4eba528` against `.gitignore`, pointed at an absolute path on the original dev's machine — broken for everyone else). `typebox` is already a `peerDependency` provided by PI.
 - **v0.18.0**: introduces R-0014 — ships first `LICENSE` (PolyForm Noncommercial 1.0.0) and first `README.md`. `package.json#license` switches from the orphan `MIT` declaration to `PolyForm-Noncommercial-1.0.0`. AH becomes source-available rather than orphan-MIT.
 - **v0.19.0**: introduces R-0015 — `/ah:project-status` derives the in-progress `pct` and phase from `PLAN.md` + `steps/NN-*.md` (`status:` field), the same way for every in-progress task, dropping the v0.18.x split between "current task" and "others". The `progress:` frontmatter is no longer the source of truth — it stays as a last-resort fallback. New phase indicator `[no plan]` for tasks where `task-start` ran but the inner cycle was bypassed.
+- **v0.20.0**: introduces R-0016 — `/ah:project-bootstrap`, the greenfield on-ramp. Single guided command that turns a fresh repo (no code) into a workable AH state: populated `.pi/REQUIREMENTS.md` (Context + first R-NNNN entries), three intent-based codebase docs (`STACK.md`/`ARCHITECTURE.md`/`CONVENTIONS.md` with `source: intent` frontmatter and `<!-- intent:keep -->` markers), and a first set of 3–7 backlog tasks each wired to the requirements. Defensive softening in `skills/ah-task-discuss/INSTRUCTIONS.md` step 2 (only `ARCHITECTURE`+`CONVENTIONS` blocking; `STRUCTURE` advisory) and in `procedures/map-codebase.md` (preserves `intent:keep` blocks and augments under `## Observed state` when code arrives). No new consumer migration.

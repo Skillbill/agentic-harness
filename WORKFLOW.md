@@ -55,20 +55,33 @@ command (e.g. "you commit it"). Only in that case does the agent run it.
 The prompt templates in the agentic-harness extension all follow this rule:
 they propose git commands but do not run them.
 
+## Greenfield entry
+
+If the project has no source code yet (only a README / vision / a few
+docs), start with **`/ah:project-bootstrap`** — a single guided
+command that produces a populated `.pi/REQUIREMENTS.md`, three
+intent-based codebase docs (`STACK.md`, `ARCHITECTURE.md`,
+`CONVENTIONS.md`), and a first set of 3–7 backlog tasks each wired to
+the new requirements, all in one commit on `main`. After that, the
+regular `task-new` / `task-start` / `task-next-step` loop takes over.
+The command refuses to run on a project that already has codebase
+docs, R-NNNN entries, or tasks.
+
 ## Available commands
 
 All AH commands are prefixed with `ah:`.
 
-| Command              | Purpose                                                   |
-|----------------------|-----------------------------------------------------------|
-| `/ah:task-new`       | Create a new task in the backlog                          |
-| `/ah:task-start`     | Pick up a task and prepare the feature branch             |
-| `/ah:task-next-step` | Advance the current task to the next inner-cycle phase (discuss → plan → execute → verify) |
-| `/ah:task-done`      | Close a task after its PR is merged                       |
-| `/ah:project-status` | Project progress bar + status of in-progress tasks        |
-| `/ah:pr-open`        | Verify DoD and prepare PR description                     |
-| `/ah:do-git-stuff`   | Run mutating git commands delegated by the dev            |
-| `/ah:help`           | Overlay with version, slash command list, and keyboard shortcuts |
+| Command                   | Purpose                                                   |
+|---------------------------|-----------------------------------------------------------|
+| `/ah:project-bootstrap`   | Greenfield on-ramp: vision → REQUIREMENTS → codebase intent docs → initial backlog, in one commit |
+| `/ah:task-new`            | Create a new task in the backlog                          |
+| `/ah:task-start`          | Pick up a task and prepare the feature branch             |
+| `/ah:task-next-step`      | Advance the current task to the next inner-cycle phase (discuss → plan → execute → verify) |
+| `/ah:task-done`           | Close a task after its PR is merged                       |
+| `/ah:project-status`      | Project progress bar + status of in-progress tasks        |
+| `/ah:pr-open`             | Verify DoD and prepare PR description                     |
+| `/ah:do-git-stuff`        | Run mutating git commands delegated by the dev            |
+| `/ah:help`                | Overlay with version, slash command list, and keyboard shortcuts |
 
 ### Keyboard shortcuts
 

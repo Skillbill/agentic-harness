@@ -8,6 +8,19 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 
 ## [Unreleased]
 
+## [0.20.0] — 2026-05-19
+
+### Added
+- **(R-0016)** New slash command `/ah:project-bootstrap` — a guided greenfield on-ramp. Single-session dialogue that takes a brand-new project (no code yet, perhaps a README) through five phases: pre-flight + raw-material read → vision/context (Phase A, free 1–3 question loop) → requirements harvesting (Phase B, one R-NNNN at a time with `accept/edit/drop/next`) → technical intent (Phase C, three mini-questions on stack/architecture/conventions) → initial backlog (Phase D, batch proposal of 3–7 tasks each linked to ≥ 1 R-NNNN). Produces a populated `.pi/REQUIREMENTS.md` (Context + first R-NNNN entries), three intent-based codebase docs (`.pi/codebase/STACK.md`, `ARCHITECTURE.md`, `CONVENTIONS.md` with `source: intent` frontmatter and `<!-- intent:keep -->` markers) plus a coherent `INDEX.md`, and N task directories under `.pi/tasks/backlog/`. All written in `$CONTENT_LANG`. Committed in a single `chore(bootstrap): initialize project — N requirements, M tasks` commit on `main`/`master` via a scoped Git Safety exception. Pre-flight refuses to run if the project shows any sign of being non-greenfield (existing `.pi/codebase/` content, existing R-NNNN entries, or existing task directories).
+
+### Changed
+- **(R-0016)** `skills/ah-task-discuss/INSTRUCTIONS.md` step 2 softened: only `ARCHITECTURE.md` + `CONVENTIONS.md` are blocking prerequisites — `STRUCTURE.md` is now advisory (a fresh bootstrap legitimately has no structure to map yet). The skill also recognizes the `source: intent` frontmatter flag on bootstrap-produced docs and anchors gray-area questions to *planned* architecture in that case. The STOP message points greenfield projects at `/ah:project-bootstrap` rather than at `map-codebase`.
+- **(R-0016)** `procedures/map-codebase.md` updated to preserve intent-based docs. The "Skip" guidance now targets "projects just bootstrapped and not yet carrying source-code commits" instead of the older "greenfield projects" wording. Step 1a scenario 1 grows a "bootstrap-state map" sub-case: when `STACK.md`/`ARCHITECTURE.md`/`CONVENTIONS.md` carry `source: intent`, the procedure does **not** mark them stale on first run — only `STRUCTURE.md`/`INTEGRATIONS.md`/`TESTING.md`/`TECHNICAL_DEBT.md` enter `stale_docs`. When intent-based docs are eventually re-generated, blocks wrapped in `<!-- intent:keep --> … <!-- /intent:keep -->` HTML comments are preserved verbatim, observed content is appended under a `## Observed state` section, and `source:` flips to `intent+observed`.
+- `WORKFLOW.md` adds a "Greenfield entry" subsection and lists `/ah:project-bootstrap` as the first row of the slash-command table. `README.md` mirrors the same addition.
+
+### Migration
+- No action required. `/ah:project-bootstrap` is opt-in and refuses to run on projects that aren't greenfield. Consumers upgrading from v0.19.2 don't need to do anything; the new command is available the next time they start a brand-new project from `main`.
+
 ## [0.19.2] — 2026-05-19
 
 ### Changed
@@ -377,7 +390,8 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 ### Migration
 - No action required — first public release.
 
-[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.19.2...HEAD
+[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.20.0...HEAD
+[0.20.0]: https://github.com/Skillbill/agentic-harness/compare/v0.19.2...v0.20.0
 [0.19.2]: https://github.com/Skillbill/agentic-harness/compare/v0.19.1...v0.19.2
 [0.19.1]: https://github.com/Skillbill/agentic-harness/compare/v0.19.0...v0.19.1
 [0.19.0]: https://github.com/Skillbill/agentic-harness/compare/v0.18.0...v0.19.0
