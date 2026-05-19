@@ -8,6 +8,15 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 
 ## [Unreleased]
 
+## [0.15.2] — 2026-05-19
+
+### Fixed
+- AH ↔ PI compatibility check fired a `[ah-pi-compat-warning]` banner at every session start when running on PI 0.75.x because `peerDependencies["@earendil-works/pi-coding-agent"]` was still `^0.74.0`, which under npm's pre-1.0 caret rule resolves to `>=0.74.0 <0.75.0` and excludes 0.75.x. All the v0.12.0+ features (`registerShortcut`, `ui.custom`, `pi.exec`) have been exercised against PI 0.75.3 on Efesto with no API drift, so widening the range is safe. Bumped to `^0.75.0` (matches the current published PI line); the doc comment in `lib/check-pi-compat.ts` was updated to reflect the new pinning.
+
+### Migration
+- No action required. The warning banner disappears at next `pi update` of AH.
+- If you're still on PI 0.74.x, stay on AH v0.15.1 (the matcher in `lib/check-pi-compat.ts` doesn't support compound ranges, and we chose `^0.75.0` over `>=0.74.0` to avoid falsely declaring future PI 1.0+ as compatible).
+
 ## [0.15.1] — 2026-05-19
 
 ### Fixed
@@ -261,7 +270,8 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 ### Migration
 - No action required — first public release.
 
-[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.15.1...HEAD
+[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.15.2...HEAD
+[0.15.2]: https://github.com/Skillbill/agentic-harness/compare/v0.15.1...v0.15.2
 [0.15.1]: https://github.com/Skillbill/agentic-harness/compare/v0.15.0...v0.15.1
 [0.15.0]: https://github.com/Skillbill/agentic-harness/compare/v0.14.1...v0.15.0
 [0.14.1]: https://github.com/Skillbill/agentic-harness/compare/v0.14.0...v0.14.1

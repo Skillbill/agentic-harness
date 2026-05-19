@@ -55,8 +55,8 @@ export function readPiInstalledVersion(): string {
  * a form we don't recognize. The caller treats `null` as "skip the
  * comparison" — we never want to lie about compatibility.
  *
- * Caret semantics follow npm's pre-1.0 rule: `^0.74.0` means
- * `>=0.74.0 <0.75.0` (when major is 0, the minor is treated as the
+ * Caret semantics follow npm's pre-1.0 rule: `^0.75.0` means
+ * `>=0.75.0 <0.76.0` (when major is 0, the minor is treated as the
  * stability anchor instead of major).
  */
 export function satisfies(version: string, range: string): boolean | null {
