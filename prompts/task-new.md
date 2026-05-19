@@ -156,8 +156,11 @@ Layout (see `task-layout.md` §1): each task is a **directory**
 
 - Create the folder `.pi/tasks/backlog/<ID>-<slug>/`.
 - File path: `.pi/tasks/backlog/<ID>-<slug>/TASK.md`.
-- Start from the template `$EXT_DIR/templates/task.md` (slim version: only
-  Context, Goal, standard Definition of Done, Log).
+- Start from the template at `$EXT_DIR/templates/task.md` (slim version:
+  only Context, Goal, standard Definition of Done, Log). The path above
+  is already an absolute filesystem path — open it directly with your
+  file-reading tool; never run `find` / `locate` / `grep -r` to look for
+  the template.
 - Replace the frontmatter placeholders:
   - `{{ID}}` → new ID
   - `{{TITLE}}` → title derived from the dev's topic. If the topic is

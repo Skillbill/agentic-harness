@@ -8,6 +8,14 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 
 ## [Unreleased]
 
+## [0.9.2] — 2026-05-19
+
+### Fixed
+- Long filesystem-wide stalls during `/ah:task-new` (and other AH commands referencing `$EXT_DIR`) caused by the agent running `find /` to locate AH-internal templates instead of using the absolute path already substituted in the prompt body. `lib/register-prompt.ts` now prepends a short directive to every prompt that references `$EXT_DIR`, instructing the agent that AH-internal paths arrive pre-resolved as absolute paths and must be read directly (no `find` / `locate` / `grep -r`). The `/ah:task-new` step that loads `templates/task.md` is reinforced with the same instruction inline.
+
+### Migration
+- No action required.
+
 ## [0.9.1] — 2026-05-19
 
 ### Added
@@ -143,7 +151,8 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 ### Migration
 - No action required — first public release.
 
-[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.9.1...HEAD
+[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.9.2...HEAD
+[0.9.2]: https://github.com/Skillbill/agentic-harness/compare/v0.9.1...v0.9.2
 [0.9.1]: https://github.com/Skillbill/agentic-harness/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/Skillbill/agentic-harness/compare/v0.8.1...v0.9.0
 [0.8.1]: https://github.com/Skillbill/agentic-harness/compare/v0.8.0...v0.8.1

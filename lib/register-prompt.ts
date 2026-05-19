@@ -22,6 +22,24 @@ function parseFrontmatter(raw: string): { meta: PromptFrontmatter; body: string 
 }
 
 /**
+ * Header prepended to every prompt body that references `$EXT_DIR`. Tells the
+ * agent that AH-internal paths arrive pre-resolved as absolute paths and must
+ * be read directly — no `find` / `locate` / `grep -r` to "discover" them.
+ *
+ * Why: substituted paths point outside the consumer's `cwd` (they live inside
+ * AH's installation directory), and some models default to filesystem-wide
+ * searches when they don't trust an out-of-cwd path. That search can scan the
+ * entire disk and stall the session for minutes.
+ */
+const EXT_DIR_DIRECTIVE =
+  "> **Note — AH-internal file paths.** Any path in this prompt that points " +
+  "inside AH's own installation (templates, prompts, skills, procedures) is " +
+  "already fully resolved to an absolute path. Read it directly with your " +
+  "file-reading tool at the exact path given. Do **not** run `find`, " +
+  "`locate`, `grep -r`, or any filesystem-wide search to locate AH files — " +
+  "the path you see is authoritative.\n\n";
+
+/**
  * Register a `.md` prompt as an extension command.
  *
  * Substitutions performed inside the prompt body on every invocation:
@@ -44,6 +62,7 @@ export function registerPrompt(
 ) {
   const raw = readFileSync(mdPath, "utf-8");
   const { meta, body } = parseFrontmatter(raw);
+  const hasExtDirRef = body.includes("$EXT_DIR");
 
   pi.registerCommand(name, {
     description: meta.description ?? name,
@@ -59,6 +78,7 @@ export function registerPrompt(
         const firstArg = args.split(/\s+/)[0] ?? args;
         prompt = prompt.replaceAll("$1", firstArg);
       }
+      if (hasExtDirRef) prompt = EXT_DIR_DIRECTIVE + prompt;
       pi.sendUserMessage(prompt);
     },
   });
