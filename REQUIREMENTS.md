@@ -245,6 +245,28 @@ Starting from v0.16.0, the codebase-map logic lives in `procedures/map-codebase.
 - When you edit `procedures/map-codebase.md` and renumber the steps, search-and-update the four `steps 2–5` references in the consumers (`grep -rn "procedures/map-codebase" --include='*.md'`). The references are step-number-coupled — splitting that coupling would mean changing the procedure layout.
 - Do not silently re-introduce `/ah:map-codebase` as a slash command. If a future requirement says "the dev wants a one-line manual refresh", prefer a different name (e.g. `/ah:refresh-codebase`) that's a *wrapper* whose body is `read $EXT_DIR/procedures/map-codebase.md and run it`. Keeps the procedure file the single source of truth and the slash command minimal.
 
+### R-0013 — Auto-commit of `.pi/ah-version` marker bump (sanctioned Git Safety exception)
+
+Starting from v0.17.0, when the consumer migration framework (R-0003) advances `<consumerRoot>/.pi/ah-version` and the resulting working-tree change is *only* that marker bump, AH stages and commits the file on the consumer's behalf. Without this exception every `pi update` produced a stray modification the dev had to clean up by hand at next session start — a paper cut the user explicitly asked us to fix.
+
+**Decisions**:
+
+- **Trivial-state gate, not policy switch**: the auto-commit fires only when *all* of these hold (parallel check in `autoCommitMarkerBump`):
+  1. The consumer is inside a git working tree (`git rev-parse --is-inside-work-tree`).
+  2. The current branch is `main` or `master`. Feature branches are deliberately excluded — committing the marker bump on a feature branch pulls AH's housekeeping into that feature's history and produces a merge conflict when the feature lands.
+  3. `git status --porcelain` returns *exactly one* line, and its path is `.pi/ah-version`. Any other state (multiple files, different path) means a real migration touched the tree (e.g. v0.10.0 retrofitting `priority:` into every `TASK.md`) or the dev has work in progress — both demand human review.
+- **Single commit shape**: `chore: bump AH consumer marker to vX.Y.Z`. Hard-coded message, no `Co-Authored-By:` trailer. Versioned identically to the installed AH version so `git log --grep "consumer marker"` is a clean audit trail.
+- **No push**: the dev keeps push authority. Auto-commit is local-only.
+- **Never throws, always non-blocking**: every git failure (no git on `$PATH`, non-zero exit, detached HEAD, hook failure, pre-commit reject) is downgraded to a single `console.warn` and session start continues. The marker file remains modified on disk so the dev can still commit it manually.
+- **Branch detection is best-effort**: we accept `main` *and* `master` to cover the two near-universal defaults without paying the round-trip to `git symbolic-ref refs/remotes/origin/HEAD` (which also requires a remote). Consumers with a custom default branch fall back to the v0.16.x behavior (manual commit) — they can rename to `main` if they want the auto-commit. This is a deliberate trade-off: covers ~99% of real consumers, zero latency, zero remote chatter.
+- **Explicit exception, not policy reversal**: R-0003 still says "no git mutations from consumer migrations". R-0013 carves out *one* surgical case — the marker file written by the framework itself. Real migrations (`lib/migrations/v*.ts`) keep the original prohibition; they may touch consumer files but never call `git`. Same exception model used by `/ah:task-new` (auto-commit of the new TASK.md).
+
+**Consequences for the AH dev**:
+- Do not weaken the trivial-state gate to cover "messy but the marker is in there somewhere" cases. The single-file check is the only thing that prevents AH from accidentally committing a dev's WIP. A dirty-tree auto-commit would turn into the worst kind of footgun (lost diffs, stray commits, unhappy users).
+- A future migration that legitimately wants to commit something must declare its own exception — do **not** reuse this auto-commit path. It's scoped to the marker only.
+- When you add a new migration `vX.Y.Z` that touches consumer files (rename, frontmatter retrofit, etc.), expect the gate to *not* fire on that update: the working tree will contain `.pi/ah-version` *plus* the files the migration changed. The dev sees both, reviews, commits together. This is by design.
+- If the consumer's default branch is anything other than `main` / `master` (`develop`, `trunk`, …) the auto-commit silently skips. That's intentional — adding more defaults to the allowlist is a one-line edit when a real consumer asks for it. Don't widen speculatively.
+
 ## Out of scope
 
 - Distribution of third-party extensions other than AH.
@@ -287,3 +309,6 @@ Starting from v0.16.0, the codebase-map logic lives in `procedures/map-codebase.
 - **v0.15.1**: fixes `alt+s` runtime crash — `exec` lives on `pi` (ExtensionAPI), not on `ctx` (ExtensionContext). Three call sites in `extensions/index.ts` switched from `ctx.exec` to `pi.exec`.
 - **v0.15.2**: bumps `peerDependencies["@earendil-works/pi-coding-agent"]` from `^0.74.0` to `^0.75.0` to silence the compat warning on PI 0.75.x. No API drift observed between 0.74 and 0.75 for the surfaces AH uses.
 - **v0.16.0**: introduces R-0012 — codebase-map logic moves from `prompts/map-codebase.md` (auto-registered as `/ah:map-codebase`) to `procedures/map-codebase.md` (inline sub-procedure referenced via `$EXT_DIR`). Drops the slash command. Four consumers updated to read the new path. No consumer migration.
+- **v0.16.1**: drops the obsolete `CODEMAP.md — deprecated` block from `task-layout.md`. Single-line deprecation notice with no remaining callers anywhere in the repo — git history keeps the archeology.
+- **v0.16.2**: scrubs explicit consumer-project names ("Efesto") from `lib/context-inspector.ts`, `REQUIREMENTS.md`, and earlier `CHANGELOG.md` entries. AH is a generic Pi Package; source and docs must not name any one of the N possible consumers.
+- **v0.17.0**: introduces R-0013 — `lib/migrate-consumer.ts` auto-commits `.pi/ah-version` when the marker bump is the only thing dirty and the consumer is on `main` / `master`. Removes the paper cut where every `pi update` left a stray modification at session start.

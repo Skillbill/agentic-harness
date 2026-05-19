@@ -107,7 +107,10 @@ export async function migrateConsumer(pi: ExtensionAPI, consumerRoot: string): P
   // so subsequent starts skip this branch entirely. This is the common
   // case at v0.6.0 baseline.
   if (pending.length === 0) {
-    if (marker !== installed) writeMarker(consumerRoot, installed);
+    if (marker !== installed) {
+      writeMarker(consumerRoot, installed);
+      await autoCommitMarkerBump(pi, consumerRoot, installed);
+    }
     return;
   }
 
@@ -129,5 +132,107 @@ export async function migrateConsumer(pi: ExtensionAPI, consumerRoot: string): P
       );
       return; // non-blocking: AH keeps loading
     }
+  }
+
+  // After the loop ends (all migrations applied successfully), try the
+  // marker-only auto-commit. When a migration touched real consumer files
+  // (e.g. v0.10.0 added `priority:` to every TASK.md), the working tree
+  // won't be "marker only" and the auto-commit silently skips — exactly
+  // what we want: the dev reviews and commits.
+  await autoCommitMarkerBump(pi, consumerRoot, installed);
+}
+
+/**
+ * Sanctioned exception to the Git Safety Rule (R-0013). Auto-commit
+ * `.pi/ah-version` **only** when the change is trivially mechanical: the
+ * consumer is on `main` / `master` and the marker is the **only** thing
+ * the working tree shows as dirty. Any other working-tree state — feature
+ * branch, other files modified by a real migration, other dev work in
+ * progress — leaves the modification for the dev to handle.
+ *
+ * Never throws. Every git failure is downgraded to a console warning so a
+ * dirty exec environment can't block session start.
+ */
+async function autoCommitMarkerBump(
+  pi: ExtensionAPI,
+  consumerRoot: string,
+  installed: string,
+): Promise<void> {
+  // 1. We must be inside a git working tree.
+  try {
+    const r = await pi.exec("git", ["rev-parse", "--is-inside-work-tree"], {
+      cwd: consumerRoot,
+    });
+    if (r.code !== 0 || r.stdout.trim() !== "true") return;
+  } catch {
+    return;
+  }
+
+  // 2. Branch must be the project's default (best-effort detection — we
+  //    don't run `git symbolic-ref refs/remotes/origin/HEAD` because that
+  //    requires a remote and adds latency for what's essentially a paper
+  //    cut. Accept the two near-universal defaults.)
+  let branch: string;
+  try {
+    const r = await pi.exec("git", ["branch", "--show-current"], {
+      cwd: consumerRoot,
+    });
+    if (r.code !== 0) return;
+    branch = r.stdout.trim();
+  } catch {
+    return;
+  }
+  if (branch !== "main" && branch !== "master") return;
+
+  // 3. Working tree must contain exactly one entry, and that entry must
+  //    be `.pi/ah-version`. Anything else (multiple files, a different
+  //    path) means a real migration touched the tree or the dev has
+  //    work in progress — leave it for review.
+  let porcelain: string;
+  try {
+    const r = await pi.exec("git", ["status", "--porcelain"], {
+      cwd: consumerRoot,
+    });
+    if (r.code !== 0) return;
+    porcelain = r.stdout;
+  } catch {
+    return;
+  }
+  const lines = porcelain.split(/\r?\n/).filter((l) => l.length > 0);
+  if (lines.length !== 1) return;
+  // Porcelain v1 line shape: "XY <path>" — X = staged flag, Y = unstaged
+  // flag. The path starts at column 3.
+  const path = lines[0]!.slice(3).trim();
+  if (path !== ".pi/ah-version") return;
+
+  // 4. Stage and commit. No push — that's still the dev's call.
+  try {
+    const add = await pi.exec("git", ["add", ".pi/ah-version"], {
+      cwd: consumerRoot,
+    });
+    if (add.code !== 0) {
+      console.warn(
+        `[agentic-harness] auto-commit of .pi/ah-version: git add failed (${(add.stderr || add.stdout).trim() || "exit " + add.code})`,
+      );
+      return;
+    }
+    const commit = await pi.exec(
+      "git",
+      ["commit", "-m", `chore: bump AH consumer marker to v${installed}`],
+      { cwd: consumerRoot },
+    );
+    if (commit.code !== 0) {
+      console.warn(
+        `[agentic-harness] auto-commit of .pi/ah-version: git commit failed (${(commit.stderr || commit.stdout).trim() || "exit " + commit.code})`,
+      );
+      return;
+    }
+    console.log(
+      `[agentic-harness] 📝 Auto-committed .pi/ah-version bump to v${installed} on ${branch} (working tree was clean otherwise).`,
+    );
+  } catch (err) {
+    console.warn(
+      `[agentic-harness] auto-commit of .pi/ah-version threw: ${err instanceof Error ? err.message : String(err)}`,
+    );
   }
 }

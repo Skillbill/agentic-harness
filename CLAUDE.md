@@ -86,7 +86,7 @@ When a consumer project upgrades AH (e.g. v0.7.0 → v0.8.0 via `pi update`), AH
 
 **Invariants**:
 - **Idempotency** mandatory: every `apply` must be safe to re-run (e.g. `mkdirSync(..., { recursive: true })`, rename only if source exists and target does not).
-- **No git mutations**: the Git Safety Rule applies inside migrations too. They may mutate files in `.pi/` or in the working tree, but `git add/commit/push/checkout` remain the dev's responsibility.
+- **No git mutations from migrations**: the Git Safety Rule applies inside `lib/migrations/v*.ts`. They may mutate files in `.pi/` or in the working tree, but `git add/commit/push/checkout` remain the dev's responsibility. **Exception (R-0013, v0.17.0)**: the *framework itself* auto-commits `.pi/ah-version` after the migration loop **only** when the working tree shows that marker as the single dirty file and the consumer is on `main` / `master`. Real migrations still never call git.
 - **Failure non-blocking**: if a migration fails, AH logs the error, leaves the marker at the last successful step, and keeps loading. The dev fixes and relaunches the session.
 
 **To add a migration**:
@@ -108,7 +108,7 @@ If you change any of these, the prompts under `prompts/` and the skills under `s
 
 The authoritative rule — list of forbidden commands, the `/ah:task-new` exception, and the "you commit it" / "push it" override — lives in **`WORKFLOW.md` § Git Safety Rule**. That file is loaded as context by AH's prompts inside consumers; this `CLAUDE.md` is not.
 
-Implication for **consumer migrations** (`lib/migrations/v*.ts`): when they run inside the consumer they mutate `<consumerRoot>/.pi/...` or the consumer's working tree, but they **never** run `git add` / `commit` / `push` / `checkout`. See R-0003.
+Implication for **consumer migrations** (`lib/migrations/v*.ts`): when they run inside the consumer they mutate `<consumerRoot>/.pi/...` or the consumer's working tree, but they **never** run `git add` / `commit` / `push` / `checkout`. See R-0003. The single narrow exception is the framework-level marker-bump auto-commit (R-0013) — that happens in `lib/migrate-consumer.ts` after the migration loop, only when the working tree is "marker-only dirty" and the consumer is on `main` / `master`.
 
 ## Inner-cycle skills
 

@@ -8,6 +8,23 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 
 ## [Unreleased]
 
+## [0.17.0] — 2026-05-19
+
+### Added
+- **(R-0013)** `lib/migrate-consumer.ts` now auto-commits `.pi/ah-version` after the migration loop when the working tree contains *only* that marker bump and the consumer is on `main` or `master`. Removes the paper cut where every `pi update` left a stray `modified: .pi/ah-version` for the dev to clean up at next session start. Commit message is hard-coded: `chore: bump AH consumer marker to vX.Y.Z`. No push — that remains the dev's call.
+
+  Trivial-state gate (all must hold):
+  1. Inside a git working tree (`git rev-parse --is-inside-work-tree`).
+  2. Current branch is `main` or `master`.
+  3. `git status --porcelain` returns exactly one line, and its path is `.pi/ah-version`.
+
+  Any other state — feature branch, multiple dirty files, real migration touched other files — silently skips the auto-commit. The marker stays modified on disk so the dev can commit by hand exactly as before.
+- Requirement **R-0013** in `REQUIREMENTS.md` and a matching carve-out note next to the R-0003 "no git mutations" invariant in `CLAUDE.md`.
+
+### Migration
+- No action required. The next `pi update` of AH followed by a `session_start` on `main` / `master` will auto-commit the marker bump.
+- Working on a feature branch? The behavior is unchanged from v0.16.x: the marker shows as modified, you commit when you want.
+
 ## [0.16.2] — 2026-05-19
 
 ### Changed
@@ -309,7 +326,8 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 ### Migration
 - No action required — first public release.
 
-[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.16.2...HEAD
+[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.17.0...HEAD
+[0.17.0]: https://github.com/Skillbill/agentic-harness/compare/v0.16.2...v0.17.0
 [0.16.2]: https://github.com/Skillbill/agentic-harness/compare/v0.16.1...v0.16.2
 [0.16.1]: https://github.com/Skillbill/agentic-harness/compare/v0.16.0...v0.16.1
 [0.16.0]: https://github.com/Skillbill/agentic-harness/compare/v0.15.2...v0.16.0
