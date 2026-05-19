@@ -87,6 +87,73 @@ collide with PI's built-in editor bindings.
 
 ---
 
+## Workflow at a glance
+
+### External lifecycle — the task moves between four directories
+
+```
+                /ah:task-new
+                     │
+                     ▼
+                ┌─────────┐
+                │ backlog │   .pi/tasks/backlog/T-NNN-<slug>/
+                └────┬────┘
+                     │ /ah:task-start
+                     │ (creates branch feature/T-NNN-<slug>)
+                     ▼
+              ┌─────────────┐
+              │ in-progress │   .pi/tasks/in-progress/T-NNN-<slug>/
+              └──────┬──────┘   ◀──── inner cycle happens here ────▶
+                     │ /ah:pr-open
+                     │ (opens GitHub PR)
+                     ▼
+                ┌────────┐
+                │ review │   .pi/tasks/review/T-NNN-<slug>/
+                └───┬────┘
+                    │ /ah:task-done
+                    │ (after the PR is merged)
+                    ▼
+                 ┌──────┐
+                 │ done │   .pi/tasks/done/T-NNN-<slug>/
+                 └──────┘
+```
+
+Each transition is a single slash command. The task **directory** moves
+between buckets; the **feature branch** is created at `task-start` and merged
+at `task-done` (after the PR is reviewed and merged on GitHub).
+
+### Inner cycle — what happens inside `in-progress/`
+
+`/ah:task-next-step` advances the task one phase at a time. Every phase
+produces a specific artifact under `.pi/tasks/in-progress/T-NNN-<slug>/`,
+and every state is recoverable from the filesystem alone:
+
+```
+                  /ah:task-next-step (called once per phase)
+                  ────────────────────────────────────────▶
+
+      ┌─────────┐     ┌──────┐     ┌─────────┐     ┌────────┐
+      │ discuss │──▶│ plan │──▶│ execute │──▶│ verify │──▶ /ah:pr-open
+      └─────────┘     └──────┘     └─────────┘     └────────┘
+           │             │             │              │
+           ▼             ▼             ▼              ▼
+      DISCUSS.md      PLAN.md       steps/NN-*.md  VERIFY.md
+                      + steps/      one commit
+                        NN-*.md     per step,
+                                    loop until
+                                    every step's
+                                    `status: done`
+```
+
+- **discuss**: surfaces gray areas as questions; the dev's answers are baked into `DISCUSS.md`.
+- **plan**: writes `PLAN.md` with a `context-needed:` frontmatter list of codebase docs to load, plus one `steps/NN-<slug>.md` per atomic commit.
+- **execute**: a *single* step per `task-next-step` call. One step file flips to `status: done`, one commit lands as `feat(T-NNN/NN): …`. Run the command repeatedly until every step is `done`.
+- **verify**: writes `VERIFY.md` ticking off the Definition of Done from `TASK.md`. Advisory, not a hard gate.
+
+When all four phases are recorded, `/ah:pr-open` packages the work into a PR description and moves the task directory to `review/`.
+
+---
+
 ## How it fits together
 
 A typical task flow:

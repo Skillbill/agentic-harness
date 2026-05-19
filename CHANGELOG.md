@@ -8,6 +8,14 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 
 ## [Unreleased]
 
+## [0.19.2] — 2026-05-19
+
+### Changed
+- `README.md` gains a `Workflow at a glance` section with two ASCII diagrams: the **external lifecycle** (task directory moves `backlog → in-progress → review → done`, each transition driven by a single slash command) and the **inner cycle** (`discuss → plan → execute → verify`, with the artifacts each phase writes). Cosmetic-only; the underlying behavior was already documented in `WORKFLOW.md` and `task-layout.md`.
+
+### Migration
+- No action required.
+
 ## [0.19.1] — 2026-05-19
 
 ### Fixed
@@ -369,7 +377,8 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 ### Migration
 - No action required — first public release.
 
-[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.19.1...HEAD
+[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.19.2...HEAD
+[0.19.2]: https://github.com/Skillbill/agentic-harness/compare/v0.19.1...v0.19.2
 [0.19.1]: https://github.com/Skillbill/agentic-harness/compare/v0.19.0...v0.19.1
 [0.19.0]: https://github.com/Skillbill/agentic-harness/compare/v0.18.0...v0.19.0
 [0.18.0]: https://github.com/Skillbill/agentic-harness/compare/v0.17.1...v0.18.0
