@@ -150,6 +150,23 @@ Starting from v0.9.0 AH manages a single document `<consumerRoot>/.pi/REQUIREMEN
 - Do not extend `context-needed:` to cover REQUIREMENTS — keep the two namespaces (codebase docs vs project intent) distinct.
 - When changing the file's structure (sections, frontmatter keys, R-NNNN body fields), update `templates/REQUIREMENTS.md`, the v0.9.0 migration's substitution logic, and the parsing rules in `prompts/task-new.md` step 2-bis and `skills/ah-task-discuss/INSTRUCTIONS.md` step 7.5 together.
 
+### R-0007 — Task `priority` frontmatter field
+
+Starting from v0.10.0 every `TASK.md` carries a `priority:` key in its frontmatter, a coarse-grained urgency tag with exactly four levels (`LOW`, `NORMAL`, `HIGH`, `IMMEDIATE`, uppercase, case-sensitive). The default is `NORMAL`. The field is consumed by `/ah:project-status` to render a per-task priority marker and to sort the `Backlog` section in priority-descending order; it is **not** consumed by the inner-cycle phases (discuss / plan / execute / verify) — priority is about queue ordering, not work content.
+
+**Decisions**:
+
+- **Allowed values & casing**: exactly the four uppercase tokens above. Anything else (missing, blank, lowercase, typo) is normalized to `NORMAL` by readers; the migration only writes the canonical uppercase form.
+- **Default on creation**: `NORMAL`. `/ah:task-new` does not interview the dev about priority — it writes the template's literal `priority: NORMAL` and stops. The dev edits the file by hand when a task needs a different urgency. Rationale: priority changes over time and is usually a queue-management decision separate from defining the task; bolting it into the creation interview would conflate the two.
+- **Display in `/ah:project-status`**: a single-character marker in column 2 of the row prefix (`!` = IMMEDIATE, `^` = HIGH, ` ` = NORMAL, `v` = LOW), uniform across all sections so columns align. Column 1 stays the current-task marker (`▶`).
+- **Backlog ordering**: `IMMEDIATE → HIGH → NORMAL → LOW`, tie-break by `id` ascending. Other sections keep their existing order (in-progress / review / recently-closed have their own natural sort).
+- **Bootstrap & migration**: existing TASK.md files in any consumer that upgrades to v0.10.0 are walked by `lib/migrations/v0_10_0.ts` and get `priority: NORMAL` inserted after the `status:` line. Idempotent — skips any file that already declares a `priority:` value. Non-destructive — never overrides an existing value (the dev owns it).
+- **Linkage to other contracts**: no impact on `implements:`, `progress:`, `branch:`, the inner-cycle phases, or the codebase-doc workflow. `WORKFLOW.md` is unchanged because the lifecycle states are still the same; only the per-task metadata grows by one field.
+
+**Consequences for the AH dev**:
+- When you add a new reader of TASK.md frontmatter, normalize the priority field the same way as `/ah:project-status` (case-insensitive parse, default `NORMAL` on miss). Don't add a fifth level without updating R-0007, the template, the migration, and the project-status renderer in lockstep.
+- The migration is **append-only on missing fields**; if you ever need to rewrite an existing priority (e.g. to normalize casing), add a new migration rather than retrofitting v0.10.0.
+
 ## Out of scope
 
 - Distribution of third-party extensions other than AH.
@@ -179,3 +196,6 @@ Starting from v0.9.0 AH manages a single document `<consumerRoot>/.pi/REQUIREMEN
 - **v0.8.0**: introduces R-0004 — peer-version compatibility check (`lib/check-pi-compat.ts`) run at `session_start` before `migrateConsumer`. Warn loud non-blocking on three channels (console + UI toast + persistent message). Also introduces R-0005 — AH becomes English-only (prompts, skills, docs, console logs) and the consumer picks content language via `.pi/ah-config.json`. The first real consumer migration (`lib/migrations/v0_8_0.ts`) renames the 5 Italian-named codebase docs (`INTEGRAZIONI → INTEGRATIONS`, etc.), exercising the migration framework end-to-end.
 - **v0.8.1**: extends R-0005 — AH auto-creates `.pi/ah-config.json` at `session_start` when missing, with a `contentLanguage` chosen by `detectConsumerLanguage` (Italian if existing `.pi/codebase/*.md` content looks Italian — rescues legacy v0.7.x consumers like Efesto; English otherwise). Makes the language choice explicit and committable instead of relying on a silent in-memory default.
 - **v0.9.0**: introduces R-0006 — consumer-side `.pi/REQUIREMENTS.md`. New `templates/REQUIREMENTS.md` skeleton, consumer migration `lib/migrations/v0_9_0.ts` that drops an empty file on first session after upgrade, new `implements:` frontmatter key on `TASK.md`, and integration into `/ah:task-new` (step 2-bis), `/ah:task-discuss` (step 3-bis + 7.5), `/ah:task-plan` (§3-bis read-only), and `/ah:task-verify` (Requirements DoD subsection). `/ah:task-execute` is deliberately unchanged. No new slash command — requirements grow organically.
+- **v0.9.1**: small UX tweak to `/ah:project-status` — adds a `Recently closed` section showing the last 5 tasks in `done/` sorted by `updated` desc. No new requirement.
+- **v0.9.2**: defensive fix to `lib/register-prompt.ts` — prepends a short directive to any prompt body that references `$EXT_DIR` instructing the agent that AH-internal paths arrive pre-resolved as absolute paths and must be read directly (no `find` / `locate` / `grep -r`). Caps a long stall observed in `/ah:task-new` where some agents scanned the entire filesystem to "locate" the template. No new requirement.
+- **v0.10.0**: introduces R-0007 — `priority` field on `TASK.md` frontmatter (`LOW | NORMAL | HIGH | IMMEDIATE`, default `NORMAL`). `/ah:project-status` renders the priority marker for every task and sorts the Backlog by priority desc. Consumer migration `lib/migrations/v0_10_0.ts` retrofits the field as `NORMAL` on every legacy task in the four task buckets.

@@ -185,6 +185,10 @@ Layout (see `task-layout.md` §1): each task is a **directory**
   you filled in.
 - Leave `estimate: null` in the frontmatter (estimate is not asked in
   `/task-new`).
+- Leave `priority: NORMAL` in the frontmatter (priority is not asked in
+  `/task-new` — the dev edits it by hand later if the task is more or
+  less urgent than the default). Valid values are
+  `LOW | NORMAL | HIGH | IMMEDIATE`.
 - Leave the `## Log` section empty (it's filled in during work).
 
 Write the file.

@@ -116,6 +116,7 @@ sections. It's the file you look at to "know what this is about".
 id: T-NNN
 title: <human title>
 status: backlog | in-progress | review | done
+priority: LOW | NORMAL | HIGH | IMMEDIATE   # default NORMAL
 estimate: <N>h | null
 assignee: <username> | null
 branch: feature/T-NNN-<slug> | null
@@ -124,6 +125,13 @@ created: YYYY-MM-DD
 updated: YYYY-MM-DD
 ---
 ```
+
+**`priority:` key — coarse-grained urgency tag**
+
+- Allowed values: `LOW`, `NORMAL`, `HIGH`, `IMMEDIATE` (uppercase, case-sensitive). Default `NORMAL`.
+- Set to `NORMAL` by `/ah:task-new`; not asked during the interview. The dev edits it by hand when a task is more (or less) urgent than the default.
+- Consumed by `/ah:project-status`: priority is displayed next to each task and the `Backlog` section is rendered in priority-descending order (`IMMEDIATE → HIGH → NORMAL → LOW`, tie-break by ID ascending).
+- Existing tasks without the field are migrated to `priority: NORMAL` by the v0.10.0 consumer migration.
 
 **`implements:` key — linking to project requirements**
 

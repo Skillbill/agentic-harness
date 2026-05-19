@@ -2,6 +2,7 @@
 id: {{ID}}
 title: {{TITLE}}
 status: backlog
+priority: NORMAL
 estimate: null
 progress: null
 assignee: null

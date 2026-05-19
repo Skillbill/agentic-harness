@@ -8,6 +8,23 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 
 ## [Unreleased]
 
+## [0.10.0] — 2026-05-19
+
+### Added
+- **(R-0007)** Task `priority` frontmatter field on `TASK.md`. Coarse-grained urgency tag with exactly four levels — `LOW`, `NORMAL`, `HIGH`, `IMMEDIATE` (uppercase, case-sensitive). Default `NORMAL`. New tasks created via `/ah:task-new` get `priority: NORMAL` directly from `templates/task.md`; the interview does not ask for priority — the dev edits the field by hand when a task is more or less urgent than the default. Documented in `task-layout.md` §3.1.
+- **(R-0007)** `/ah:project-status` now displays the priority of every task as a single-character marker placed in column 2 of the row prefix (`!` = IMMEDIATE, `^` = HIGH, ` ` = NORMAL, `v` = LOW). Column 1 remains the current-task marker (`▶`), so a row reads `<prefix><priority> T-NNN  …`. The 2-char prefix applies to every section (In progress, In review, Backlog, Recently closed) so columns line up.
+- **(R-0007)** `Backlog` section in `/ah:project-status` is now sorted by `priority` descending (`IMMEDIATE → HIGH → NORMAL → LOW`), tie-break by `id` ascending. Other sections keep their existing order (in-progress / in-review / recently-closed are ordered by status, branch, and `updated` respectively).
+- New consumer migration `lib/migrations/v0_10_0.ts` that walks `.pi/tasks/{backlog,in-progress,review,done}/T-*/TASK.md` and inserts `priority: NORMAL` into any frontmatter that lacks the field. Insertion point is right after the `status:` line, matching the order in `templates/task.md`. Idempotent (skips files that already declare any `priority:` value, regardless of which of the four levels) and non-destructive (does not normalize existing values — the dev owns that). One advisory `console.log` line at session_start when at least one task is touched.
+- Requirement **R-0007** in `REQUIREMENTS.md`.
+
+### Changed
+- `templates/task.md` gains the `priority: NORMAL` line in the frontmatter (after `status:`). No placeholder — the value is always `NORMAL` on creation.
+- `prompts/project-status.md` step 1 extracts `priority` in addition to the existing fields, normalizing missing / blank / unrecognized values to `NORMAL` (case-insensitive parse, uppercase output).
+
+### Migration
+- Auto-applied at the first `session_start` after upgrading to v0.10.0. Existing tasks (in any of the four buckets) get `priority: NORMAL` written explicitly into their `TASK.md` frontmatter. The migration is idempotent — re-running it on a tree where every task already has a priority value is a no-op. Future tasks created via `/ah:task-new` inherit `priority: NORMAL` from the template directly.
+- Dev action: review the resulting `priority:` values and bump the urgent ones to `HIGH` or `IMMEDIATE` by hand (the migration does not guess — every legacy task starts at `NORMAL`).
+
 ## [0.9.2] — 2026-05-19
 
 ### Fixed
@@ -151,7 +168,8 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 ### Migration
 - No action required — first public release.
 
-[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.9.2...HEAD
+[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/Skillbill/agentic-harness/compare/v0.9.2...v0.10.0
 [0.9.2]: https://github.com/Skillbill/agentic-harness/compare/v0.9.1...v0.9.2
 [0.9.1]: https://github.com/Skillbill/agentic-harness/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/Skillbill/agentic-harness/compare/v0.8.1...v0.9.0
