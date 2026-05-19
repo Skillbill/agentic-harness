@@ -228,10 +228,12 @@ export default function (pi: ExtensionAPI) {
     if (!ctx.hasUI) return;
 
     // Resolve the current branch up-front so we can mark it (and avoid
-    // running a checkout that is a no-op).
+    // running a checkout that is a no-op). Note `exec` lives on `pi`
+    // (ExtensionAPI), not on `ctx` — easy to mix up because most other
+    // I/O surfaces (`ui`, `cwd`) come through ctx.
     let currentBranch = "";
     try {
-      const head = await ctx.exec("git", ["branch", "--show-current"], {
+      const head = await pi.exec("git", ["branch", "--show-current"], {
         cwd: ctx.cwd,
       });
       currentBranch = head.stdout.trim();
@@ -284,7 +286,7 @@ export default function (pi: ExtensionAPI) {
     // --porcelain` aborts the switch with a warning toast.
     let dirtyOutput = "";
     try {
-      const dirty = await ctx.exec("git", ["status", "--porcelain"], {
+      const dirty = await pi.exec("git", ["status", "--porcelain"], {
         cwd: ctx.cwd,
       });
       dirtyOutput = dirty.stdout;
@@ -304,7 +306,7 @@ export default function (pi: ExtensionAPI) {
     }
 
     try {
-      const co = await ctx.exec("git", ["checkout", selected.branch], {
+      const co = await pi.exec("git", ["checkout", selected.branch], {
         cwd: ctx.cwd,
       });
       if (co.code !== 0) {

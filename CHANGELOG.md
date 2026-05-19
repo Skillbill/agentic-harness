@@ -8,6 +8,14 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 
 ## [Unreleased]
 
+## [0.15.1] — 2026-05-19
+
+### Fixed
+- `alt+s` branch switcher crashed at ENTER with `Error: Could not check working tree: ctx.exec is not a function`. The handler called `ctx.exec(...)` but `exec` lives on `pi` (ExtensionAPI), not on the per-handler `ctx` (ExtensionContext). Easy to mix up because most other I/O surfaces (`ui`, `cwd`, `notify`) DO come through `ctx`. Switched the three call sites (`git branch --show-current`, `git status --porcelain`, `git checkout`) to `pi.exec(...)`, with a one-line reminder next to the first call so the trap is documented for the next contributor.
+
+### Migration
+- No action required.
+
 ## [0.15.0] — 2026-05-19
 
 ### Added
@@ -253,7 +261,8 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 ### Migration
 - No action required — first public release.
 
-[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.15.0...HEAD
+[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.15.1...HEAD
+[0.15.1]: https://github.com/Skillbill/agentic-harness/compare/v0.15.0...v0.15.1
 [0.15.0]: https://github.com/Skillbill/agentic-harness/compare/v0.14.1...v0.15.0
 [0.14.1]: https://github.com/Skillbill/agentic-harness/compare/v0.14.0...v0.14.1
 [0.14.0]: https://github.com/Skillbill/agentic-harness/compare/v0.13.0...v0.14.0
