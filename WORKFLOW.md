@@ -70,6 +70,19 @@ All AH commands are prefixed with `ah:`.
 | `/ah:map-codebase`   | Analyze the codebase and produce 7 structured docs in `.pi/codebase/` |
 | `/ah:do-git-stuff`   | Run mutating git commands delegated by the dev            |
 
+### Keyboard shortcuts
+
+| Shortcut | Purpose                                                                          |
+|----------|----------------------------------------------------------------------------------|
+| `alt+p`  | Popup viewer of tasks in `.pi/tasks/in-progress/` (sorted by id asc)              |
+| `alt+k`  | Popup viewer of tasks in `.pi/tasks/backlog/` (sorted by priority desc, id asc)   |
+| `alt+c`  | Popup viewer of tasks in `.pi/tasks/done/` (sorted by `updated` desc, id desc)    |
+
+Inside the popup: `↑` / `↓` cycles through the bucket, `ESC` closes. Long
+`TASK.md` bodies are truncated to ~30 lines — the popup shows the path so
+the dev can open the file in a separate editor for the full text. The
+shortcut is a no-op (with a `notify` toast) when the bucket is empty.
+
 ### Codebase map (recommended prerequisite)
 
 `/ah:map-codebase` analyzes the entire codebase and produces 7 structured

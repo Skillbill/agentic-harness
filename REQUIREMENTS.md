@@ -156,6 +156,27 @@ Starting from v0.10.0 every `TASK.md` carries a `priority:` key in its frontmatt
 - When you add a new reader of TASK.md frontmatter, normalize the priority field the same way as `/ah:project-status` (case-insensitive parse, default `NORMAL` on miss). Don't add a fifth level without updating R-0007, the template, the migration, and the project-status renderer in lockstep.
 - The migration is **append-only on missing fields**; if you ever need to rewrite an existing priority (e.g. to normalize casing), add a new migration rather than retrofitting v0.10.0.
 
+### R-0008 — Keyboard shortcuts for per-bucket task popup
+
+Starting from v0.12.0, AH registers three keyboard shortcuts via PI's `pi.registerShortcut` API. Each opens a TUI overlay scoped to a single task bucket and lets the dev cycle through the bucket's tasks with `↑` / `↓` and dismiss with `ESC`. The popup body shows the full `TASK.md` (frontmatter + sections) truncated to ~30 lines, plus the relative file path.
+
+**Decisions**:
+
+- **Three shortcuts, one per bucket** (rather than a single picker over all tasks): keeps each popup focused on the slice the dev is reasoning about — current work, next pick-up, or recent closures. Matches the same mental model as the three sections in `/ah:project-status`.
+  - `alt+p` → `in-progress/`, sorted by id ascending.
+  - `alt+k` → `backlog/`, sorted by `priority` descending (IMMEDIATE → LOW) with id-ascending tie-break (mirrors `/ah:project-status` Backlog).
+  - `alt+c` → `done/`, sorted by `updated` descending with id-descending tie-break (most recent closure first).
+- **`alt+b` is deliberately not used** — PI already binds it (and `alt+left`, `ctrl+left`) to the "move back one word" editor command. `alt+k` was chosen as the next closest mnemonic for ba**c**k**l**og.
+- **Body truncation**: hard cap of 30 content lines. Long bodies (typical for tasks with verbose `## Goal` or `## Definition of Done`) trigger a `… N more line(s) truncated — open <relPath> for full text` footer. Rationale: the popup is for the "fast glance" use case; full reading happens in an editor.
+- **No runtime import of `@earendil-works/pi-tui`**: the popup component duck-types pi-tui's `Component` shape (`render` / `handleInput` / `invalidate`) and matches ESC / ↑ / ↓ from raw ANSI byte sequences. Avoids adding pi-tui to `peerDependencies` for a single overlay component. Side effect: only standard-mode escape sequences are recognized; Kitty CSI-u modifiers are out of scope (the three keys we care about all work in standard mode regardless).
+- **Backward-compatibility on old PI**: `pi.registerShortcut` is called inside a `try/catch`. If the running PI is too old to support shortcut registration, AH logs a single `console.warn` and continues — the rest of the extension stays functional.
+- **Empty bucket UX**: shortcut shows a `ctx.ui.notify("No tasks in .pi/tasks/<bucket>/", "info")` toast and does not open an empty popup.
+
+**Consequences for the AH dev**:
+- Don't break parity with `/ah:project-status` Backlog ordering: both use `sortForBucket` from `lib/show-task.ts`. Any change to the priority-rank function or tie-break rule must update both call sites consistently.
+- When adding a fourth shortcut (or moving keys), pick from the alt+letter combinations not reserved by PI's editor / app keymaps (`alt+b`, `alt+d`, `alt+f`, `alt+y`, `alt+v`, `alt+up`, `alt+enter`, `alt+left`, `alt+right`, `alt+delete`, `alt+backspace` are all taken — see `core/keybindings.d.ts` in PI).
+- The popup is a single-page renderer (no intra-task scroll). If the body cap becomes too restrictive in practice, the right move is a paged Component with `pageUp` / `pageDown` — not raising the cap, which would dwarf the chat area.
+
 ## Out of scope
 
 - Distribution of third-party extensions other than AH.
@@ -188,3 +209,6 @@ Starting from v0.10.0 every `TASK.md` carries a `priority:` key in its frontmatt
 - **v0.9.1**: small UX tweak to `/ah:project-status` — adds a `Recently closed` section showing the last 5 tasks in `done/` sorted by `updated` desc. No new requirement.
 - **v0.9.2**: defensive fix to `lib/register-prompt.ts` — prepends a short directive to any prompt body that references `$EXT_DIR` instructing the agent that AH-internal paths arrive pre-resolved as absolute paths and must be read directly (no `find` / `locate` / `grep -r`). Caps a long stall observed in `/ah:task-new` where some agents scanned the entire filesystem to "locate" the template. No new requirement.
 - **v0.10.0**: introduces R-0007 — `priority` field on `TASK.md` frontmatter (`LOW | NORMAL | HIGH | IMMEDIATE`, default `NORMAL`). `/ah:project-status` renders the priority marker for every task and sorts the Backlog by priority desc. Consumer migration `lib/migrations/v0_10_0.ts` retrofits the field as `NORMAL` on every legacy task in the four task buckets.
+- **v0.10.1**: visibility fix for the priority badge — uses a fixed 4-char `[XY]` token (`!!`/`^ `/` ·`/`v `) instead of a single-character column where NORMAL rendered as blank space. Limited to the `In progress` and `Backlog` sections of `/ah:project-status`.
+- **v0.11.0**: drops the unused `/ah:standup` slash command. `/ah:project-status` covers the same use case.
+- **v0.12.0**: introduces R-0008 — three keyboard shortcuts (`alt+p`, `alt+k`, `alt+c`) that open a TUI overlay listing the tasks of a single bucket. New `lib/show-task.ts` listing/sort helpers and `lib/task-popup.ts` overlay component. No consumer migration.

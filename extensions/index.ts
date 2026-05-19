@@ -10,6 +10,12 @@ import { registerLoadCodebaseDoc } from "../lib/load-codebase-doc.js";
 import { migrateConsumer } from "../lib/migrate-consumer.js";
 import { checkPiCompat } from "../lib/check-pi-compat.js";
 import {
+  listBucketTasks,
+  sortForBucket,
+  type TaskBucket,
+} from "../lib/show-task.js";
+import { TaskPopup } from "../lib/task-popup.js";
+import {
   type AhConfig,
   AH_CONFIG_DEFAULTS,
   ensureAhConfigFile,
@@ -95,6 +101,55 @@ export default function (pi: ExtensionAPI) {
     if (!file.endsWith(".md")) continue;
     const name = `ah:${basename(file, ".md")}`;
     registerPrompt(pi, name, join(promptsDir, file), repoRoot, getCurrentAhConfig);
+  }
+
+  // R-0008: per-bucket task popups. Three shortcuts open an overlay that
+  // shows the full TASK.md of the focused task and lets the dev cycle
+  // through the bucket with ↑/↓ (ESC closes). Wrapped in try/catch so a
+  // missing `pi.registerShortcut` on older PI versions doesn't break
+  // extension load — the rest of AH stays functional.
+  const openBucketPopup = async (
+    ctx: Parameters<Parameters<typeof pi.registerShortcut>[1]["handler"]>[0],
+    bucket: TaskBucket,
+    title: string,
+  ) => {
+    if (!ctx.hasUI) return;
+    const tasks = sortForBucket(listBucketTasks(ctx.cwd, bucket), bucket);
+    if (tasks.length === 0) {
+      ctx.ui.notify(`No tasks in .pi/tasks/${bucket}/`, "info");
+      return;
+    }
+    await ctx.ui.custom<true>(
+      (_tui, _theme, _kb, done) =>
+        new TaskPopup({ title, tasks, done: () => done(true) }),
+      {
+        overlay: true,
+        overlayOptions: {
+          width: "85%",
+          maxHeight: "85%",
+          anchor: "center",
+        },
+      },
+    );
+  };
+
+  try {
+    pi.registerShortcut("alt+p", {
+      description: "AH — show in-progress tasks (popup)",
+      handler: (ctx) => openBucketPopup(ctx, "in-progress", "📋 In progress"),
+    });
+    pi.registerShortcut("alt+k", {
+      description: "AH — show backlog tasks (popup)",
+      handler: (ctx) => openBucketPopup(ctx, "backlog", "📥 Backlog"),
+    });
+    pi.registerShortcut("alt+c", {
+      description: "AH — show recently closed tasks (popup)",
+      handler: (ctx) => openBucketPopup(ctx, "done", "✅ Closed"),
+    });
+  } catch (err) {
+    console.warn(
+      `[agentic-harness] registerShortcut failed (PI too old?): ${err instanceof Error ? err.message : String(err)}`,
+    );
   }
 
   pi.on("session_start", async (_event, ctx) => {

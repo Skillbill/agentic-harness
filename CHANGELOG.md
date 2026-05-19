@@ -8,6 +8,25 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 
 ## [Unreleased]
 
+## [0.12.0] — 2026-05-19
+
+### Added
+- **(R-0008)** Three keyboard shortcuts that open a TUI popup viewer scoped to a single task bucket:
+  - `alt+p` → tasks in `.pi/tasks/in-progress/` (sorted by id ascending).
+  - `alt+k` → tasks in `.pi/tasks/backlog/` (sorted by `priority` descending, tie-break by id ascending — same order as `/ah:project-status`).
+  - `alt+c` → tasks in `.pi/tasks/done/` (sorted by `updated` descending, tie-break by id descending).
+
+  Inside the popup, `↑` / `↓` cycles through the bucket, `ESC` closes. The popup body shows the full `TASK.md` content (frontmatter + sections) truncated to ~30 lines; the relative path is displayed so the dev can `code <path>` or equivalent to read the rest. Empty buckets surface a `notify` toast instead of opening an empty popup.
+- Documentation for the new shortcuts in `WORKFLOW.md` under "Keyboard shortcuts".
+- Requirement **R-0008** in `REQUIREMENTS.md`.
+
+### Changed
+- New TUI module `lib/task-popup.ts` (the overlay Component, ~100 lines, no `@earendil-works/pi-tui` runtime imports — duck-types the Component interface and recognizes ESC / ↑ / ↓ via raw ANSI bytes to keep AH free of an extra peer dependency).
+- New listing/sort helpers in `lib/show-task.ts` (`listBucketTasks`, `sortForBucket`, `parseTaskFrontmatter`) reused by the three shortcut handlers in `extensions/index.ts`.
+
+### Migration
+- No action required. Shortcuts are registered at session start; if a consumer is running on a PI version that lacks `pi.registerShortcut`, AH logs a single `console.warn` and the rest of the extension keeps working.
+
 ## [0.11.0] — 2026-05-19
 
 ### Removed
@@ -187,7 +206,8 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 ### Migration
 - No action required — first public release.
 
-[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.12.0...HEAD
+[0.12.0]: https://github.com/Skillbill/agentic-harness/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/Skillbill/agentic-harness/compare/v0.10.1...v0.11.0
 [0.10.1]: https://github.com/Skillbill/agentic-harness/compare/v0.10.0...v0.10.1
 [0.10.0]: https://github.com/Skillbill/agentic-harness/compare/v0.9.2...v0.10.0
