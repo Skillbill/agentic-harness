@@ -39,20 +39,27 @@ Read-only. No changes to files or git.
    - `pct_done = round(closed / total * 100)`  (0 if `total == 0`)
 
 3. **For every task in `in-progress/`**, determine percentage and phase
-   using the same logic — *no* distinction between the current task and
-   the others. The numbers reflect the inner-cycle artifacts, not the
-   stale `progress:` frontmatter field.
+   using the **same code path** — `pct` and the phase indicator do
+   not depend on which branch is currently checked out. The numbers
+   reflect the inner-cycle artifacts as they are *committed on the
+   task's feature branch*, not the stale `progress:` frontmatter field
+   and not the working-tree state.
 
-   **Where the artifacts live**: if the feature branch (from TASK.md's
-   `branch:` field) is checked out locally, the artifacts are on disk at
-   `.pi/tasks/in-progress/<ID>-<slug>/`. Otherwise, read them from the
-   branch tree:
-   - `git ls-tree -r <branch> -- .pi/tasks/in-progress/<ID>-<slug>/` to
-     enumerate the artifacts present on the branch.
-   - `git show <branch>:<path>` to read individual files (e.g. each
-     step's frontmatter `status:`).
-   - Fall back to `origin/<branch>` if the local branch is missing, then
-     to the on-disk file as a last resort.
+   **Artifact source resolution** (identical for every task, mirrors the
+   TASK.md resolution flow in step 1 — never reads from the working tree
+   first):
+   1. `git ls-tree -r <branch> -- .pi/tasks/in-progress/<ID>-<slug>/`
+      on the local branch from `TASK.md#branch:` — enumerates artifacts.
+      For each file of interest, `git show <branch>:<path>` reads it.
+   2. If the local branch doesn't exist, retry with `origin/<branch>`.
+   3. Only when both fail (branch deleted everywhere), fall back to the
+      on-disk file at `.pi/tasks/in-progress/<ID>-<slug>/<path>`. The
+      disk path is a last resort, not a shortcut for the current task.
+
+   Consequence: a percentage seen from `main` matches the percentage
+   seen from `feature/T-NNN-*` (assuming everything on that branch is
+   committed — which it should be, since `task-execute` commits per
+   step). Uncommitted work in the working tree never shows up.
 
    a. **Step inventory**: enumerate `steps/NN-*.md` (exclude `steps/archive/`).
       For each step file, read the frontmatter `status:` field.

@@ -8,6 +8,14 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 
 ## [Unreleased]
 
+## [0.19.1] — 2026-05-19
+
+### Fixed
+- `/ah:project-status` step 3 had asymmetric wording that *looked* like a residual current-vs-others branching even though R-0015 in v0.19.0 had unified the computation: "if the feature branch is checked out locally, the artifacts are on disk… otherwise read via `git show`". Functionally equivalent in the committed-only common case, but cognitively confusing and semantically wrong — the current task would have picked up uncommitted working-tree state while the others read only committed content from the branch. Rewrote the resolution flow to mirror step 1: always `git show <branch>:<path>` first (then `origin/<branch>`, then disk as last-resort fallback), regardless of which branch is checked out. A percentage seen from `main` now matches the percentage seen from the feature branch.
+
+### Migration
+- No action required.
+
 ## [0.19.0] — 2026-05-19
 
 ### Changed
@@ -361,7 +369,8 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 ### Migration
 - No action required — first public release.
 
-[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.19.0...HEAD
+[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.19.1...HEAD
+[0.19.1]: https://github.com/Skillbill/agentic-harness/compare/v0.19.0...v0.19.1
 [0.19.0]: https://github.com/Skillbill/agentic-harness/compare/v0.18.0...v0.19.0
 [0.18.0]: https://github.com/Skillbill/agentic-harness/compare/v0.17.1...v0.18.0
 [0.17.1]: https://github.com/Skillbill/agentic-harness/compare/v0.17.0...v0.17.1
