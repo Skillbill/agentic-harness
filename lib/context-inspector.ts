@@ -2,8 +2,8 @@
  * Context Inspector — agentic-harness module.
  *
  * Tracks at a fine grain what `pi` sends to the LLM provider and what comes
- * back, so token usage in upload/download can be tuned across tasks (Efesto
- * and other projects that load AH).
+ * back, so token usage in upload/download can be tuned across tasks in any
+ * consumer project that loads AH.
  *
  * `pi` events used (see pi's docs/extensions.md):
  *   - before_provider_request  → full outbound payload to the provider
