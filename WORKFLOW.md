@@ -67,7 +67,6 @@ All AH commands are prefixed with `ah:`.
 | `/ah:task-done`      | Close a task after its PR is merged                       |
 | `/ah:project-status` | Project progress bar + status of in-progress tasks        |
 | `/ah:pr-open`        | Verify DoD and prepare PR description                     |
-| `/ah:map-codebase`   | Analyze the codebase and produce 7 structured docs in `.pi/codebase/` |
 | `/ah:do-git-stuff`   | Run mutating git commands delegated by the dev            |
 | `/ah:help`           | Overlay with version, slash command list, and keyboard shortcuts |
 
@@ -86,10 +85,10 @@ Inside the popup: `↑` / `↓` cycles through the bucket, `ESC` closes. Long
 the dev can open the file in a separate editor for the full text. The
 shortcut is a no-op (with a `notify` toast) when the bucket is empty.
 
-### Codebase map (recommended prerequisite)
+### Codebase map (implicit, no explicit command)
 
-`/ah:map-codebase` analyzes the entire codebase and produces 7 structured
-documents in `.pi/codebase/`:
+AH maintains a structured map of the consumer's codebase under
+`.pi/codebase/`, made of 7 thematic documents + an `INDEX.md`:
 
 | Document | Content |
 |---|---|
@@ -101,12 +100,18 @@ documents in `.pi/codebase/`:
 | `TESTING.md` | Test framework, structure, mocking |
 | `TECHNICAL_DEBT.md` | Technical debt, known bugs, fragile areas |
 
-These documents are **consumed** automatically by the `plan` and `execute`
-phases of the inner cycle, to give the agent global context on project
-architecture, conventions, and patterns.
+These documents are consumed by the `discuss`, `plan`, `execute`, and
+`verify` phases of the inner cycle, plus the post-close refresh in
+`/ah:task-done`.
 
-The map is **recommended but non-blocking**: the phases work without it,
-just with less context.
+**There is no explicit `/ah:map-codebase` slash command** — the mapping
+procedure lives in `procedures/map-codebase.md` (referenced via
+`$EXT_DIR` by the consumer phases). When a phase finds `.pi/codebase/`
+missing or incomplete it offers to run the procedure inline; when
+`/ah:task-done` closes a task it regenerates the map automatically. If
+you need a manual refresh, run the closing phase of a small task or ask
+the agent in the chat to "run the codebase map procedure" — AH will
+execute the same procedure file.
 
 ### Project requirements (`.pi/REQUIREMENTS.md`) — input layer
 

@@ -48,8 +48,9 @@ scans tasks must look for directories, not files.
 ## 2. Codebase map (`.pi/codebase/`) — project-level prerequisite
 
 The codebase map is a **project-level** resource (not per-task), produced
-by `/ah:map-codebase`. It contains 7 structured documents describing
-cross-cutting aspects of the whole project:
+by the codebase-map procedure (`procedures/map-codebase.md`, R-0012 —
+**not** an explicit slash command). It contains 7 structured documents
+describing cross-cutting aspects of the whole project:
 
 | Document | Content |
 |---|---|
@@ -65,8 +66,9 @@ cross-cutting aspects of the whole project:
 
 The map is **mandatory** for the `discuss`, `plan`, and `execute` phases.
 If `.pi/codebase/` does not exist or is incomplete when a phase requires it,
-the agent **proposes generating it inline** by running the `/ah:map-codebase`
-logic. If the dev refuses, the phase halts.
+the agent **proposes running the codebase-map procedure inline** (it reads
+`$EXT_DIR/procedures/map-codebase.md` and executes steps 2–5). If the dev
+refuses, the phase halts.
 
 ### Selective loading
 
@@ -87,10 +89,15 @@ choice is explicit for every task.
 ### Updating
 
 The map is updated:
-- **Manually** by the dev with `/ah:map-codebase` (typically after
-  significant changes to the codebase).
+- **Automatically** when one of the inner-cycle phases (`discuss`, `plan`,
+  `execute`) needs `.pi/codebase/` and finds it missing or incomplete —
+  the phase runs the codebase-map procedure inline before continuing.
 - **Automatically** by `/ah:task-done` at task closure (regenerates the
   map to reflect the changes introduced).
+- **Manually**, when the dev wants a refresh outside the task cycle: ask
+  the agent in chat to "run the codebase-map procedure" — it will read
+  `$EXT_DIR/procedures/map-codebase.md` and execute it. There is no
+  slash command for this (R-0012).
 
 ### CODEMAP.md — deprecated
 
@@ -403,7 +410,7 @@ All four commands **auto-detect the current task** from the git branch
 | Verify | `chore(T-NNN): verify` | At the end of `/task-verify` |
 | Task state | `chore(T-NNN): start task` · `chore(T-NNN): to review` · `chore(T-NNN): done` | State transitions |
 | Backlog | `chore(T-NNN): add task to backlog` | `/task-new` |
-| Codebase map | `docs: codebase map` | `/map-codebase` and `/task-done` |
+| Codebase map | `docs: codebase map` | Inline codebase-map procedure (run by `discuss`/`plan`/`execute` on cold start, by `/task-done` at closure) |
 
 ---
 

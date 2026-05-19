@@ -77,8 +77,8 @@ anchored to the real code.
   > prerequisite to plan steps anchored to the code.
   > Should I generate the map now?
 
-  If the dev confirms → **execute the logic of `/ah:map-codebase`** inline:
-  read the file `$EXT_DIR/prompts/map-codebase.md` and execute the
+  If the dev confirms → **run the codebase-map procedure inline**:
+  read `$EXT_DIR/procedures/map-codebase.md` and execute the
   instructions of steps 2–5 (create `.pi/codebase/`, the 4 passes,
   security scan, output verification). At the end proceed with step 2b.
 

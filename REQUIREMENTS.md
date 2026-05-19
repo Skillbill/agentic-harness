@@ -228,6 +228,23 @@ Every keyboard shortcut AH registers via `pi.registerShortcut(...)` MUST be list
 - When you remove a shortcut: delete both lines. Leaving a stale row in `shortcutRows` lies to the user.
 - If a new PR adds a shortcut without touching `shortcutRows`, the right reviewer comment is "missing R-0011 entry in `/ah:help`" — pointing at this requirement makes the fix obvious.
 
+### R-0012 — Codebase map as internal procedure, not a slash command
+
+Starting from v0.16.0, the codebase-map logic lives in `procedures/map-codebase.md` and is **not** exposed as the `/ah:map-codebase` slash command anymore. The 1015-line procedure is referenced via `$EXT_DIR/procedures/map-codebase.md` by every consumer that needs to (re)generate `.pi/codebase/`.
+
+**Decisions**:
+
+- **No auto-registration**: `extensions/index.ts` scans `prompts/*.md` for slash-command registration. By moving the file to `procedures/` we make AH's "is this a command?" decision a function of *location*, not of a frontmatter flag — there's nothing to remember, no opt-in/opt-out marker that can be forgotten.
+- **`procedures/` is for inline sub-procedures**: this directory was already listed in `CLAUDE.md` as a sibling of `templates/` referenced by prompts/skills via `$EXT_DIR`, but it was empty. R-0012 establishes the convention: anything that is *executed inline by another phase* (1+ caller, no standalone user value) belongs in `procedures/`; anything *the dev types directly* belongs in `prompts/`.
+- **Four call sites, one source**: `skills/ah-task-discuss`, `skills/ah-task-plan`, `skills/ah-task-execute`, and `prompts/task-done.md` all read `$EXT_DIR/procedures/map-codebase.md` and execute its steps 2–5. The dev never types the command — they hit `/ah:task-discuss` (or similar), and if `.pi/codebase/` is missing the phase proposes running the procedure inline.
+- **Manual refresh path**: if a dev wants to regenerate the map outside the task cycle, they ask the agent in chat ("run the codebase-map procedure" or similar). AH reads the procedure file and runs it. No slash command, no shortcut — chat is the only entry.
+- **Why not a frontmatter `internal: true` flag**: the alternative was to keep the file in `prompts/` and filter it out of the auto-discovery loop based on a frontmatter marker. Rejected because: (a) it'd add a one-off code path in `register-prompt.ts` for a single file, (b) prompts and procedures have different *audiences* (dev vs. agent), and a folder separation makes that explicit, (c) the existing `procedures/` directory was already declared in `CLAUDE.md` waiting for content.
+
+**Consequences for the AH dev**:
+- When you introduce a new long sub-procedure that other phases reference (security audit, dependency scan, license check, …), drop it in `procedures/` from day one. Do not put it in `prompts/` then refactor.
+- When you edit `procedures/map-codebase.md` and renumber the steps, search-and-update the four `steps 2–5` references in the consumers (`grep -rn "procedures/map-codebase" --include='*.md'`). The references are step-number-coupled — splitting that coupling would mean changing the procedure layout.
+- Do not silently re-introduce `/ah:map-codebase` as a slash command. If a future requirement says "the dev wants a one-line manual refresh", prefer a different name (e.g. `/ah:refresh-codebase`) that's a *wrapper* whose body is `read $EXT_DIR/procedures/map-codebase.md and run it`. Keeps the procedure file the single source of truth and the slash command minimal.
+
 ## Out of scope
 
 - Distribution of third-party extensions other than AH.
@@ -267,3 +284,6 @@ Every keyboard shortcut AH registers via `pi.registerShortcut(...)` MUST be list
 - **v0.14.0**: bordered popups (`lib/popup-frame.ts`), reordered `/ah:help` body, new `alt+h` shortcut. No new requirement — purely visual / additive.
 - **v0.14.1**: emoji-aware width fix in `lib/popup-frame.ts` (closes the right border of the box on lines containing wide BMP emoji like `✅`).
 - **v0.15.0**: introduces R-0010 (`alt+s` branch switcher + clean-tree gate) and R-0011 (help popup is the single source of truth for shortcuts). New `lib/branch-switch-popup.ts`; `TaskInfo` grows a `branch` field populated from frontmatter.
+- **v0.15.1**: fixes `alt+s` runtime crash — `exec` lives on `pi` (ExtensionAPI), not on `ctx` (ExtensionContext). Three call sites in `extensions/index.ts` switched from `ctx.exec` to `pi.exec`.
+- **v0.15.2**: bumps `peerDependencies["@earendil-works/pi-coding-agent"]` from `^0.74.0` to `^0.75.0` to silence the compat warning on PI 0.75.x. No API drift observed between 0.74 and 0.75 for the surfaces AH uses.
+- **v0.16.0**: introduces R-0012 — codebase-map logic moves from `prompts/map-codebase.md` (auto-registered as `/ah:map-codebase`) to `procedures/map-codebase.md` (inline sub-procedure referenced via `$EXT_DIR`). Drops the slash command. Four consumers updated to read the new path. No consumer migration.

@@ -8,6 +8,29 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 
 ## [Unreleased]
 
+## [0.16.0] — 2026-05-19
+
+### Removed
+- `/ah:map-codebase` slash command. The 1015-line prompt body never had standalone value for the dev — it was always invoked inline by `discuss` / `plan` / `execute` (cold-start bootstrap of `.pi/codebase/`) and by `/ah:task-done` (post-close refresh). Codified the new pattern as **R-0012**.
+
+### Changed
+- The codebase-map logic file moves from `prompts/map-codebase.md` to `procedures/map-codebase.md`. The auto-discovery loop in `extensions/index.ts` only scans `prompts/*.md`, so the move alone is enough to stop registering `/ah:map-codebase` as a command — no flag, no opt-out marker. The procedure stays referenced via `$EXT_DIR/procedures/map-codebase.md` by the four call sites:
+  - `skills/ah-task-discuss/INSTRUCTIONS.md` step 2
+  - `skills/ah-task-plan/INSTRUCTIONS.md` step 2
+  - `skills/ah-task-execute/INSTRUCTIONS.md` step 1
+  - `prompts/task-done.md` step 5
+- `WORKFLOW.md` command table loses the `/ah:map-codebase` row; the "Codebase map" section is rewritten to describe the implicit trigger model and how to request a manual refresh in chat (no slash command).
+- `CLAUDE.md` reference to `lib/codebase-cache.ts` now points at the procedure instead of the (former) command.
+- `task-layout.md` updated in 4 places — section §2 intro, blocking-prerequisite paragraph, "Updating" bullets, and the commits table.
+- `procedures/` is now an explicit category in AH's source tree (was declared in CLAUDE.md but empty until v0.16.0). Convention: any long body that one or more phases execute inline lives here; standalone slash commands live in `prompts/`.
+- Requirement **R-0012** in `REQUIREMENTS.md`.
+
+### Migration
+- No consumer action required. After `pi update`:
+  - `/ah:map-codebase` no longer appears in PI's slash command palette or in the `/ah:help` overlay.
+  - The four task phases continue to (re)generate `.pi/codebase/` automatically.
+  - Devs who used to type `/ah:map-codebase` manually should instead let the next `/ah:task-done` regenerate the map, or ask the agent in chat to "run the codebase-map procedure".
+
 ## [0.15.2] — 2026-05-19
 
 ### Fixed
@@ -270,7 +293,8 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 ### Migration
 - No action required — first public release.
 
-[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.15.2...HEAD
+[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.16.0...HEAD
+[0.16.0]: https://github.com/Skillbill/agentic-harness/compare/v0.15.2...v0.16.0
 [0.15.2]: https://github.com/Skillbill/agentic-harness/compare/v0.15.1...v0.15.2
 [0.15.1]: https://github.com/Skillbill/agentic-harness/compare/v0.15.0...v0.15.1
 [0.15.0]: https://github.com/Skillbill/agentic-harness/compare/v0.14.1...v0.15.0
