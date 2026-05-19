@@ -15,7 +15,7 @@ Read-only. No changes to files or git.
 
 1. **Scan `.pi/tasks/{backlog,in-progress,review,done}/T-*/TASK.md`**.
    For each file extract from the frontmatter: `id`, `title`, `status`, `estimate`,
-   `assignee`, `branch`.
+   `assignee`, `branch`, `updated`.
 
    **⚠ Authoritative source for active tasks (not `done`, not `backlog`)**:
    the TASK.md on `main` may be stale (status/progress updated only
@@ -74,6 +74,10 @@ Read-only. No changes to files or git.
    Backlog
      T-010  Integrate thermal cameras                             (-, -)
      T-011  DTS module setup                                      (-, 8h)
+
+   Recently closed
+     T-002  2026-05-18  Fix alarm broadcast                       (marco, 2h)
+     T-001  2026-05-15  Initial scaffolding                       (toto, 4h)
    ```
 
    Rendering rules:
@@ -91,8 +95,15 @@ Read-only. No changes to files or git.
    - "In review" section without bar: just ID, title, (assignee, estimate).
    - **"Backlog" section**: list all tasks in `backlog/` without a progress
      bar. Format: just ID, truncated title, (assignee, estimate).
+   - **"Recently closed" section**: list the **last 5** tasks in `done/`
+     sorted by `updated` frontmatter field **descending** (most recent
+     first). If `updated` is missing, fall back to `created`; if both are
+     missing, treat as the earliest possible date (sinks to the bottom).
+     Format: ID, `updated` date (`YYYY-MM-DD` or `-` if missing),
+     truncated title, (assignee, estimate). No progress bar. Omit the
+     section entirely if `done/` is empty.
    - **Omit** empty sections (if no in-progress, don't print the
-     "In progress" block; same for review, same for backlog).
+     "In progress" block; same for review, backlog, recently closed).
    - If `total == 0`, print only: `📊 Project — <today>  (no tasks)`.
    - **DO NOT** add any other output: no advice, no "next steps",
      no legend, no explanations. Only the block above.

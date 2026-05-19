@@ -8,6 +8,17 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 
 ## [Unreleased]
 
+## [0.9.1] — 2026-05-19
+
+### Added
+- `/ah:project-status` now renders a **"Recently closed"** section listing the last 5 tasks in `done/`, sorted by the `updated` frontmatter field in descending order (most recent first). Falls back to `created` if `updated` is missing; tasks with neither sink to the bottom. Each line shows ID, date (`YYYY-MM-DD` or `-`), truncated title, and `(assignee, estimate)`. Section is omitted when `done/` is empty.
+
+### Changed
+- Step 1 of `/ah:project-status` extracts `updated` from the TASK.md frontmatter in addition to the existing fields.
+
+### Migration
+- No action required.
+
 ## [0.9.0] — 2026-05-14
 
 ### Added
@@ -132,7 +143,8 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 ### Migration
 - No action required — first public release.
 
-[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.9.1...HEAD
+[0.9.1]: https://github.com/Skillbill/agentic-harness/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/Skillbill/agentic-harness/compare/v0.8.1...v0.9.0
 [0.8.1]: https://github.com/Skillbill/agentic-harness/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/Skillbill/agentic-harness/compare/v0.7.0...v0.8.0
