@@ -8,6 +8,19 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 
 ## [Unreleased]
 
+## [0.14.0] — 2026-05-19
+
+### Added
+- `alt+h` keyboard shortcut that opens the `/ah:help` overlay directly (same handler as the slash command). Listed inside the help popup itself for discoverability.
+
+### Changed
+- Both AH overlays (`/ah:help` and the three `alt+p`/`alt+k`/`alt+c` task popups) now render inside a Unicode-box border (`┌─┐ │ │ ├─┤ └─┘`) with a horizontal divider between header, body, and footer. New shared helper `lib/popup-frame.ts` (`renderBox` + `clipToWidth`) makes the chrome consistent across the two popup types.
+- `/ah:help` layout reordered to match the natural read order: the version is now on the title line itself (`🆘 agentic-harness — help   vX.Y.Z`), the body begins with **Keyboard shortcuts**, then **Docs**, and the longer **Slash commands** list comes last. Previously the slash-command list appeared first and pushed the shortcuts off-screen on smaller terminals.
+- `InfoPopup` API drops the separate `subtitle` field; callers fold the subtitle text into `title` when needed.
+
+### Migration
+- No action required.
+
 ## [0.13.0] — 2026-05-19
 
 ### Added
@@ -219,7 +232,8 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 ### Migration
 - No action required — first public release.
 
-[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.13.0...HEAD
+[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.14.0...HEAD
+[0.14.0]: https://github.com/Skillbill/agentic-harness/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/Skillbill/agentic-harness/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/Skillbill/agentic-harness/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/Skillbill/agentic-harness/compare/v0.10.1...v0.11.0

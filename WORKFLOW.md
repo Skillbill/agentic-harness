@@ -78,6 +78,7 @@ All AH commands are prefixed with `ah:`.
 | `alt+p`  | Popup viewer of tasks in `.pi/tasks/in-progress/` (sorted by id asc)              |
 | `alt+k`  | Popup viewer of tasks in `.pi/tasks/backlog/` (sorted by priority desc, id asc)   |
 | `alt+c`  | Popup viewer of tasks in `.pi/tasks/done/` (sorted by `updated` desc, id desc)    |
+| `alt+h`  | `/ah:help` overlay (version, shortcuts, docs, slash commands)                     |
 
 Inside the popup: `↑` / `↓` cycles through the bucket, `ESC` closes. Long
 `TASK.md` bodies are truncated to ~30 lines — the popup shows the path so

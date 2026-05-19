@@ -1,15 +1,16 @@
+import { renderBox, type Section } from "./popup-frame.js";
+
 /**
  * Single-page overlay used by `/ah:help` (and any future read-only popup
  * that just needs to dump text and exit on ESC).
  *
  * Sibling of `lib/task-popup.ts`: same duck-typed `Component` shape, same
  * "no `@earendil-works/pi-tui` runtime import" trick (we match ESC from
- * its raw ANSI byte). The difference is that `InfoPopup` has no
- * navigation — it's static text + an ESC closer.
+ * its raw ANSI byte). Difference: no navigation.
  *
- * Body is truncated to `MAX_BODY_LINES` so a future caller that passes a
- * huge string doesn't blow the overlay; the title and footer are always
- * rendered.
+ * The body is truncated to `MAX_BODY_LINES` so a future caller that
+ * hands in a huge string doesn't blow the overlay; the title and footer
+ * always render.
  */
 
 const KEY_ESC = "\x1b";
@@ -19,11 +20,9 @@ const MAX_BODY_LINES = 120;
 export interface InfoPopupOptions {
   /** First line of the popup (e.g. "🆘 AH help"). */
   title: string;
-  /** Optional second-row subtitle (e.g. "agentic-harness v0.13.0"). */
-  subtitle?: string;
   /** Body — array of pre-rendered lines (empty strings are valid spacers). */
   lines: string[];
-  /** Footer hint shown below the bottom separator. */
+  /** Footer hint shown below the bottom divider. */
   footer?: string;
   /** Called when the dev presses ESC. */
   done: (closed: true) => void;
@@ -37,10 +36,7 @@ export class InfoPopup {
   }
 
   render(width: number): string[] {
-    const { title, subtitle, lines, footer } = this.opts;
-    const sepWidth = Math.max(10, Math.min(width, 100));
-    const sep = "─".repeat(sepWidth);
-
+    const { title, lines, footer } = this.opts;
     const body =
       lines.length > MAX_BODY_LINES
         ? [
@@ -50,23 +46,16 @@ export class InfoPopup {
           ]
         : lines;
 
-    const out: string[] = [];
-    out.push(clipToWidth(title, width));
-    if (subtitle) out.push(clipToWidth(subtitle, width));
-    out.push(sep);
-    for (const line of body) out.push(clipToWidth(line, width));
-    out.push(sep);
-    out.push(clipToWidth(footer ?? "esc close", width));
-    return out;
+    const sections: Section[] = [
+      { lines: [title] },
+      { lines: body },
+      { lines: [footer ?? "esc close"] },
+    ];
+
+    return renderBox(width, sections);
   }
 
   handleInput(data: string): void {
     if (data === KEY_ESC) this.opts.done(true);
   }
-}
-
-function clipToWidth(line: string, width: number): string {
-  if (line.length <= width) return line;
-  if (width <= 1) return line.slice(0, width);
-  return `${line.slice(0, Math.max(0, width - 1))}…`;
 }
