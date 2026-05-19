@@ -267,6 +267,26 @@ Starting from v0.17.0, when the consumer migration framework (R-0003) advances `
 - When you add a new migration `vX.Y.Z` that touches consumer files (rename, frontmatter retrofit, etc.), expect the gate to *not* fire on that update: the working tree will contain `.pi/ah-version` *plus* the files the migration changed. The dev sees both, reviews, commits together. This is by design.
 - If the consumer's default branch is anything other than `main` / `master` (`develop`, `trunk`, …) the auto-commit silently skips. That's intentional — adding more defaults to the allowlist is a one-line edit when a real consumer asks for it. Don't widen speculatively.
 
+### R-0014 — Source-available distribution under PolyForm Noncommercial 1.0.0
+
+Starting from v0.18.0, AH ships with a `LICENSE` file containing the full text of [PolyForm Noncommercial 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0) and `package.json#license` set to the SPDX identifier `PolyForm-Noncommercial-1.0.0`. Until v0.17.x the `package.json` declared `MIT` without a matching `LICENSE` file — an orphan declaration.
+
+**Decisions**:
+
+- **PolyForm Noncommercial 1.0.0, not MIT / Apache / GPL**: the intent expressed by Skillbill is "anyone can use and modify AH unless they make money from it". That intent does not match any OSI-approved license (the OSI definition requires unrestricted commercial use). PolyForm Noncommercial is the modern, software-tailored, lawyer-drafted (Heather Meeker et al., 2020) license that says exactly this. SPDX-recognized.
+- **Not Creative Commons BY-NC**: CC explicitly recommends against using its licenses for software. PolyForm is the software-specific analog.
+- **Not "Commons Clause" rider** on top of a permissive license: that pattern (used historically by Redis, MongoDB) is now considered convoluted and legally murky compared to a single-document license like PolyForm.
+- **Not BUSL** (Business Source License): BUSL allows commercial use except for a specific competing-product carve-out and converts to OSI-licensed after a delay. Heavier than what's needed here, and changes shape over time.
+- **No automatic conversion to permissive after N years**: AH stays PolyForm-NC indefinitely. If/when the policy changes, a new release with a different `LICENSE` is the migration path — `git log` keeps the historical license attached to historical tags.
+- **Skillbill internal use is unaffected**: the licensor (Skillbill) holds the copyright and the license restricts *licensees*, not the licensor. Skillbill's internal commercial use of AH is implicit and unrestricted.
+- **"Use" of AH inside a consumer project is non-commercial use of AH, not commercial**: a paid developer running AH against a commercial codebase is using AH as a *tool* (the same way they'd use VS Code or an OS), not redistributing or selling AH. PolyForm Noncommercial covers that case via the "noncommercial purpose" + "fair use" sections. Distribution / resale of AH as a paid product is the case that requires a separate commercial license.
+
+**Consequences for the AH dev**:
+- Source files / docs may carry SPDX headers if added later, but the canonical statement is `package.json#license` + `LICENSE` at repo root. Don't add per-file copyright headers retroactively — they age badly.
+- When merging external contributions: the contributor agrees, by submitting, that their changes are licensed back to Skillbill under PolyForm Noncommercial (documented in `README.md` Contributing section). No CLA file required for now; revisit if/when contribution volume justifies one.
+- Changing license at a future release is a significant decision — it would warrant a major bump (e.g. `v1.0.0` → `v2.0.0` with a different `LICENSE`). Old releases keep their original license attached to their git tag.
+- `README.md` carries a one-paragraph plain-English summary of the license so a casual visitor doesn't have to parse the legal text. Keep that summary truthful — if you change the license, change the README in the same commit.
+
 ## Out of scope
 
 - Distribution of third-party extensions other than AH.
@@ -312,3 +332,5 @@ Starting from v0.17.0, when the consumer migration framework (R-0003) advances `
 - **v0.16.1**: drops the obsolete `CODEMAP.md — deprecated` block from `task-layout.md`. Single-line deprecation notice with no remaining callers anywhere in the repo — git history keeps the archeology.
 - **v0.16.2**: scrubs explicit consumer-project names ("Efesto") from `lib/context-inspector.ts`, `REQUIREMENTS.md`, and earlier `CHANGELOG.md` entries. AH is a generic Pi Package; source and docs must not name any one of the N possible consumers.
 - **v0.17.0**: introduces R-0013 — `lib/migrate-consumer.ts` auto-commits `.pi/ah-version` when the marker bump is the only thing dirty and the consumer is on `main` / `master`. Removes the paper cut where every `pi update` left a stray modification at session start.
+- **v0.17.1**: untracks a stray `node_modules/typebox` symlink (committed in `4eba528` against `.gitignore`, pointed at an absolute path on the original dev's machine — broken for everyone else). `typebox` is already a `peerDependency` provided by PI.
+- **v0.18.0**: introduces R-0014 — ships first `LICENSE` (PolyForm Noncommercial 1.0.0) and first `README.md`. `package.json#license` switches from the orphan `MIT` declaration to `PolyForm-Noncommercial-1.0.0`. AH becomes source-available rather than orphan-MIT.

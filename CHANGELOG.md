@@ -8,6 +8,19 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 
 ## [Unreleased]
 
+## [0.18.0] — 2026-05-19
+
+### Added
+- `README.md` — first proper project entry point. Short tagline, what AH is, install instructions (with the three `pi install` variants and the version-pin form), at-a-glance tables for slash commands and keyboard shortcuts, a typical task flow, repo layout map, pointers to the four authoritative docs (`CLAUDE.md` / `WORKFLOW.md` / `task-layout.md` / `REQUIREMENTS.md`), update/migration model, license summary, contributing note.
+- `LICENSE` — full text of **PolyForm Noncommercial 1.0.0** (SPDX `PolyForm-Noncommercial-1.0.0`). Permits use / modification / redistribution for non-commercial purposes (personal, research, education, charity, government non-commercial); commercial use requires a separate license from Skillbill.
+
+### Changed
+- `package.json#license` switched from `MIT` to `PolyForm-Noncommercial-1.0.0`. The previous declaration was orphaned — `MIT` was listed but no `LICENSE` file existed. R-0014 codifies the choice and the rationale.
+- `package.json#files` now ships `README.md` and `LICENSE` so users who install AH via `pi install git:...` get both alongside `CLAUDE.md` and the rest.
+
+### Migration
+- No action required. Consumers that already track an AH install see the new license metadata at next `pi update`. Existing usage of AH inside consumer projects remains permitted — consumer projects are themselves the dev's work, not redistribution of AH.
+
 ## [0.17.1] — 2026-05-19
 
 ### Removed
@@ -334,7 +347,8 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 ### Migration
 - No action required — first public release.
 
-[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.17.1...HEAD
+[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.18.0...HEAD
+[0.18.0]: https://github.com/Skillbill/agentic-harness/compare/v0.17.1...v0.18.0
 [0.17.1]: https://github.com/Skillbill/agentic-harness/compare/v0.17.0...v0.17.1
 [0.17.0]: https://github.com/Skillbill/agentic-harness/compare/v0.16.2...v0.17.0
 [0.16.2]: https://github.com/Skillbill/agentic-harness/compare/v0.16.1...v0.16.2
