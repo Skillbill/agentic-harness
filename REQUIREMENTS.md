@@ -1,19 +1,8 @@
----
-feature: AH OTA update
-status: approved
-created: 2026-05-14
-updated: 2026-05-14
----
+# REQUIREMENTS — agentic-harness
 
-# REQUIREMENTS — OTA update of the AH extension for PI
+This file is the rolling list of AH's product-level requirements. Each entry below is a self-contained `R-NNNN` — a single feature / capability of the extension, with rationale and decisions captured at the time it was introduced. R-NNNN ids are append-only and never recycled; declined requirements stay in place with a strikethrough and a `DECLINED in vX.Y.Z` marker (see R-0002).
 
-## Context
-
-`agentic-harness` (AH) is an extension for [`@earendil-works/pi-coding-agent`](https://www.npmjs.com/package/@earendil-works/pi-coding-agent) (PI). Today the extension is installed manually by cloning/copying the source into PI's extensions directory, and updates require an explicit dev intervention.
-
-This feature introduces an "official" distribution of AH as a **Pi Package** installable via `pi install git:...`, and an OTA (over-the-air) mechanism that, at startup of a PI environment with AH installed, checks for a new version and — subject to dev confirmation — applies it and reloads the extension.
-
-Top-level objective: reduce the friction of adopting and updating AH while keeping the dev in control of the changes applied to their environment.
+> **Heads-up — do not confuse with the consumer-side file.** This is `REQUIREMENTS.md` *of the AH repo itself*, listing AH's own product requirements. The companion file `.pi/REQUIREMENTS.md`, created inside each **consumer** project (per R-0006 from v0.9.0), is a different document with the same shape but a different scope: it lists the *consumer project's* requirements (the things the dev is building **with** AH), not AH's own. Keep the two cleanly separated when editing.
 
 ## Requirements
 
