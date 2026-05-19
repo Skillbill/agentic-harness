@@ -8,6 +8,17 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 
 ## [Unreleased]
 
+## [0.10.1] — 2026-05-19
+
+### Fixed
+- `/ah:project-status` priority badge is now actually visible. v0.10.0 used a single-character column where `NORMAL` rendered as a blank space, which made the column appear empty in any project where most tasks are at the default — defeating the point of "show priority". Replaced with a fixed 4-character `[XY]` badge using `!!` (IMMEDIATE), `^ ` (HIGH), ` ·` (NORMAL), `v ` (LOW). Every level now has a visible glyph.
+
+### Changed
+- `/ah:project-status` priority badge is shown **only** in the `In progress` and `Backlog` sections. `In review` and `Recently closed` revert to the pre-v0.10.0 layout (no badge, no prefix column). Rationale: priority is most actionable while planning the next bit of work (backlog) and tracking what's open (in-progress); on review-pending and already-closed items the badge is mostly noise.
+
+### Migration
+- No action required.
+
 ## [0.10.0] — 2026-05-19
 
 ### Added
@@ -168,7 +179,8 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 ### Migration
 - No action required — first public release.
 
-[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.10.1...HEAD
+[0.10.1]: https://github.com/Skillbill/agentic-harness/compare/v0.10.0...v0.10.1
 [0.10.0]: https://github.com/Skillbill/agentic-harness/compare/v0.9.2...v0.10.0
 [0.9.2]: https://github.com/Skillbill/agentic-harness/compare/v0.9.1...v0.9.2
 [0.9.1]: https://github.com/Skillbill/agentic-harness/compare/v0.9.0...v0.9.1

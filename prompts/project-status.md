@@ -69,36 +69,46 @@ Read-only. No changes to files or git.
    Project   [██████░░░░░░░░░░░░░░]  30%   (3/10 done · 2 active · 5 backlog)
 
    In progress
-   ▶! T-003  ███████░░░░░░  58%  Add web camera support           (toto, 4h)  [execute 3/5]
-     ^ T-007  ██░░░░░░░░░░░  15%  Refactor cctv module            (marco, 6h) [discuss]
+   ▶ [!!] T-003  ███████░░░░░░  58%  Add web camera support       (toto, 4h)  [execute 3/5]
+     [^ ] T-007  ██░░░░░░░░░░░  15%  Refactor cctv module         (marco, 6h) [discuss]
+     [ ·] T-009  █░░░░░░░░░░░░  10%  Minor cleanup in modbus      (-, 2h)     [plan]
 
    In review
-       T-001  Fix alarm broadcast                                 (marco, 2h)
+     T-001  Fix alarm broadcast                                   (marco, 2h)
 
    Backlog
-     ! T-010  Integrate thermal cameras                           (-, -)
-     ^ T-011  DTS module setup                                    (-, 8h)
-       T-012  Minor cleanup                                       (-, -)
-     v T-013  Nice-to-have polish                                 (-, -)
+     [!!] T-010  Integrate thermal cameras                        (-, -)
+     [^ ] T-011  DTS module setup                                 (-, 8h)
+     [ ·] T-012  Minor cleanup                                    (-, -)
+     [v ] T-013  Nice-to-have polish                              (-, -)
 
    Recently closed
-       T-002  2026-05-18  Fix alarm broadcast                     (marco, 2h)
-       T-001  2026-05-15  Initial scaffolding                     (toto, 4h)
+     T-002  2026-05-18  Fix alarm broadcast                       (marco, 2h)
+     T-001  2026-05-15  Initial scaffolding                       (toto, 4h)
    ```
 
    Rendering rules:
-   - **Row prefix (2 chars before the ID)**: column 1 is the *current-task*
-     marker (`▶` if this is the task on the current git branch, else space);
-     column 2 is the *priority* marker — `!` = IMMEDIATE, `^` = HIGH,
-     ` ` (space) = NORMAL, `v` = LOW. So a row reads
-     `<prefix><priority> T-NNN  …`. This 2-char prefix applies to every
-     section (In progress, In review, Backlog, Recently closed) so columns
-     line up across the report.
+   - **Priority badge** — shown only in the **In progress** and **Backlog**
+     sections (not in "In review" or "Recently closed"). Format: a fixed
+     4-character `[XY]` token inserted between the current-task marker
+     and the task ID, where `XY` is one of:
+     - `!!` = IMMEDIATE
+     - `^ ` = HIGH
+     - ` ·` = NORMAL
+     - `v ` = LOW
+
+     Every level renders a visible glyph (NORMAL is `·`, not blank) so
+     the column is readable even when most tasks are at the default.
    - **Current task**: detect the current task from the git branch (`feature/T-NNN-…`).
      If found, show it in the header after the date: `🎯 T-NNN <title>`.
-     In the "In progress" block, the current task gets the prefix `▶` in
-     column 1 instead of space (column 2 still carries the priority marker).
-     If there is no current task (not on a feature/ branch), omit `🎯` from the header.
+     In the "In progress" block, the current task gets the prefix `▶` —
+     otherwise the prefix is a single space. The priority badge (4 chars)
+     follows the prefix. So an in-progress row reads
+     `<prefix> [XY] T-NNN  …`. If there is no current task (not on a
+     feature/ branch), omit `🎯` from the header.
+   - **In review** and **Recently closed**: no priority badge, no prefix
+     column. Just `  T-NNN  …` (two leading spaces for alignment with
+     the body of the report, identical to the pre-v0.10.0 layout).
    - Project progress bar: **20 chars** (`█` filled, `░` empty).
    - Per-task progress bar for in-progress tasks: **13 chars** (`█` / `░`).
    - Title truncated to 40 chars with `…` if it exceeds.
