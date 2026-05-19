@@ -38,28 +38,55 @@ Read-only. No changes to files or git.
    - `active  = in-progress + review`
    - `pct_done = round(closed / total * 100)`  (0 if `total == 0`)
 
-3. **For each task in `in-progress/`**, determine % and phase:
+3. **For every task in `in-progress/`**, determine percentage and phase
+   using the same logic — *no* distinction between the current task and
+   the others. The numbers reflect the inner-cycle artifacts, not the
+   stale `progress:` frontmatter field.
 
-   **Only for the current task** (the one on the current git branch) run
-   the full inspection:
+   **Where the artifacts live**: if the feature branch (from TASK.md's
+   `branch:` field) is checked out locally, the artifacts are on disk at
+   `.pi/tasks/in-progress/<ID>-<slug>/`. Otherwise, read them from the
+   branch tree:
+   - `git ls-tree -r <branch> -- .pi/tasks/in-progress/<ID>-<slug>/` to
+     enumerate the artifacts present on the branch.
+   - `git show <branch>:<path>` to read individual files (e.g. each
+     step's frontmatter `status:`).
+   - Fall back to `origin/<branch>` if the local branch is missing, then
+     to the on-disk file as a last resort.
 
-   a. **% of DoD**:
-      - Read the `## Definition of Done` section of TASK.md.
-      - Count the `- [x]` and `- [ ]` checkboxes.
-      - `pct = round(checked / total_items * 100)` (0 if no checkboxes).
+   a. **Step inventory**: enumerate `steps/NN-*.md` (exclude `steps/archive/`).
+      For each step file, read the frontmatter `status:` field.
 
-   b. **Inner-cycle phase** — check the artifacts in the task directory
-      (`.pi/tasks/in-progress/T-NNN-<slug>/`):
+   b. **`pct` (progress percentage)**:
+      - If `PLAN.md` is absent **or** there are zero non-archived step
+        files: `pct = 0` (the task hasn't entered the execute phase).
+      - Otherwise: `pct = round(steps_done / steps_total * 100)`, where
+        `steps_done` is the count of step files whose frontmatter says
+        `status: done`.
+
+   c. **Inner-cycle phase**:
       - `DISCUSS.md` doesn't exist → `discuss`
       - `PLAN.md` doesn't exist → `plan`
       - `steps/` empty or absent → `plan`
-      - At least one step is not `done` → `execute` (show `done/total`)
-      - `VERIFY.md` doesn't exist → `verify`
-      - Everything complete → `✔ ready`
+      - **`PLAN.md` exists but every step file is `status: todo` (zero
+        done) and no execute commit exists yet** → `plan` (the plan has
+        been written but execute hasn't started). Distinguishable from
+        the previous bullet by the presence of `PLAN.md`.
+      - At least one step `done` and at least one step not `done` →
+        `execute N/M` (where `N`/`M` are done/total).
+      - All steps `done` and `VERIFY.md` doesn't exist → `verify`
+      - All steps `done` and `VERIFY.md` exists → `✔ ready`
+      - **Special case — `task-start` but no inner-cycle artifacts**:
+        the task dir contains only `TASK.md` (no `DISCUSS.md`, no
+        `PLAN.md`, no `steps/`) → `no plan`. Means the dev started the
+        task but bypassed discuss/plan/execute. Surface it explicitly so
+        the dev can decide to enter the cycle or leave the task
+        free-form.
 
-   **For other in-progress tasks** (not current): trust the frontmatter.
-   - `pct` = `progress` field from frontmatter (if `null` or absent → `0`).
-   - Phase = do not inspect artifacts; show `[-]` (unverified state).
+   d. **Fallback when even artifacts can't be loaded** (e.g. branch
+      missing locally AND on origin AND only `TASK.md` exists on disk):
+      use the `progress` field from frontmatter. If that is also null or
+      missing, `pct = 0` and phase = `[?]`.
 
 4. **Render** — use exactly this format, nothing else:
 
@@ -69,9 +96,10 @@ Read-only. No changes to files or git.
    Project   [██████░░░░░░░░░░░░░░]  30%   (3/10 done · 2 active · 5 backlog)
 
    In progress
-   ▶ [!!] T-003  ███████░░░░░░  58%  Add web camera support       (toto, 4h)  [execute 3/5]
-     [^ ] T-007  ██░░░░░░░░░░░  15%  Refactor cctv module         (marco, 6h) [discuss]
-     [ ·] T-009  █░░░░░░░░░░░░  10%  Minor cleanup in modbus      (-, 2h)     [plan]
+   ▶ [!!] T-003  ███░░░░░░░░░░  25%  Add web camera support       (toto, 4h)  [execute 1/4]
+     [^ ] T-007  ░░░░░░░░░░░░░   0%  Refactor cctv module         (marco, 6h) [discuss]
+     [ ·] T-009  ░░░░░░░░░░░░░   0%  Minor cleanup in modbus      (-, 2h)     [plan]
+     [ ·] T-022  ░░░░░░░░░░░░░   0%  Free-form work, no inner cycle (-, -)    [no plan]
 
    In review
      T-001  Fix alarm broadcast                                   (marco, 2h)

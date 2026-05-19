@@ -8,6 +8,20 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 
 ## [Unreleased]
 
+## [0.19.0] — 2026-05-19
+
+### Changed
+- **(R-0015)** `/ah:project-status` now computes per-task `pct` and inner-cycle phase the same way for **every** task in `in-progress/` — current task and others. Source of truth is the inner-cycle artifacts (`PLAN.md` + `steps/NN-*.md` with `status: todo | doing | done | …`), read from the feature branch via `git show <branch>:<path>` when the branch isn't checked out (or from `origin/<branch>` as a second-tier fallback). The stale `progress:` frontmatter field is no longer consulted as the primary source — only as a last resort when artifacts are entirely unreachable.
+
+  Previous behavior (v0.18.x) showed `0%` and `[-]` for any in-progress task that wasn't on the current branch, because `progress:` was never updated incrementally by `task-execute`. Tasks like T-019 with 1/8 steps done rendered as `0%` from `main`. Now they render as `12% [execute 1/8]`.
+
+- **(R-0015)** New phase indicator `[no plan]` for the case where `/ah:task-start` ran but the dev bypassed `task-discuss` / `task-plan` / `task-execute` (the task dir contains only `TASK.md`, no `DISCUSS.md` / `PLAN.md` / `steps/`). The bar stays at `0%` — honest, because there's no plan to measure progress against. Catches free-form work that's invisible to the inner cycle.
+
+- **(R-0015)** `pct` for the current in-progress task is no longer derived from `## Definition of Done` checkbox counts. DoD checkboxes describe *readiness to close* (lint/typecheck/tests passed, docs updated, …), not *how far through execute we are*. The two metrics were conflated in v0.18.x. Now `pct` = `steps_done / steps_total` consistently for every in-progress task; DoD readiness shows up implicitly via the `verify` phase appearing.
+
+### Migration
+- No action required. Existing tasks with `progress: null` in their frontmatter will start displaying correct percentages at the next `/ah:project-status` run — derived from their existing step files. No write side-effects are added to `task-execute`: the `TASK.md` frontmatter stays the same to avoid merge-conflict noise on long-running tasks.
+
 ## [0.18.0] — 2026-05-19
 
 ### Added
@@ -347,7 +361,8 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 ### Migration
 - No action required — first public release.
 
-[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.18.0...HEAD
+[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.19.0...HEAD
+[0.19.0]: https://github.com/Skillbill/agentic-harness/compare/v0.18.0...v0.19.0
 [0.18.0]: https://github.com/Skillbill/agentic-harness/compare/v0.17.1...v0.18.0
 [0.17.1]: https://github.com/Skillbill/agentic-harness/compare/v0.17.0...v0.17.1
 [0.17.0]: https://github.com/Skillbill/agentic-harness/compare/v0.16.2...v0.17.0

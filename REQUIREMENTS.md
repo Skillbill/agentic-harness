@@ -287,6 +287,30 @@ Starting from v0.18.0, AH ships with a `LICENSE` file containing the full text o
 - Changing license at a future release is a significant decision — it would warrant a major bump (e.g. `v1.0.0` → `v2.0.0` with a different `LICENSE`). Old releases keep their original license attached to their git tag.
 - `README.md` carries a one-paragraph plain-English summary of the license so a casual visitor doesn't have to parse the legal text. Keep that summary truthful — if you change the license, change the README in the same commit.
 
+### R-0015 — Project-status progress derived from inner-cycle artifacts, not from the `progress:` frontmatter
+
+Starting from v0.19.0, `/ah:project-status` computes the per-task percentage and inner-cycle phase the same way for **every** task in `in-progress/` — current task and others. The numbers come from inspecting `PLAN.md` + `steps/NN-*.md` (with their frontmatter `status:` field) and the presence of `DISCUSS.md` / `VERIFY.md`. The `progress:` frontmatter field on `TASK.md` is no longer the source of truth — it remains as a last-resort fallback when no artifacts at all can be reached.
+
+**Why this change**:
+
+- The `progress:` field was a dead letter. A `grep -rn "progress:" skills/ prompts/` across the AH source shows that **no phase writes it incrementally** — only `pr-open` and `task-done` set it to `100`. So every in-progress task that wasn't the current one rendered as `0%` until it reached PR. The deeper the task, the more the bar lied.
+- Inner-cycle artifacts already carry the right signal: each `steps/NN-*.md` has a `status: todo | doing | done | blocked | failed` field that the agent is supposed to bump as it works through them. Reading those gives an honest `done/total` ratio per task without any new write path.
+
+**Decisions**:
+
+- **Single computation path for all in-progress tasks**: drops the v0.18.x branch that treated "current task" differently. Same logic everywhere. Avoids the surprise where T-019 with 1/8 steps done renders as `[execute 1/8]` from inside its branch but as `0% [-]` from `main`.
+- **Artifact source resolution order**: (a) on-disk files if the feature branch is currently checked out, (b) `git show <branch>:<path>` on the local branch otherwise, (c) `git show origin/<branch>:<path>` if the local branch is missing, (d) fall back to the on-disk file under the task dir as a last resort. Mirrors the existing TASK.md resolution flow from step 1 of the prompt.
+- **New phase indicator `[no plan]`**: when the task dir contains only `TASK.md` (no `DISCUSS.md`, no `PLAN.md`, no `steps/`), surface "task started but inner cycle bypassed" explicitly. Catches the case where `/ah:task-start` was run and then the dev did freeform implementation commits without `task-discuss` / `task-plan` / `task-execute`. The bar stays at 0% — honest, because AH has no plan to measure against.
+- **Fallback `[?]`**: when even artifacts can't be loaded (branch missing locally and on origin, disk only has `TASK.md`, `progress:` is null), show `[?]` to signal "cannot determine". Different from `[no plan]`: `[no plan]` is a known state (the dev bypassed the cycle), `[?]` is an unknown state (the data is unreachable from this checkout).
+- **DoD checkboxes no longer drive `pct`**: in v0.18.x the current task's percentage came from `## Definition of Done` checkbox count. That metric conflates "ready to close" (DoD) with "how far into execute" (steps). The new logic puts each in its own lane — `pct` = step progress, DoD readiness becomes visible only through the `verify` phase appearing.
+- **No write side-effects**: `task-execute` is **not** changed to update `progress:` after each step. Side-effecting `TASK.md`'s frontmatter every commit would create merge-conflict noise on long-running tasks. Computing at read time keeps the file boring.
+
+**Consequences for the AH dev**:
+
+- The `progress:` frontmatter key now has a single legitimate writer set: `pr-open` (→ `100`) and `task-done` (→ `100`). If you ever consider writing it from another phase, prefer extending the read-time computation in `project-status.md` instead. The field is kept (with its two writers) only as the documented fallback when artifacts can't be reached.
+- Step files **must** carry a `status:` line per `task-layout.md` §3.4. AH's plan templates already enforce this; if you add new step authoring paths, mirror the contract.
+- The `[no plan]` indicator is informational — `/ah:project-status` doesn't gate or warn on it. If you want to enforce "tasks must follow the inner cycle", add a separate `/ah:audit` command; don't bolt enforcement onto the status renderer.
+
 ## Out of scope
 
 - Distribution of third-party extensions other than AH.
@@ -334,3 +358,4 @@ Starting from v0.18.0, AH ships with a `LICENSE` file containing the full text o
 - **v0.17.0**: introduces R-0013 — `lib/migrate-consumer.ts` auto-commits `.pi/ah-version` when the marker bump is the only thing dirty and the consumer is on `main` / `master`. Removes the paper cut where every `pi update` left a stray modification at session start.
 - **v0.17.1**: untracks a stray `node_modules/typebox` symlink (committed in `4eba528` against `.gitignore`, pointed at an absolute path on the original dev's machine — broken for everyone else). `typebox` is already a `peerDependency` provided by PI.
 - **v0.18.0**: introduces R-0014 — ships first `LICENSE` (PolyForm Noncommercial 1.0.0) and first `README.md`. `package.json#license` switches from the orphan `MIT` declaration to `PolyForm-Noncommercial-1.0.0`. AH becomes source-available rather than orphan-MIT.
+- **v0.19.0**: introduces R-0015 — `/ah:project-status` derives the in-progress `pct` and phase from `PLAN.md` + `steps/NN-*.md` (`status:` field), the same way for every in-progress task, dropping the v0.18.x split between "current task" and "others". The `progress:` frontmatter is no longer the source of truth — it stays as a last-resort fallback. New phase indicator `[no plan]` for tasks where `task-start` ran but the inner cycle was bypassed.
