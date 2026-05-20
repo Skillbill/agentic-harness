@@ -1,7 +1,8 @@
 /**
  * Shared chrome for AH's TUI overlays: a Unicode-box border with one
- * horizontal divider per logical section. Used by `info-popup.ts` and
- * `task-popup.ts` so the two overlays look like siblings.
+ * horizontal divider per logical section. Used by `task-popup.ts`,
+ * `help-popup.ts`, and `branch-switch-popup.ts` so the overlays look
+ * like siblings.
  *
  * Kept in its own file because both popups must agree on the inner
  * width budget (outer width minus left/right border + spaces).

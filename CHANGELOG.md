@@ -8,6 +8,14 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 
 ## [Unreleased]
 
+## [0.21.0] — 2026-05-20
+
+### Changed
+- **(R-0009)** The `/ah:help` overlay (and the `alt+h` shortcut that shares its handler) becomes interactive in its "Slash commands" section. `↑` / `↓` move a `▶` marker between the listed `/ah:*` commands; pressing `ENTER` closes the popup and prefills the core input editor with `/<name> ` so the dev can append arguments (or hit `ENTER` again for args-less commands). `ESC` still closes without selection. Implementation: new `lib/help-popup.ts` Component, modelled on `lib/branch-switch-popup.ts` (view-only, side-effect-free); the prefill happens in the shortcut handler via `ctx.ui.setEditorText`. The previous `lib/info-popup.ts` is removed — it was only used by `/ah:help` and its read-only contract no longer fits.
+
+### Migration
+- No action required. Existing `alt+h` / `/ah:help` muscle memory keeps working — ESC still closes. The new `↑` / `↓` + `ENTER` behavior is purely additive.
+
 ## [0.20.0] — 2026-05-19
 
 ### Added
@@ -391,6 +399,7 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 - No action required — first public release.
 
 [Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.20.0...HEAD
+[0.21.0]: https://github.com/Skillbill/agentic-harness/compare/v0.20.0...v0.21.0
 [0.20.0]: https://github.com/Skillbill/agentic-harness/compare/v0.19.2...v0.20.0
 [0.19.2]: https://github.com/Skillbill/agentic-harness/compare/v0.19.1...v0.19.2
 [0.19.1]: https://github.com/Skillbill/agentic-harness/compare/v0.19.0...v0.19.1

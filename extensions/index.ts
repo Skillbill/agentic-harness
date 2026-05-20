@@ -15,7 +15,7 @@ import {
   type TaskBucket,
 } from "../lib/show-task.js";
 import { TaskPopup } from "../lib/task-popup.js";
-import { InfoPopup } from "../lib/info-popup.js";
+import { HelpPopup, type HelpCommand } from "../lib/help-popup.js";
 import {
   BranchSwitchPopup,
   type BranchItem,
@@ -159,14 +159,11 @@ export default function (pi: ExtensionAPI) {
 
     // Slash commands discovered dynamically — keeps the list in sync as
     // prompts are added or removed.
-    const ahCommands = pi
+    const ahCommands: HelpCommand[] = pi
       .getCommands()
       .filter((c) => c.name.startsWith("ah:"))
-      .sort((a, b) => a.name.localeCompare(b.name));
-    const cmdRows = ahCommands.map(
-      (c) =>
-        `  /${c.name}${"".padEnd(Math.max(1, 22 - c.name.length), " ")} ${c.description ?? ""}`.trimEnd(),
-    );
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((c) => ({ name: c.name, description: c.description }));
 
     // Shortcut list is hard-coded — PI exposes no enumeration API. Keep
     // this block in sync with the `pi.registerShortcut(...)` calls below.
@@ -180,23 +177,22 @@ export default function (pi: ExtensionAPI) {
       "  alt+h   🆘 This help popup",
     ];
 
-    const lines: string[] = [];
-    lines.push("Keyboard shortcuts");
-    lines.push(...shortcutRows);
-    lines.push("");
-    lines.push("Docs");
-    lines.push("  https://github.com/Skillbill/agentic-harness");
-    lines.push("");
-    lines.push("Slash commands");
-    lines.push(...(cmdRows.length > 0 ? cmdRows : ["  (none registered)"]));
+    const prelude: string[] = [];
+    prelude.push("Keyboard shortcuts");
+    prelude.push(...shortcutRows);
+    prelude.push("");
+    prelude.push("Docs");
+    prelude.push("  https://github.com/Skillbill/agentic-harness");
 
-    await ctx.ui.custom<true>(
+    const picked = await ctx.ui.custom<HelpCommand | null>(
       (_tui, _theme, _kb, done) =>
-        new InfoPopup({
+        new HelpPopup({
           title: `🆘 agentic-harness — help   v${version}`,
-          lines,
-          footer: "esc close",
-          done: () => done(true),
+          prelude,
+          commandsHeading: "Slash commands",
+          commands: ahCommands,
+          footer: "↑/↓ select · enter run · esc close",
+          done,
         }),
       {
         overlay: true,
@@ -207,6 +203,21 @@ export default function (pi: ExtensionAPI) {
         },
       },
     );
+
+    // ENTER on a focused row prefills the editor with `/<name> ` so the
+    // dev can append arguments (or just press ENTER again to run as-is).
+    // setEditorText was chosen over auto-dispatch because some AH
+    // commands take arguments (e.g. /ah:task-start <ID>) — surfacing the
+    // command in the editor lets the dev decide.
+    if (!picked) return;
+    try {
+      ctx.ui.setEditorText(`/${picked.name} `);
+    } catch (err) {
+      ctx.ui.notify(
+        `Could not prefill editor: ${err instanceof Error ? err.message : String(err)}`,
+        "warning",
+      );
+    }
   };
 
   pi.registerCommand("ah:help", {

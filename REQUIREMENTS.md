@@ -179,20 +179,23 @@ Starting from v0.12.0, AH registers three keyboard shortcuts via PI's `pi.regist
 
 ### R-0009 — `/ah:help` overlay
 
-Starting from v0.13.0, AH ships a `/ah:help` slash command that opens a single-page TUI overlay with the installed AH version, the list of AH slash commands, and the keyboard shortcuts from R-0008. ESC closes.
+Starting from v0.13.0, AH ships a `/ah:help` slash command that opens a single-page TUI overlay with the installed AH version, the list of AH slash commands, and the keyboard shortcuts from R-0008. ESC closes. From v0.21.0, the slash-command section is interactive: `↑` / `↓` move the focus, `ENTER` prefills the editor with `/<name> ` (the dev appends any arguments and presses ENTER again to run).
 
 **Decisions**:
 
 - **Registered via `pi.registerCommand`, not via a prompt file**. The default registration path for `/ah:*` commands is the `prompts/*.md` loop in `extensions/index.ts`, which routes the body through `pi.sendUserMessage` so the LLM produces the response. `/ah:help` deliberately bypasses that — the popup is purely local (overlay + raw filesystem read of `package.json`) and never burns an LLM turn.
 - **Command list is discovered, not hard-coded**. The handler calls `pi.getCommands().filter(c => c.name.startsWith("ah:"))` so the popup automatically reflects whatever set of prompts is currently registered (after `/ah:standup` was dropped in v0.11.0, after `/ah:help` itself was added in v0.13.0, etc.). The shortcut list, by contrast, is hard-coded — there is no public PI API to enumerate registered shortcuts.
-- **Layout**: title (`🆘 agentic-harness — help`), subtitle (`vX.Y.Z`), separator, "Slash commands" section, blank line, "Keyboard shortcuts" section, blank line, docs link, separator, footer (`esc close`).
-- **Reuse, not generalization**: a new `lib/info-popup.ts` Component sits next to `lib/task-popup.ts`. Both duck-type pi-tui's `Component` and recognize ESC from a raw ANSI byte. They share the `clipToWidth` helper conceptually but each owns its own copy — a real generalization (a `BasePopup` class) isn't justified by two call sites.
-- **Fallback on missing UI**: if `ctx.hasUI` is false (RPC / print mode), the handler returns early after a `ctx.ui.notify` (when notify is available) instead of crashing.
+- **Layout**: title (`🆘 agentic-harness — help   vX.Y.Z`), separator, "Keyboard shortcuts" block, blank line, "Docs" line, separator, "Slash commands" selectable list (with `▶` marker on the focused row), separator, footer (`↑/↓ select · enter run · esc close`).
+- **Prefill, not auto-dispatch**. ENTER on a focused command writes `/<name> ` into the core input editor via `ctx.ui.setEditorText` and closes the popup. AH does **not** dispatch the slash command itself — several AH commands take arguments (e.g. `/ah:task-start <ID>`), and surfacing the command in the editor lets the dev complete it before submitting. For args-less commands the dev just hits ENTER again. There is no `pi.dispatchCommand` API to call instead; even if there were, the prefill flow keeps the dev in the loop (visible in the editor, can be cancelled with backspace).
+- **Reuse, not generalization**: `lib/help-popup.ts` sits next to `lib/task-popup.ts` and `lib/branch-switch-popup.ts`. All three duck-type pi-tui's `Component`, recognize ESC from a raw ANSI byte, and use `lib/popup-frame.ts` for the chrome. They share `clipToWidth` conceptually but each owns its own copy — a real generalization (a `BasePopup` class) isn't justified by three call sites.
+- **View / action separation**: `HelpPopup` is side-effect-free — it owns keyboard handling and the visual marker, nothing else. The editor prefill happens in the shortcut handler in `extensions/index.ts` after the `done` callback resolves, mirroring the posture of `BranchSwitchPopup` (where the git checkout lives in the handler, not the component).
+- **Fallback on missing UI**: if `ctx.hasUI` is false (RPC / print mode), the handler returns early after a `ctx.ui.notify` (when notify is available) instead of crashing. If `setEditorText` throws (older PI without the API surface), the handler emits a warning toast and stays alive.
 
 **Consequences for the AH dev**:
 - When you add or remove a `prompts/*.md` file, `/ah:help` updates on its own — no doc churn here.
 - When you add a new keyboard shortcut in `extensions/index.ts`, also append a row to the hard-coded `shortcutRows` array in the `/ah:help` handler. Same applies if you change the key for an existing shortcut.
 - Do not add LLM-bound content to the popup body (no `$@`, `$EXT_DIR`, or `pi.sendUserMessage` from inside the handler). The popup is meant to be cheap — a single overlay open / close cycle should not cost a token.
+- Don't move git / filesystem side effects into `HelpPopup`: the component must stay side-effect-free so a future caller can swap the prefill action for a different one (e.g. auto-dispatch when PI grows that API) without touching the popup.
 
 ### R-0010 — `alt+s` branch switcher with clean-tree gate
 
