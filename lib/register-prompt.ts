@@ -73,11 +73,17 @@ export function registerPrompt(
       let prompt = body.replaceAll("$EXT_DIR", extDir);
       prompt = prompt.replaceAll("$CONTENT_LANG_CODE", config.contentLanguage);
       prompt = prompt.replaceAll("$CONTENT_LANG", langName);
-      if (args) {
-        prompt = prompt.replaceAll("$@", args);
-        const firstArg = args.split(/\s+/)[0] ?? args;
-        prompt = prompt.replaceAll("$1", firstArg);
-      }
+      // Always substitute `$@` and `$1` — empty string when no args were
+      // provided. Skipping the substitution leaves the literal placeholder in
+      // the prompt body, which the LLM can mis-parse: when `current-task-context`
+      // or the codebase INDEX is injected in the same turn, the LLM has been
+      // observed treating those blocks as the "topic" of a no-arg `/ah:task-new`.
+      // All consumer prompts that use `$@` / `$1` already handle the empty case
+      // (auto-detect from branch, ask the dev, etc.).
+      const argText = args ?? "";
+      prompt = prompt.replaceAll("$@", argText);
+      const firstArg = argText.length > 0 ? (argText.split(/\s+/)[0] ?? "") : "";
+      prompt = prompt.replaceAll("$1", firstArg);
       if (hasExtDirRef) prompt = EXT_DIR_DIRECTIVE + prompt;
       pi.sendUserMessage(prompt);
     },

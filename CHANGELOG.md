@@ -8,6 +8,15 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 
 ## [Unreleased]
 
+## [0.23.1] — 2026-05-21
+
+### Fixed
+- `lib/register-prompt.ts` always substitutes `$@` and `$1` placeholders — empty string when the slash command was invoked with no arguments. Previously the substitution was gated by `if (args) { … }`, leaving the literal `$@` token in the prompt body when no arg was passed. The LLM, seeing the same turn carry the injected `current-task-context` block and the codebase `INDEX.md`, has been observed mis-interpreting those orientation blocks as the "topic" of a no-arg `/ah:task-new` (e.g. proposing a task whose subject is the list of `.pi/codebase/*.md` filenames). All consumer prompts that use `$@` / `$1` already handle the empty case (auto-detect from branch, ask the dev, optional argument hints), so substituting to empty string is a strict improvement.
+- `prompts/task-new.md` gains an **empty-topic guard** at the top of the prompt body that tells the agent: when `Topic provided:` is blank, ask the dev directly with a single question — do **not** treat any other context block (`current-task-context`, codebase `INDEX.md`, the list of `.pi/codebase/*.md` files) as the user's topic. Defensive layer for models that might still read the orientation context as intent.
+
+### Migration
+- No action required. Pure bug fix in the prompt substitution layer; no schema change, no consumer migration. Existing tasks are unaffected.
+
 ## [0.23.0] — 2026-05-21
 
 ### Changed
@@ -419,7 +428,8 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 ### Migration
 - No action required — first public release.
 
-[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.23.0...HEAD
+[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.23.1...HEAD
+[0.23.1]: https://github.com/Skillbill/agentic-harness/compare/v0.23.0...v0.23.1
 [0.23.0]: https://github.com/Skillbill/agentic-harness/compare/v0.22.0...v0.23.0
 [0.22.0]: https://github.com/Skillbill/agentic-harness/compare/v0.21.0...v0.22.0
 [0.21.0]: https://github.com/Skillbill/agentic-harness/compare/v0.20.0...v0.21.0

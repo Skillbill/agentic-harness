@@ -8,6 +8,17 @@ in the backlog starting from the topic supplied by the user.
 
 **Topic provided:** $@
 
+> **Empty-topic guard.** If the `Topic provided:` line above is blank
+> (or whitespace only), the dev launched `/ah:task-new` with no
+> arguments. In that case ask the dev **directly** for the topic with
+> a single question in **$CONTENT_LANG** (e.g. "What is this task
+> about? — a short title plus one or two lines on the why is enough.").
+> **Do not** treat any other context block in this turn (the
+> `current-task-context` block, the codebase `INDEX.md`, the list of
+> `.pi/codebase/*.md` files, etc.) as the topic — those are
+> orientation context, never the user's intent. Wait for the dev's
+> reply, then resume from step 3.
+
 **Output language**: the TASK.md content you generate (Context, Goal, DoD, etc.) MUST be written in **$CONTENT_LANG**. The frontmatter keys and slug stay English/ASCII.
 
 The sole goal of the interview is to clarify **what the task is about** —
