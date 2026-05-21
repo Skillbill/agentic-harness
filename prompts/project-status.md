@@ -15,7 +15,7 @@ Read-only. No changes to files or git.
 
 1. **Scan `.pi/tasks/{backlog,in-progress,review,done}/T-*/TASK.md`**.
    For each file extract from the frontmatter: `id`, `title`, `status`, `priority`,
-   `estimate`, `assignee`, `branch`, `updated`.
+   `estimate`, `assignee`, `customer`, `project`, `branch`, `updated`.
 
    **Priority normalization**: if `priority` is missing, blank, or not in
    `{LOW, NORMAL, HIGH, IMMEDIATE}` (compare case-insensitively, then
@@ -103,22 +103,22 @@ Read-only. No changes to files or git.
    Project   [██████░░░░░░░░░░░░░░]  30%   (3/10 done · 2 active · 5 backlog)
 
    In progress
-   ▶ [!!] T-003  ███░░░░░░░░░░  25%  Add web camera support       (toto, 4h)  [execute 1/4]
-     [^ ] T-007  ░░░░░░░░░░░░░   0%  Refactor cctv module         (marco, 6h) [discuss]
-     [ ·] T-009  ░░░░░░░░░░░░░   0%  Minor cleanup in modbus      (-, 2h)     [plan]
-     [ ·] T-022  ░░░░░░░░░░░░░   0%  Free-form work, no inner cycle (-, -)    [no plan]
+   ▶ [!!] T-003  ███░░░░░░░░░░  25%  Add web camera support       (toto, 4h)  [Acme/Efesto] [execute 1/4]
+     [^ ] T-007  ░░░░░░░░░░░░░   0%  Refactor cctv module         (marco, 6h) [Globex]      [discuss]
+     [ ·] T-009  ░░░░░░░░░░░░░   0%  Minor cleanup in modbus      (-, 2h)                   [plan]
+     [ ·] T-022  ░░░░░░░░░░░░░   0%  Free-form work, no inner cycle (-, -)                  [no plan]
 
    In review
-     T-001  Fix alarm broadcast                                   (marco, 2h)
+     T-001  Fix alarm broadcast                                   (marco, 2h)  [Acme/Efesto]
 
    Backlog
-     [!!] T-010  Integrate thermal cameras                        (-, -)
-     [^ ] T-011  DTS module setup                                 (-, 8h)
+     [!!] T-010  Integrate thermal cameras                        (-, -)       [Initech]
+     [^ ] T-011  DTS module setup                                 (-, 8h)      [Acme/Efesto]
      [ ·] T-012  Minor cleanup                                    (-, -)
      [v ] T-013  Nice-to-have polish                              (-, -)
 
    Recently closed
-     T-002  2026-05-18  Fix alarm broadcast                       (marco, 2h)
+     T-002  2026-05-18  Fix alarm broadcast                       (marco, 2h)  [Acme/Efesto]
      T-001  2026-05-15  Initial scaffolding                       (toto, 4h)
    ```
 
@@ -148,6 +148,18 @@ Read-only. No changes to files or git.
    - Per-task progress bar for in-progress tasks: **13 chars** (`█` / `░`).
    - Title truncated to 40 chars with `…` if it exceeds.
    - Assignee/estimate in parentheses; if missing show `-`.
+   - **Customer / project tag** — optional bracketed token rendered
+     **after** the parenthetical `(assignee, estimate)` block and
+     **before** any phase tag (`[execute N/M]`, etc.). Format:
+     - Both set → `[customer/project]` (literal `/`, no spaces).
+     - Customer only → `[customer]`.
+     - Project only → `[project]`.
+     - Both `null` (or missing in legacy files) → **omit entirely**;
+       no empty `[]` and no spacing artifact.
+     Truncate each component to 20 chars with `…` if it exceeds, so
+     the combined tag stays readable. The tag is rendered in **every**
+     section (In progress, In review, Backlog, Recently closed) — it's
+     a commercial routing marker independent of task state.
    - **Inner-cycle phase**: for each in-progress task, show the phase in
      square brackets after `(assignee, estimate)`. Format: `[discuss]`,
      `[plan]`, `[execute N/M]` (steps done/total), `[verify]`, `[✔ ready]`.

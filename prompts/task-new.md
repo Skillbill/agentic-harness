@@ -146,8 +146,36 @@ Loop rules:
   task`, `ok go`, immediately break the loop and proceed to step 4 with
   what you have. Never insist.
 - **No summary + confirm turn**. When you have enough
-  to write Context + Goal, **go straight to step 4** —
+  to write Context + Goal, **go straight to step 3-bis** —
   the final output (step 6) acts as an implicit "after-the-fact confirmation".
+
+### 3-bis. Customer / project (optional, single turn)
+
+Some teams sell the same product to multiple customers, or work on
+customer-bespoke projects; tasks can carry that commercial routing
+as two optional frontmatter fields (`customer:` / `project:`, see
+`task-layout.md` §3.1). They are **pure metadata** — no inner-cycle
+phase reads them; only `/ah:project-status` surfaces them.
+
+Procedure:
+
+1. Ask **one compact message**, no follow-ups:
+
+   > Customer / project for this task? (optional)
+   > Reply with `<customer> / <project>`, or just `<customer>`, or
+   > just `/ <project>`, or `skip` to leave both blank.
+
+2. Parse the answer:
+   - `skip`, empty, `none`, `-`, or anything unparseable → record
+     `customer: null` and `project: null` for step 4.
+   - `Acme / Efesto` (a single `/` separator) → `customer: Acme`,
+     `project: Efesto`. Trim whitespace on both sides.
+   - `Acme` (no `/`) → `customer: Acme`, `project: null`.
+   - `/ Efesto` (leading `/`) → `customer: null`, `project: Efesto`.
+3. Use the values verbatim (no rewording, no localization). Empty /
+   whitespace-only halves are recorded as `null`.
+4. **No re-ask, no clarification turn**. If the answer is ambiguous,
+   prefer the `customer: null` / `project: null` fallback and move on.
 
 ### 4. Create the task file
 
@@ -170,6 +198,17 @@ Layout (see `task-layout.md` §1): each task is a **directory**
   - `{{IMPLEMENTS}}` → the list decided in step 2-bis:
     `[R-NNNN]` if linked, `[]` if `skip` was chosen.
   - `{{DATE}}` → `date +%Y-%m-%d`.
+- **`customer:` / `project:` frontmatter** (from step 3-bis):
+  - Both null (`skip` / unparseable / empty) → write `customer: null`
+    and `project: null` exactly as the template has them. No change.
+  - Customer-only → replace `customer: null` with `customer: Acme`.
+    Leave `project: null`.
+  - Project-only → leave `customer: null`. Replace `project: null`
+    with `project: Efesto`.
+  - Both → replace both lines. Quote the value with double quotes only
+    if it contains a YAML special character (`:`, `#`, `&`, `*`,
+    `!`, `|`, `>`, `'`, `"`, `%`, `@`, `\``). Plain alphanumeric +
+    space + `-` / `_` / `/` stays unquoted.
 - Fill the body sections with what was gathered in the interview:
   - `## Context` → 2–5 lines of prose explaining why the task exists
     (problem, motivation, any links/decisions if they came up).

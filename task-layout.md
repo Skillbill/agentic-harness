@@ -118,6 +118,8 @@ status: backlog | in-progress | review | done
 priority: LOW | NORMAL | HIGH | IMMEDIATE   # default NORMAL
 estimate: <N>h | null
 assignee: <username> | null
+customer: <customer name> | null            # optional; default null
+project: <product/project name> | null      # optional; default null
 branch: feature/T-NNN-<slug> | null
 implements: [R-NNNN, ...]   # optional; empty list `[]` is legal
 created: YYYY-MM-DD
@@ -131,6 +133,30 @@ updated: YYYY-MM-DD
 - Set to `NORMAL` by `/ah:task-new`; not asked during the interview. The dev edits it by hand when a task is more (or less) urgent than the default.
 - Consumed by `/ah:project-status`: priority is displayed next to each task and the `Backlog` section is rendered in priority-descending order (`IMMEDIATE → HIGH → NORMAL → LOW`, tie-break by ID ascending).
 - Existing tasks without the field are migrated to `priority: NORMAL` by the v0.10.0 consumer migration.
+
+**`customer:` / `project:` keys — optional commercial routing**
+
+- Both are free-form strings, both default to `null`. They are metadata
+  only: no inner-cycle phase reads them, no context injection includes
+  them, no behavior changes when they're set. Their sole consumer is
+  `/ah:project-status`, which surfaces them next to `(assignee,
+  estimate)` so the dev can see at a glance which customer / product a
+  task belongs to.
+- `customer:` — the customer / client paying for the work. `project:` —
+  the product or installation the task is delivered against. Either, both,
+  or neither may be set. Typical patterns:
+  - **Internal product, multiple customers**: same `project:` (e.g.
+    `Efesto`) shared across many tasks, with `customer:` varying per
+    deployment (`Acme`, `Globex`, `Initech`).
+  - **Customer-bespoke project**: same `customer:` (e.g. `Acme`) with
+    `project:` denoting the specific engagement (`Acme/HMI-2026`).
+  - **Internal / uncommercial work**: leave both `null`.
+- `/ah:task-new` asks once, optionally, in step 3-bis (free-form,
+  blank → `null`). The dev edits the file by hand to change either
+  field later — there is no rename command.
+- Existing TASK.md files without these keys are retrofitted to
+  `customer: null` / `project: null` by the v0.22.0 consumer
+  migration. Idempotent, append-only.
 
 **`implements:` key — linking to project requirements**
 

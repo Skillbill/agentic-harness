@@ -2,6 +2,7 @@ import type { ConsumerMigration } from "./types.js";
 import { migration as v0_8_0 } from "./v0_8_0.js";
 import { migration as v0_9_0 } from "./v0_9_0.js";
 import { migration as v0_10_0 } from "./v0_10_0.js";
+import { migration as v0_22_0 } from "./v0_22_0.js";
 
 /**
  * Registry of consumer migrations, ordered by semver ascending.
@@ -22,4 +23,5 @@ export const MIGRATIONS: readonly ConsumerMigration[] = [
   v0_8_0,
   v0_9_0,
   v0_10_0,
+  v0_22_0,
 ];

@@ -6,6 +6,8 @@ priority: NORMAL
 estimate: null
 progress: null
 assignee: null
+customer: null
+project: null
 branch: null
 implements: {{IMPLEMENTS}}
 created: {{DATE}}

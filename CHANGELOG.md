@@ -8,6 +8,19 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 
 ## [Unreleased]
 
+## [0.22.0] — 2026-05-21
+
+### Added
+- **(R-0017)** Two optional commercial-routing fields on `TASK.md` frontmatter: `customer:` and `project:`, both defaulting to `null`. Captures which customer pays for the work and which product / engagement the task is delivered against. `/ah:task-new` step 3-bis asks once with a single compact prompt — `<customer> / <project>` shorthand, with `skip` (or empty / unparseable answers) falling through to `null` / `null`. No re-ask, no clarification turn — the dev edits the file by hand later if either value changes.
+- **(R-0017)** `/ah:project-status` renders a `[customer/project]` tag after `(assignee, estimate)` and before any phase tag, across every section (In progress / In review / Backlog / Recently closed). Tag format: `[customer/project]` when both are set, `[customer]` / `[project]` when only one is, omitted entirely when both are `null` (legacy default). Each component is truncated to 20 chars with `…` if it exceeds.
+
+### Changed
+- `templates/task.md` gains `customer: null` and `project: null` right after the `assignee:` line — so newly created tasks always carry the keys (explicit `null` rather than missing).
+- `task-layout.md` §3.1 documents the new keys, the three combinations (customer only / project only / both), and the v0.22.0 retrofit migration.
+
+### Migration
+- **Automatic (consumer migration `lib/migrations/v0_22_0.ts`)**: at the first `session_start` after upgrading to v0.22.0, AH walks every `TASK.md` in the four task buckets (`.pi/tasks/{backlog,in-progress,review,done}/T-*/TASK.md`) and inserts `customer: null` / `project: null` right after the `assignee:` line where they are missing. Idempotent per key — skips files that already declare either field with any value; never overrides an existing value. Non-destructive: the dev's edits remain authoritative. Followed by the standard R-0013 auto-commit of `.pi/ah-version` when the working tree is otherwise clean on `main` / `master`; the TASK.md edits themselves are **not** auto-committed (they're real content changes that the dev reviews and commits explicitly).
+
 ## [0.21.0] — 2026-05-20
 
 ### Changed
@@ -398,7 +411,8 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 ### Migration
 - No action required — first public release.
 
-[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.20.0...HEAD
+[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.22.0...HEAD
+[0.22.0]: https://github.com/Skillbill/agentic-harness/compare/v0.21.0...v0.22.0
 [0.21.0]: https://github.com/Skillbill/agentic-harness/compare/v0.20.0...v0.21.0
 [0.20.0]: https://github.com/Skillbill/agentic-harness/compare/v0.19.2...v0.20.0
 [0.19.2]: https://github.com/Skillbill/agentic-harness/compare/v0.19.1...v0.19.2
