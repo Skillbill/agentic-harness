@@ -8,6 +8,14 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 
 ## [Unreleased]
 
+## [0.23.0] — 2026-05-21
+
+### Changed
+- **(R-0007 amended)** `/ah:task-new` now asks the dev for `priority:` in a new step 3-ter, right after the customer/project step (3-bis from R-0017). Single compact prompt listing the four canonical levels (`LOW` / `NORMAL` / `HIGH` / `IMMEDIATE`), case-insensitive parsing, `skip` (or empty / unparseable) keeps the `NORMAL` default. Restores symmetry with the optional metadata that 3-bis already asks for — priority is now front-loadable at creation rather than always-edit-after. The field stays editable by hand at any time afterwards.
+
+### Migration
+- No action required. Schema unchanged, default unchanged, allowed values unchanged. Pre-existing tasks keep whatever priority they currently have. The dev simply sees one extra question in `/ah:task-new` from v0.23.0 onwards.
+
 ## [0.22.0] — 2026-05-21
 
 ### Added
@@ -411,7 +419,8 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 ### Migration
 - No action required — first public release.
 
-[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.22.0...HEAD
+[Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.23.0...HEAD
+[0.23.0]: https://github.com/Skillbill/agentic-harness/compare/v0.22.0...v0.23.0
 [0.22.0]: https://github.com/Skillbill/agentic-harness/compare/v0.21.0...v0.22.0
 [0.21.0]: https://github.com/Skillbill/agentic-harness/compare/v0.20.0...v0.21.0
 [0.20.0]: https://github.com/Skillbill/agentic-harness/compare/v0.19.2...v0.20.0

@@ -130,7 +130,7 @@ updated: YYYY-MM-DD
 **`priority:` key — coarse-grained urgency tag**
 
 - Allowed values: `LOW`, `NORMAL`, `HIGH`, `IMMEDIATE` (uppercase, case-sensitive). Default `NORMAL`.
-- Set to `NORMAL` by `/ah:task-new`; not asked during the interview. The dev edits it by hand when a task is more (or less) urgent than the default.
+- Asked optionally by `/ah:task-new` in step 3-ter (single compact prompt, case-insensitive, `skip` keeps the default). Editable by hand at any time afterwards — priority is queue-management metadata that evolves over the task's lifetime.
 - Consumed by `/ah:project-status`: priority is displayed next to each task and the `Backlog` section is rendered in priority-descending order (`IMMEDIATE → HIGH → NORMAL → LOW`, tie-break by ID ascending).
 - Existing tasks without the field are migrated to `priority: NORMAL` by the v0.10.0 consumer migration.
 

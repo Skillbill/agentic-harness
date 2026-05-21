@@ -177,6 +177,30 @@ Procedure:
 4. **No re-ask, no clarification turn**. If the answer is ambiguous,
    prefer the `customer: null` / `project: null` fallback and move on.
 
+### 3-ter. Priority (optional, single turn)
+
+Tasks carry a coarse-grained urgency tag (`priority:`, see
+`task-layout.md` §3.1 and R-0007). Allowed values: `LOW`, `NORMAL`,
+`HIGH`, `IMMEDIATE`. Default is `NORMAL`. Asked here so the dev can
+front-load the urgency at creation; still editable by hand later
+because priority is queue-management metadata that evolves over time.
+
+Procedure:
+
+1. Ask **one compact message**, no follow-ups:
+
+   > Priority for this task? `LOW` · `NORMAL` · `HIGH` · `IMMEDIATE`
+   > (default `NORMAL`, or reply `skip` to keep it).
+
+2. Parse the answer (case-insensitive, trimmed):
+   - `LOW` / `NORMAL` / `HIGH` / `IMMEDIATE` (any casing) → record the
+     **uppercase** canonical token for step 4.
+   - `skip`, empty, `none`, `-`, `default`, or anything unparseable →
+     keep `NORMAL`.
+3. **No re-ask, no clarification turn**. The dev edits the file by
+   hand later if they change their mind — same posture as customer /
+   project above.
+
 ### 4. Create the task file
 
 Layout (see `task-layout.md` §1): each task is a **directory**
@@ -224,10 +248,11 @@ Layout (see `task-layout.md` §1): each task is a **directory**
   you filled in.
 - Leave `estimate: null` in the frontmatter (estimate is not asked in
   `/task-new`).
-- Leave `priority: NORMAL` in the frontmatter (priority is not asked in
-  `/task-new` — the dev edits it by hand later if the task is more or
-  less urgent than the default). Valid values are
-  `LOW | NORMAL | HIGH | IMMEDIATE`.
+- **`priority:` frontmatter** (from step 3-ter): replace the template's
+  literal `priority: NORMAL` with the canonical uppercase token chosen
+  by the dev (`LOW` / `NORMAL` / `HIGH` / `IMMEDIATE`). If `skip` /
+  unparseable / empty was answered, leave the template default
+  (`priority: NORMAL`) untouched.
 - Leave the `## Log` section empty (it's filled in during work).
 
 Write the file.
