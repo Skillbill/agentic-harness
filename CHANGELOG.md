@@ -8,6 +8,14 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 
 ## [Unreleased]
 
+## [0.23.2] — 2026-05-28
+
+### Changed
+- Bumped `peerDependencies["@earendil-works/pi-coding-agent"]` from `^0.75.0` to `^0.76.0` to track the current PI release. PI 0.76.0 is a non-breaking release for AH's API surface (no changes to `ExtensionAPI`, hook names, `pi.sendMessage`/`pi.sendUserMessage`, `ctx.ui.notify`, `ctx.hasUI`, or tool registration); the bump is purely declarative so that R-0004's `checkPiCompat` stops flagging a false-positive mismatch on consumers that have already updated PI.
+
+### Migration
+- No action required. Consumers on PI ≥ 0.76.0 simply stop seeing the `[ah-pi-compat-warning]` banner at session start. Consumers still on PI 0.75.x will now see the same warning until they `pi update @earendil-works/pi-coding-agent` — AH keeps loading either way (R-0004 invariant: the check is diagnostic, never blocking).
+
 ## [0.23.1] — 2026-05-21
 
 ### Fixed
@@ -429,6 +437,7 @@ In addition to the standard Keep a Changelog sections (`Added`, `Changed`, `Depr
 - No action required — first public release.
 
 [Unreleased]: https://github.com/Skillbill/agentic-harness/compare/v0.23.1...HEAD
+[0.23.2]: https://github.com/Skillbill/agentic-harness/compare/v0.23.1...v0.23.2
 [0.23.1]: https://github.com/Skillbill/agentic-harness/compare/v0.23.0...v0.23.1
 [0.23.0]: https://github.com/Skillbill/agentic-harness/compare/v0.22.0...v0.23.0
 [0.22.0]: https://github.com/Skillbill/agentic-harness/compare/v0.21.0...v0.22.0
